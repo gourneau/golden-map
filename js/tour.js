@@ -17,6 +17,8 @@ const HOMES = {
   // about X, so the face looks along ~(0, -0.966, 0.257)) — the engraved design reads whole
   record:  { pos: [0, -3.05, 0.95],  target: [0, 0, 0.12] },
   map:     { pos: [2, -9, 5],        target: [2, 0, 0] },      // pull back as lines unfold
+  // Act II with the explainer panel expanded: shift the scene right, clear of it
+  mapOpen: { pos: [0.6, -9, 5],      target: [0.6, 0, 0] },
   pulsars: { pos: [4, -14, 9],       target: [3, 0, 0] },      // hero overview
   verdict: { pos: [-1.6, -1.4, 9.2], target: [-1.6, 0.2, 0] }, // plan view; panel now hugs the left margin
   finders: { pos: [-6, -18, 7],      target: [3, 0, 0] },      // wide cinematic
@@ -47,6 +49,9 @@ export function initTour(ctx) {
   const breath = new THREE.Vector3();     // last applied idle offset
   let pointerDown = false;
   let sinceUser = ORBIT_IDLE_S;           // seconds since last user gesture
+  // Act II explainer panel state (ui.js 'uilayout'). It starts expanded, so the
+  // default matches even if the init dispatch fires before this module loads.
+  let explainerOpen = true;
 
   function stripBreath() {
     camera.position.sub(breath);
@@ -60,6 +65,7 @@ export function initTour(ctx) {
   }
 
   function flyTo(pos, target, dur = 1.6) {
+    clearHover(); // the tooltip must not linger through a camera move
     stripBreath();
     if (ctx.prefersReducedMotion || dur <= 0) {
       cancelTween();
@@ -77,7 +83,8 @@ export function initTour(ctx) {
 
   // ---- framing ----------------------------------------------------------
   function goHome(dur = 2.2) {
-    const h = HOMES[ctx.state.act] || HOMES.record;
+    let h = HOMES[ctx.state.act] || HOMES.record;
+    if (ctx.state.act === 'map' && explainerOpen) h = HOMES.mapOpen;
     flyTo(new THREE.Vector3(...h.pos), new THREE.Vector3(...h.target), dur);
   }
 
@@ -132,6 +139,17 @@ export function initTour(ctx) {
     else framePulsar(target);
   });
 
+  bus.addEventListener('uilayout', (e) => {
+    const open = !!e.detail.explainerOpen;
+    if (open === explainerOpen) return;
+    explainerOpen = open;
+    // Reflow the Act II framing when the panel toggles — but never yank the
+    // camera mid-gesture or away from a selection. (The init dispatch is safe
+    // either side of the opening move: that one flies to HOMES.record, and
+    // any act === 'map' framing after this point picks the right variant.)
+    if (ctx.state.act === 'map' && ctx.state.selected == null && !pointerDown) goHome(1.2);
+  });
+
   bus.addEventListener('mapmode', () => {
     // A selected pulsar's endpoint moves with the mode — keep it framed.
     const sel = ctx.state.selected;
@@ -158,6 +176,15 @@ export function initTour(ctx) {
     return hits.length ? (hits[0].object.userData.pulsar ?? null) : null;
   }
 
+  // ---- hover events (bus 'hover', consumed by ui.js for the tooltip) -------
+  let hovered = null; // last hovered pick result: pulsar object | 'gc' | null
+
+  function clearHover() {
+    if (hovered == null) return;
+    hovered = null;
+    bus.dispatchEvent(new CustomEvent('hover', { detail: { pulsar: null } }));
+  }
+
   let downX = 0, downY = 0;
 
   // Capture on window so the tween is cancelled (and controls re-enabled)
@@ -168,6 +195,7 @@ export function initTour(ctx) {
     pointerDown = true;
     sinceUser = 0;
     downX = e.clientX; downY = e.clientY;
+    clearHover(); // drag starts — the tooltip must not linger under the cursor
     stripBreath();
     cancelTween(); // user drag always wins
   }, { capture: true });
@@ -193,8 +221,17 @@ export function initTour(ctx) {
     const now = performance.now();
     if (now - lastHover < HOVER_INTERVAL_MS) return;
     lastHover = now;
-    canvas.style.cursor = pick(e) ? 'pointer' : '';
+    const hit = pick(e);
+    canvas.style.cursor = hit ? 'pointer' : '';
+    if (hit == null) { clearHover(); return; }
+    // New target OR same target: ui.js needs the fresh x/y either way so the
+    // tooltip follows the cursor; dispatch at the same throttled cadence.
+    hovered = hit;
+    bus.dispatchEvent(new CustomEvent('hover', {
+      detail: { pulsar: hit, x: e.clientX, y: e.clientY },
+    }));
   });
+  canvas.addEventListener('pointerleave', clearHover);
 
   // ---- keyboard -------------------------------------------------------------
   function cycleAct(step) {

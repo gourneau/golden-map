@@ -71,6 +71,7 @@ export const ctx = {
     timeMyr: 0,         // Act V slider, 0 = launch epoch
     mapMode: 'engraved',// 'engraved' | 'modern' | 'both'
     timeScale: 1,       // beacon blink speed multiplier
+    artifact: false,    // persistent engraved-map overlay (Acts II–IV)
   },
   pulsars,
   GC,
@@ -97,7 +98,12 @@ export function setMapMode(mode) {
   ctx.state.mapMode = mode;
   ctx.bus.dispatchEvent(new CustomEvent('mapmode', { detail: { mode } }));
 }
+export function setArtifact(v) {
+  ctx.state.artifact = v;
+  ctx.bus.dispatchEvent(new CustomEvent('artifact', { detail: { show: v } }));
+}
 ctx.setAct = setAct; ctx.select = select; ctx.setTimeMyr = setTimeMyr; ctx.setMapMode = setMapMode;
+ctx.setArtifact = setArtifact;
 
 // ---- assemble ----------------------------------------------------------
 const modules = [];

@@ -66,22 +66,24 @@ export function initUI(ctx) {
   explainer.innerHTML = `
     <p class="eyebrow">Act II · How to read it</p>
     <h2>Fourteen clocks, one ruler</h2>
-    <p class="gm-body">Every number on the record counts in a single unit: the
-      period of the hydrogen hyperfine transition —
-      <span class="mono engraved gm-nowrap">7.04024 × 10⁻¹⁰ s</span> —
-      defined on the cover by two hydrogen atoms and the digit 1.</p>
+    <p class="gm-body">A pulsar is a collapsed star that sweeps a radio beam
+      past us with clock-like regularity — and each one ticks at its own
+      unmistakable rate. This map names fourteen of them by that rate.</p>
+    <p class="gm-body">The ruler is hydrogen, the most common atom in the
+      universe. One particular flip of its electron ticks at an exact,
+      universal rate — <span class="mono engraved gm-nowrap">7.04024 × 10⁻¹⁰ s</span> —
+      so any scientist anywhere (or any alien) can reproduce it. Two hydrogen
+      atoms and the digit 1 define it on the cover; every number on the record
+      counts in this unit.</p>
     <ul class="gm-how">
-      <li><b>The binary</b>Along each line, tick = 1 and dash = 0, most
-        significant digit at the Sun: the pulsar’s spin period, counted in
-        hydrogen units.</li>
-      <li><b>The length</b>Each line’s length is the pulsar’s in-plane
-        distance, relative to the long unnumbered fifteenth line — Sun to
-        Galactic Center.</li>
-      <li><b>The end tick</b>The short tick at a line’s end is its height off
-        the galactic plane. The map is three-dimensional.</li>
-      <li><b>The clock</b>Pulsars slow at known rates. Compare an engraved
-        period with the observed one, and the map tells you when it was
-        drawn.</li>
+      <li><b>The binary</b>Long tick = 1, short dash = 0 — a number written
+        along each line: how fast that pulsar spins.</li>
+      <li><b>The length</b>How far away it is, measured against the long
+        line to the center of the galaxy.</li>
+      <li><b>The end tick</b>How far above or below the flat disc of our
+        galaxy. The map is three-dimensional.</li>
+      <li><b>The clock</b>Pulsars slow down at known rates, so the map also
+        says <em>when</em> it was made.</li>
     </ul>
     <div class="gm-demo">
       <p class="eyebrow">Line 1 · decoding</p>
@@ -101,6 +103,36 @@ export function initUI(ctx) {
   const demoBox = explainer.querySelector('.gm-demo');
   const demoTicks = explainer.querySelector('.gm-demo-ticks');
   const demoBits = explainer.querySelector('.gm-demo-bits');
+
+  // collapse toggle — desktop only; at ≤900px the panel is a bottom sheet and
+  // this control is hidden so the two systems never fight
+  const expToggle = el('button', 'gm-exp-toggle mono');
+  expToggle.innerHTML = `
+    <span class="gm-exp-chevron" aria-hidden="true">⟨</span>
+    <span class="gm-exp-tab-label">How to read it</span>`;
+  explainer.prepend(expToggle);
+  const expChevron = expToggle.querySelector('.gm-exp-chevron');
+  const isSheetMode = () => window.innerWidth <= 900;
+  const explainerOpen = () => !isSheetMode() && !explainer.classList.contains('is-collapsed');
+  function emitLayout() {
+    bus.dispatchEvent(new CustomEvent('uilayout', { detail: { explainerOpen: explainerOpen() } }));
+  }
+  function paintExpToggle() {
+    const collapsed = explainer.classList.contains('is-collapsed');
+    expChevron.textContent = collapsed ? '⟩' : '⟨';
+    expToggle.setAttribute('aria-expanded', String(!collapsed));
+    expToggle.setAttribute('aria-label',
+      collapsed ? 'Expand the how-to-read panel' : 'Collapse the how-to-read panel');
+  }
+  expToggle.addEventListener('click', () => {
+    if (isSheetMode()) return; // no-op in bottom-sheet mode
+    const collapsed = explainer.classList.toggle('is-collapsed');
+    if (collapsed) explainer.scrollTop = 0;
+    paintExpToggle();
+    emitLayout();
+  });
+  if (window.innerWidth < 1100) explainer.classList.add('is-collapsed');
+  paintExpToggle();
 
   const demo = { bits: p0.binary, i: 0, acc: 0, active: false };
   const STEP = 0.09; // seconds per bit
@@ -266,6 +298,9 @@ export function initUI(ctx) {
     <h2>So — is the map wrong?</h2>
     <p class="gm-verdict-lede">Partially — <em>but not the way the internet
       says.</em></p>
+    <p class="gm-body">Its distances are decades out of date — yet every one
+      of the fourteen pulsars can still be identified, and the map still
+      points home.</p>
 
     <p class="gm-k gm-modes-label">show the map</p>
     <div class="gm-modes" role="group" aria-label="Map mode">
@@ -338,7 +373,7 @@ export function initUI(ctx) {
   const myrToV = (m) => (100 * Math.log10(m + 1)) / K;
   const fmtMyr = (m) => (m < 0.05 ? '0' : m < 10 ? m.toFixed(1) : String(Math.round(m)));
   const eraLine = (m) => {
-    if (m < 1) return 'All fourteen beacons burning. The map still reads.';
+    if (m < 1) return 'All fourteen beacons burning. A finder today — or in a million years — could still read this.';
     if (m <= 10) return 'The periods have drifted. A finder must rewind the spin-down.';
     if (m <= 40) return 'The ordinary pulsars are guttering out.';
     if (m <= 90) return 'Most beacons dark. Only the geometry remains — and it is warping.';
@@ -352,6 +387,10 @@ export function initUI(ctx) {
     .join('');
   finders.innerHTML = `
     <p class="eyebrow">Act V · For the finders</p>
+    <p class="gm-body gm-finders-intro">This map was built to be read
+      <em>millions of years</em> from now. For the first million years it
+      stays essentially intact — drag time forward and watch how long Earth’s
+      return address survives.</p>
     <div class="gm-time-row mono">
       <span class="gm-tplus">T + 0 Myr</span>
       <span class="gm-beacons" title="Extinction times are illustrative — no peer-reviewed per-pulsar survival table exists">beacons still shining: 14/14</span>
@@ -366,6 +405,27 @@ export function initUI(ctx) {
       <span class="gm-chip mono">40,272 AD — Voyager 1 passes 1.7 ly from Gliese 445</span>
       <span class="gm-chip mono">+296,000 yr — Voyager 2 passes 4.3 ly from Sirius</span>
     </div>
+    <details class="gm-drake">
+      <summary class="mono">The man who drew the map</summary>
+      <p class="gm-body">The same Frank Drake who computed this map in 1971
+        for the Pioneer plaque had, a decade earlier, written the equation
+        that frames the question — <em>how many civilizations are out there
+        to talk to?</em> — for the first SETI meeting at Green Bank, 1961.
+        He asked who might be listening, then drew the address label for
+        them to find us.</p>
+      <p class="gm-drake-eq mono">N = R★ · f<sub>p</sub> · n<sub>e</sub> · f<sub>l</sub> · f<sub>i</sub> · f<sub>c</sub> · L</p>
+      <ul class="gm-drake-legend">
+        <li><span class="gm-drake-t mono">R★</span>rate of star formation</li>
+        <li><span class="gm-drake-t mono">f<sub>p</sub></span>fraction of stars with planets</li>
+        <li><span class="gm-drake-t mono">n<sub>e</sub></span>habitable worlds per system</li>
+        <li><span class="gm-drake-t mono">f<sub>l</sub></span>fraction where life begins</li>
+        <li><span class="gm-drake-t mono">f<sub>i</sub></span>… that grows intelligent</li>
+        <li><span class="gm-drake-t mono">f<sub>c</sub></span>… with detectable technology</li>
+        <li><span class="gm-drake-t mono">L</span>how long civilizations last</li>
+      </ul>
+      <p class="gm-drake-tie">The last term, <em>L</em>, is the question this
+        map asks back — how long does anyone stay findable?</p>
+    </details>
     <details class="gm-sources">
       <summary class="mono">Sources</summary>
       <ul>
@@ -398,11 +458,49 @@ export function initUI(ctx) {
   const corner = el('p', 'gm-panel gm-corner mono is-on',
     '1 unit = 1 kiloparsec · you are at the origin');
 
+  // ======================================================================
+  // 10. ENGRAVING OVERLAY CHIP (Acts II–IV) — mirrors the corner mark,
+  //     bottom-right; toggles the cover-engraving artifact overlay
+  // ======================================================================
+  const artifactChip = el('button', 'gm-panel gm-artifact mono',
+    '<span aria-hidden="true">◈</span>&ensp;the engraving');
+  artifactChip.dataset.acts = 'map pulsars verdict';
+  artifactChip.title = 'Overlay the cover engraving at true scale';
+  artifactChip.setAttribute('aria-pressed', 'false');
+  artifactChip.addEventListener('click', () => ctx.setArtifact(!state.artifact));
+  bus.addEventListener('artifact', (e) => {
+    const show = !!e.detail.show;
+    artifactChip.classList.toggle('is-active', show);
+    artifactChip.setAttribute('aria-pressed', String(show));
+  });
+
+  // ======================================================================
+  // 11. HOVER TOOLTIP — floating chip fed by the tour's raycast (bus 'hover')
+  // ======================================================================
+  const tip = el('div', 'gm-tip mono');
+  tip.setAttribute('aria-hidden', 'true');
+  const sig4 = (v) => String(Number(v.toPrecision(4)));
+  bus.addEventListener('hover', (e) => {
+    const { pulsar, x, y } = e.detail;
+    if (!pulsar) { tip.classList.remove('is-on'); return; }
+    tip.textContent = pulsar === 'gc'
+      ? 'Galactic Center'
+      : `${pulsar.bname}${pulsar.alias ? ` · ${pulsar.alias}` : ''} · ${sig4(pulsar.periodEncoded)} s`;
+    tip.classList.add('is-on');
+    // offset up-right of the cursor, clamped to the viewport
+    const r = tip.getBoundingClientRect();
+    const pad = 8;
+    const left = Math.min(Math.max(x + 14, pad), window.innerWidth - r.width - pad);
+    const top = Math.min(Math.max(y - 14 - r.height, pad), window.innerHeight - r.height - pad);
+    tip.style.left = `${left}px`;
+    tip.style.top = `${top}px`;
+  });
+
   // ---- assemble ---------------------------------------------------------
-  root.append(nav, title, explainer, rail, railToggle, detail, verdict, finders, corner);
+  root.append(nav, title, explainer, rail, railToggle, detail, verdict, finders, corner, artifactChip, tip);
 
   // ---- act / selection plumbing ------------------------------------------
-  const actPanels = [title, explainer, rail, railToggle, verdict, finders];
+  const actPanels = [title, explainer, rail, railToggle, verdict, finders, artifactChip];
   const DETAIL_ACTS = new Set(['pulsars', 'verdict', 'finders']);
 
   function paintDetailVisibility() {
@@ -439,6 +537,9 @@ export function initUI(ctx) {
 
   applyAct(state.act);
   paintTime(state.timeMyr);
+  // 'uilayout' once at init, deferred a microtask so modules registered after
+  // the UI (the tour) have their bus listeners attached before it fires
+  queueMicrotask(emitLayout);
 
   // ---- per-frame work -----------------------------------------------------
   let crabAcc = 0;

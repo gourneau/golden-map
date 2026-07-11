@@ -238,6 +238,11 @@ export function createRecord(ctx) {
   let rotStart = 0;      // disc rotation at lift start (settles to 0 mod 2π)
   let rotTarget = 0;
   let spin = true;
+  let act = ctx.state.act;               // current act, tracked for the overlay
+  let artifact = !!ctx.state.artifact;   // persistent-overlay toggle
+  let overlayFade = 0;                   // overlay opacity ease, 0..1
+  const OVERLAY_ACTS = ['map', 'pulsars', 'verdict'];
+  const overlayWanted = () => artifact && OVERLAY_ACTS.includes(act);
 
   const _q = new THREE.Quaternion();
   const _engrave = new THREE.Color(ENGRAVE);
@@ -251,6 +256,7 @@ export function createRecord(ctx) {
     lifting = false;
     liftCaptured = false;
     liftT = 0;
+    overlayFade = 0; // the overlay only exists off the record
     liftGroup.visible = false;
     liftMat.opacity = 0;
     mapLines.visible = true;
@@ -261,8 +267,10 @@ export function createRecord(ctx) {
     faceMat.emissiveIntensity = 0.78;
   }
 
+  bus.addEventListener('artifact', (e) => { artifact = !!e.detail.show; });
+
   bus.addEventListener('act', (e) => {
-    const act = e.detail.act;
+    act = e.detail.act;
     const wasRecord = target === 1;
     target = act === 'record' ? 1 : 0;
     receding = act === 'map';
@@ -346,9 +354,35 @@ export function createRecord(ctx) {
           liftMat.opacity = 1 - xf;
           if (xf >= 1) {
             lifting = false;
-            liftGroup.visible = false;
+            if (overlayWanted()) {
+              // hand off into the persistent overlay: the pose is already the
+              // overlay's end frame; opacity eases from here back up to 0.45
+              overlayFade = liftMat.opacity / 0.45;
+            } else {
+              liftGroup.visible = false;
+            }
           }
         }
+      }
+
+      // persistent engraved overlay: while state.artifact is on (Acts II–IV)
+      // the ignited map stays laid into the galactic plane as a faint ghost.
+      // The ceremony owns liftGroup while `lifting` — never fight it.
+      if (!lifting) {
+        const want = overlayWanted() ? 1 : 0;
+        if (prefersReducedMotion) overlayFade = want;
+        else if (overlayFade !== want) {
+          const step = dt / 0.5;
+          overlayFade = want > overlayFade
+            ? Math.min(want, overlayFade + step)
+            : Math.max(want, overlayFade - step);
+        }
+        liftGroup.position.set(0, 0, 0);
+        liftGroup.quaternion.identity();
+        liftGroup.scale.setScalar(LIFT_SCALE_END);
+        liftMat.color.copy(_glow);
+        liftMat.opacity = 0.45 * overlayFade;
+        liftGroup.visible = liftMat.opacity > 0.004;
       }
 
       apply(t);
