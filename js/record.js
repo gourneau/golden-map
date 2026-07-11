@@ -15,11 +15,14 @@ const DISK_R = 250;                  // disk radius
 const MAP_C = { x: 263.8, y: 628.9 };// pulsar-map burst point (the Sun)
 const MAP_R = 190;                   // radius enclosing all map lines
 const GC_LEN_SVG = 183.5;            // galactic-center line length
-// neighbors inside MAP_R that are NOT part of the map (excluded from the lift)
+// neighbors inside MAP_R that are NOT part of the map (excluded from the lift
+// and the engraving overlay — only the pulsar map itself should rise)
 const EXCLUDE = [
   { x0: 338, y0: 472, x1: 415, y1: 535 }, // video calibration frame
   { x0: 338, y0: 573, x1: 418, y1: 632 }, // hydrogen atoms glyph
-  { x0: 203, y0: 462, x1: 322, y1: 497 }, // elevation-view binary marks
+  // the whole how-to-play-the-record cluster: plan view (its circle is dashed,
+  // so it parses as many short segments), tonearm, elevation view, binary marks
+  { x0: 108, y0: 315, x1: 340, y1: 505 },
 ];
 
 // ---- lift timeline (seconds; map3d.js delays must match) --------------------
@@ -142,34 +145,68 @@ export function createRecord(ctx) {
 
   {
     const parsed = new SVGLoader().parse(plaqueSvg({ stroke: '#ffffff', disk: 'none' }));
+
+    // First pass: collect every polyline with its stats.
+    const polys = [];
     for (const path of parsed.paths) {
       for (const sub of path.subPaths) {
         const pts = sub.getPoints(20);
         if (pts.length < 2) continue;
-        let minD = Infinity, len = 0, sx = 0, sy = 0;
+        let minD = Infinity, len = 0, sx = 0, sy = 0, tip = pts[0], tipD = 0;
         for (let i = 0; i < pts.length; i++) {
           const d = Math.hypot(pts[i].x - MAP_C.x, pts[i].y - MAP_C.y);
           if (d < minD) minD = d;
+          if (d > tipD) { tipD = d; tip = pts[i]; }
           if (i) len += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
           sx += pts[i].x; sy += pts[i].y;
         }
-        const cx = sx / pts.length, cy = sy / pts.length;
-        const centDist = Math.hypot(cx - MAP_C.x, cy - MAP_C.y);
-        // map = radial lines through the burst, plus their short binary ticks
-        const isMap =
-          (minD < 15 && centDist < MAP_R) ||
-          (len < 16 && centDist < MAP_R && !inExclude(cx, cy));
-        const face = isMap ? mapPts : designPts;
-        for (let i = 1; i < pts.length; i++) {
-          const ax = (pts[i - 1].x - DISK_C.x) / DISK_R, ay = -(pts[i - 1].y - DISK_C.y) / DISK_R;
-          const bx = (pts[i].x - DISK_C.x) / DISK_R, by = -(pts[i].y - DISK_C.y) / DISK_R;
-          face.push(ax, ay, 0, bx, by, 0);
-          if (isMap) {
-            liftPts.push(
-              (pts[i - 1].x - MAP_C.x) / DISK_R, -(pts[i - 1].y - MAP_C.y) / DISK_R, 0,
-              (pts[i].x - MAP_C.x) / DISK_R, -(pts[i].y - MAP_C.y) / DISK_R, 0,
-            );
-          }
+        polys.push({
+          pts, minD, len, tip,
+          cx: sx / pts.length, cy: sy / pts.length,
+        });
+      }
+    }
+
+    // The map's radial lines pass through the burst point.
+    const radial = polys.filter(
+      (q) => q.minD < 15 && Math.hypot(q.cx - MAP_C.x, q.cy - MAP_C.y) < MAP_R,
+    );
+
+    // distance from a point to the burst→tip chord of a radial line
+    const distToRadial = (x, y) => {
+      let best = Infinity;
+      for (const r of radial) {
+        const dx = r.tip.x - MAP_C.x, dy = r.tip.y - MAP_C.y;
+        const L2 = dx * dx + dy * dy;
+        if (L2 < 1) continue;
+        const t = Math.min(1, Math.max(0, ((x - MAP_C.x) * dx + (y - MAP_C.y) * dy) / L2));
+        const d = Math.hypot(x - (MAP_C.x + t * dx), y - (MAP_C.y + t * dy));
+        if (d < best) best = d;
+      }
+      return best;
+    };
+
+    for (const q of polys) {
+      const centDist = Math.hypot(q.cx - MAP_C.x, q.cy - MAP_C.y);
+      // "just the map part": the radial lines themselves, plus short binary
+      // ticks that actually sit ON one of those lines — nothing else lifts
+      // (the plan-view record circle is dashed, so proximity, not size, is
+      // what separates its dashes from the map's ticks)
+      const isMap =
+        radial.includes(q) ||
+        (q.len < 16 && centDist < MAP_R && !inExclude(q.cx, q.cy) &&
+          distToRadial(q.cx, q.cy) < 8);
+      const face = isMap ? mapPts : designPts;
+      const pts = q.pts;
+      for (let i = 1; i < pts.length; i++) {
+        const ax = (pts[i - 1].x - DISK_C.x) / DISK_R, ay = -(pts[i - 1].y - DISK_C.y) / DISK_R;
+        const bx = (pts[i].x - DISK_C.x) / DISK_R, by = -(pts[i].y - DISK_C.y) / DISK_R;
+        face.push(ax, ay, 0, bx, by, 0);
+        if (isMap) {
+          liftPts.push(
+            (pts[i - 1].x - MAP_C.x) / DISK_R, -(pts[i - 1].y - MAP_C.y) / DISK_R, 0,
+            (pts[i].x - MAP_C.x) / DISK_R, -(pts[i].y - MAP_C.y) / DISK_R, 0,
+          );
         }
       }
     }

@@ -18,8 +18,12 @@ export function initUI(ctx) {
     if (html != null) n.innerHTML = html;
     return n;
   };
-  const fmtDist = (kpc) =>
-    kpc < 1 ? `${Math.round(kpc * 1000)} pc` : `${kpc.toFixed(kpc < 10 ? 2 : 1)} kpc`;
+  // light-years first, kiloparsecs second (1 kpc = 3,262 ly).
+  // ly rounded to 2 significant figures, with thousands separators.
+  const fmtLy = (kpc) => {
+    const ly = Number((kpc * 3262).toPrecision(2));
+    return `≈ ${ly.toLocaleString('en-US')} ly (${Number(kpc.toPrecision(3))} kpc)`;
+  };
   const fmtPPM = (v) => {
     const a = Math.abs(v);
     return `${v < 0 ? '−' : '+'}${a < 10 ? a.toFixed(2) : a.toFixed(0)} ppm`;
@@ -237,8 +241,8 @@ export function initUI(ctx) {
   const detailBody = el('div', 'gm-detail-body');
   detail.append(detailClose, detailBody);
 
-  const kv = (k, v, cls = '') =>
-    `<div class="gm-kv"><span class="gm-k">${k}</span><span class="gm-v mono ${cls}">${v}</span></div>`;
+  const kv = (k, v, cls = '', vTitle = '') =>
+    `<div class="gm-kv"><span class="gm-k">${k}</span><span class="gm-v mono ${cls}"${vTitle ? ` title="${vTitle}"` : ''}>${v}</span></div>`;
 
   const FLAW_TEXT = {
     angle: (p) => `Engraved bearing off by ~${p.angleErrorDeg}°. The angle errors
@@ -259,14 +263,17 @@ export function initUI(ctx) {
         <h2 class="gm-detail-name">Galactic Center</h2>
         <p class="gm-detail-sub mono">no binary number · the longest line</p>
         <p class="gm-body">The one line without a period. It runs from the Sun to
-          the center of the galaxy, behind the pulsars, and does two jobs: it is
-          the angular reference every bearing is measured against, and its length
-          is the ruler — every other line is a fraction of this one.</p>
+          the center of the galaxy, behind the pulsars, and does two jobs: every
+          other line’s angle is measured from it, and its length is the ruler —
+          every other line is a fraction of this one.</p>
         ${kv('engraved rule', 'Sun → GC ≡ 1', 'engraved')}
-        ${kv('modern value', '8.2 kpc', 'modern')}
-        ${kv('sun off midplane', '+20.8 pc', 'modern')}
-        <p class="gm-detail-note">Modern distance from the GRAVITY Collaboration
-          (2019/2021); the Sun rides slightly above the galactic midplane.</p>`;
+        ${kv('modern value', fmtLy(8.2), 'modern')}
+        ${kv('sun off midplane', '≈ 68 ly (20.8 pc)', 'modern')}
+        <p class="gm-detail-note">The Sun doesn’t sit exactly in the flat disc
+          of the galaxy — it rides slightly above it.</p>
+        <p class="gm-fine">Modern Sun-to-center distance from the GRAVITY
+          Collaboration (2019/2021); the Sun’s height above the galactic
+          midplane is ≈ 20.8 pc (Bennett &amp; Bovy 2019).</p>`;
       return;
     }
     const p = target;
@@ -278,10 +285,11 @@ export function initUI(ctx) {
       <p class="gm-bin mono">${p.binary}</p>
       ${kv('engraved period', `${p.periodEncoded.toFixed(8)} s`, 'engraved')}
       ${kv('ATNF catalogue period', `${p.periodModern} s`, 'modern')}
-      ${kv(p.flaw === 'spurious-precision' ? 'period offset — mostly rounding' : 'spin-down drift', fmtPPM(p.driftPPM))}
-      ${kv('engraved line length', fmtDist(p.dist1977), 'engraved')}
-      ${kv('modern distance', fmtDist(p.distModern), 'modern')}
+      ${kv(p.flaw === 'spurious-precision' ? 'period offset — mostly rounding' : 'spin-down drift', fmtPPM(p.driftPPM), '', 'parts per million')}
+      ${kv('engraved line length', fmtLy(p.dist1977), 'engraved')}
+      ${kv('modern distance', fmtLy(p.distModern), 'modern')}
       <p class="gm-detail-note">${p.distNote}</p>
+      ${p.fineNote ? `<p class="gm-fine">${p.fineNote}</p>` : ''}
       ${kv('galactic', `ℓ ${p.l.toFixed(1)}° · b ${p.b.toFixed(1)}°`)}
       ${kv('RA / Dec', `${p.ra}&ensp;${p.dec}`)}
       <p class="gm-body gm-detail-story">${p.note}</p>
@@ -311,34 +319,53 @@ export function initUI(ctx) {
 
     <h3 class="gm-block-h mono">What’s genuinely off</h3>
     <ul class="gm-list">
-      <li>The line lengths. Distances are wrong by factors of 2–10× —
-        superseded 1970s dispersion-measure data, not engraving error. Russel
-        (DSES) measured over 220% average error; only 3 of the 14 lines come
-        within 3%.</li>
-      <li>Three bearings miss: B0950+08 by ~10.6°, B1642-03 by ~13.3°,
-        B0823+26 by ~17.6°.</li>
-      <li>The Crab and B0525+21 — 1.4° apart on the sky — sit positionally
-        swapped.</li>
-      <li>B1240-64’s period, known to 3 significant digits, was engraved to
-        ~30 — spurious precision.</li>
+      <li>The distances are the real problem — most lines are drawn far too
+        long or too short, off by 2–10×.
+        <span class="gm-fine">Superseded 1970s dispersion-measure data, not an
+          engraving mistake. Russel (DSES) measured over 220% average error;
+          only 3 of the 14 line lengths come within 3%.</span></li>
+      <li>Three lines point the wrong way — off by 10 to 18 degrees.
+        <span class="gm-fine">B0950+08 by ~10.6°, B1642-03 by ~13.3°,
+          B0823+26 by ~17.6° — all among the pulsars sitting farthest above
+          the galaxy’s flat disc.</span></li>
+      <li>Two stars that sit close together in the sky — the Crab and its
+        neighbor — are drawn in each other’s places.
+        <span class="gm-fine">Russel’s reconstruction found B0531+21 (Crab) and
+          B0525+21 — only 1.4° apart on the sky — positionally swapped
+          relative to reality.</span></li>
+      <li>One number was written with far more digits than anyone actually
+        knew.
+        <span class="gm-fine">B1240-64’s period, known to 3 significant digits
+          in 1971, was engraved to ~30 binary digits — spurious
+          precision.</span></li>
     </ul>
 
     <h3 class="gm-block-h mono">What still works</h3>
     <ul class="gm-list">
-      <li>Johnston (2007) identified all 14 pulsars from the engraved periods
-        (one twin-period pair also needed line direction to separate),
-        most matching to better than 1 ppm — and recovered the map’s epoch from
-        spin-down: 1969.7 ± 1.2.</li>
-      <li>Russel triangulated the Sun’s galactic position to within ~4% from
-        the angles alone.</li>
+      <li>All fourteen pulsars can still be identified from their engraved
+        spin rates — and the drift in those rates dates the map to
+        1969.7 ± 1.2.
+        <span class="gm-fine">Johnston (2007): most periods match to better
+          than 1 ppm (one part per million); one twin-period pair also needed
+          line direction to separate; the epoch falls out of spin-down.</span></li>
+      <li>From the angles alone, the Sun’s place in the galaxy can be found
+        to within ~4%.
+        <span class="gm-fine">Russel (DSES) triangulated the Sun’s galactic
+          position using only the engraved bearings.</span></li>
     </ul>
 
     <h3 class="gm-block-h mono">The verdict</h3>
     <p class="gm-body">The strong claim — <em>reconstruct it and it points to the
       wrong place</em> — is a myth. Every documented reconstruction has
-      succeeded. Siegel’s “hopelessly wrong” (Forbes, 2017) argues future decay
-      over millions of years, and concedes the map was sound when it was
-      made.</p>
+      succeeded.</p>
+    <details class="gm-fine-more">
+      <summary>for the technically curious</summary>
+      <p class="gm-fine">Siegel’s “hopelessly wrong” (Forbes, 2017) — the likely
+        source of the meme — argues future decay over millions of years, and
+        concedes the map was sound when it was made. The substantive
+        reconstructions on record, Johnston (2007) and Russel (DSES, 2019),
+        both succeeded.</p>
+    </details>
 
     <div class="gm-crab">
       <p class="eyebrow">The Crab clock</p>
@@ -456,7 +483,7 @@ export function initUI(ctx) {
   // 9. CORNER MARK (always present)
   // ======================================================================
   const corner = el('p', 'gm-panel gm-corner mono is-on',
-    '1 unit = 1 kiloparsec · you are at the origin');
+    '1 grid unit ≈ 3,260 light-years · you are at the center');
 
   // ======================================================================
   // 10. ENGRAVING OVERLAY CHIP (Acts II–IV) — mirrors the corner mark,

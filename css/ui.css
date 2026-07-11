@@ -71,6 +71,39 @@
 }
 .gm-v { font-size: 0.8rem; text-align: right; }
 
+/* ---- fine print: footnote-grade secondary text ------------------------
+   Plain language leads; the technical provenance lives here. */
+.gm-fine {
+  display: block;
+  font-size: 0.72rem;
+  line-height: 1.55;
+  color: var(--paper-dim);
+  border-top: 1px solid color-mix(in srgb, var(--gold-faint) 55%, transparent);
+  margin: 0.55em 0 0 0.6em;
+  padding-top: 0.45em;
+  max-width: 58ch;
+}
+/* inside list items the border-left already insets the text */
+.gm-list li .gm-fine { margin-left: 0; }
+
+/* longer technical asides collapse behind a disclosure */
+.gm-fine-more { margin: 0.8em 0 0 0.6em; }
+.gm-fine-more summary {
+  cursor: pointer;
+  list-style: none;
+  font-family: var(--mono);
+  font-weight: 500;
+  font-size: 0.56rem;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--gold-dim);
+}
+.gm-fine-more summary::-webkit-details-marker { display: none; }
+.gm-fine-more summary::after { content: ' +'; color: var(--gold-dim); }
+.gm-fine-more[open] summary::after { content: ' −'; }
+.gm-fine-more summary:hover { color: var(--gold); }
+.gm-fine-more .gm-fine { border-top: none; margin-left: 0; padding-top: 0.35em; }
+
 /* ======================================================================
    1. ACT NAV
    ====================================================================== */
