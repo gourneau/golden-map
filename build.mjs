@@ -14,6 +14,7 @@ execSync(
     'npx esbuild js/main.js --bundle --minify --format=iife',
     '--alias:three=./vendor/three.module.js',
     `'--alias:three/addons/controls/OrbitControls.js=./vendor/OrbitControls.js'`,
+    `'--alias:three/addons/loaders/SVGLoader.js=./vendor/SVGLoader.js'`,
     `--outfile=${bundle}`,
   ].join(' '),
   { stdio: 'inherit', cwd: new URL('.', import.meta.url).pathname },

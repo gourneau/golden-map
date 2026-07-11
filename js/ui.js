@@ -129,10 +129,28 @@ export function initUI(ctx) {
   rail.innerHTML = `
     <header class="gm-rail-head">
       <p class="eyebrow">The beacons · engraved order</p>
-      <p class="gm-rail-note">each dot pulses its own period, slowed ~20×</p>
+      <p class="gm-rail-note">each dot pulses its own period</p>
+      <div class="gm-pulse-ctl" role="group" aria-label="Pulse rate">
+        <span class="gm-k">pulse rate</span>
+        <button class="gm-mode is-active" data-scale="1">slowed 20×</button>
+        <button class="gm-mode" data-scale="4">slowed 5×</button>
+        <button class="gm-mode" data-scale="20">true speed</button>
+      </div>
     </header>`;
   const railList = el('div', 'gm-rail-list');
   rail.appendChild(railList);
+
+  // pulse-rate control: scales the 3D beacon blink (ctx.state.timeScale, read
+  // live by map3d) and the rail dots' CSS animation in step
+  const pulseBtns = [...rail.querySelectorAll('.gm-pulse-ctl .gm-mode')];
+  function setPulseScale(scale) {
+    state.timeScale = scale;
+    for (const b of pulseBtns) b.classList.toggle('is-active', +b.dataset.scale === scale);
+    for (const d of railList.querySelectorAll('.gm-dot:not(.gm-dot-still)')) {
+      d.style.animationDuration = `${Math.max(0.09, +d.dataset.base / scale).toFixed(3)}s`;
+    }
+  }
+  for (const b of pulseBtns) b.addEventListener('click', () => setPulseScale(+b.dataset.scale));
 
   const rows = []; // { target, el }
   for (const p of pulsars) {
@@ -144,7 +162,7 @@ export function initUI(ctx) {
         ${p.confidence === 'probable' ? '<span class="gm-row-conf">identification: probable</span>' : ''}
       </span>
       <span class="gm-row-p mono engraved">${p.periodEncoded.toFixed(8)} s</span>
-      <span class="gm-dot" style="animation-duration:${blinkSecs(p).toFixed(2)}s"></span>`;
+      <span class="gm-dot" data-base="${blinkSecs(p).toFixed(3)}" style="animation-duration:${blinkSecs(p).toFixed(2)}s"></span>`;
     row.addEventListener('click', () => ctx.select(p));
     rows.push({ target: p, el: row });
     railList.appendChild(row);

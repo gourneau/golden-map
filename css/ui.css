@@ -288,6 +288,14 @@
 }
 .gm-rail-head { padding: 0 1.1rem 0.7rem; }
 .gm-rail-note { font-size: 0.74rem; font-style: italic; color: var(--paper-dim); }
+.gm-pulse-ctl {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35em;
+  margin-top: 0.55rem;
+}
+.gm-pulse-ctl .gm-k { margin-right: 0.2em; }
+.gm-pulse-ctl .gm-mode { padding: 0.18em 0.55em; font-size: 0.62rem; }
 .gm-rail-list { overflow-y: auto; }
 .gm-row {
   display: grid;

@@ -129,21 +129,32 @@ export function createMap(ctx) {
   }
 
   // ---- per-pulsar assembly -------------------------------------------------------
-  // flatten a position into the record plane (galactic X right, Z up),
-  // preserving length — Act II unfolds from here into true 3D
+  // flatten a position into the galactic plane (in-plane bearing, length
+  // preserved) — this matches the engraved map's own drawing convention, so
+  // the record's lifted artwork hands off 1:1; Act II unfolds from here
   function flat(v) {
     const len = v.length();
-    const a = Math.atan2(v.z, v.x);
-    return new THREE.Vector3(Math.cos(a) * len, 0, Math.sin(a) * len);
+    const a = Math.atan2(v.y, v.x);
+    return new THREE.Vector3(Math.cos(a) * len, Math.sin(a) * len, 0);
   }
 
   const pickables = [];
   const items = pulsars.map((p) => {
     const eLine = makeLine(0xc9a227);
-    const mLine = makeLine(0xa9c3d4);
+    const mLine = makeLine(0xbcd6e8);
 
-    const eBeacon = makeSprite(beaconTex, 0xf2d478, 0.1);
-    const mBeacon = makeSprite(beaconTex, 0xa9c3d4, 0.1);
+    // dashed displacement link engraved-end → modern-end: in the overlay it
+    // shows directly how far each star's mapped position moved
+    const linkGeo = new THREE.BufferGeometry();
+    linkGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(6), 3));
+    const link = new THREE.Line(linkGeo, new THREE.LineDashedMaterial({
+      color: 0xd97a56, transparent: true, opacity: 0,
+      dashSize: 0.14, gapSize: 0.09, depthWrite: false,
+    }));
+    link.frustumCulled = false;
+
+    const eBeacon = makeSprite(beaconTex, 0xf2d478, 0.085);
+    const mBeacon = makeSprite(beaconTex, 0xbcd6e8, 0.12);
     const remnant = makeSprite(emberTex, 0x3a1c12, 0.05, false);
     remnant.renderOrder = 4;
 
@@ -167,11 +178,11 @@ export function createMap(ctx) {
       group.add(arc);
     }
 
-    group.add(eLine, mLine, eBeacon, mBeacon, remnant, eHit, mHit, label.sprite);
+    group.add(eLine, mLine, link, eBeacon, mBeacon, remnant, eHit, mHit, label.sprite);
 
     return {
       p,
-      eLine, mLine, eBeacon, mBeacon, remnant, eHit, mHit, arc,
+      eLine, mLine, link, eBeacon, mBeacon, remnant, eHit, mHit, arc,
       label: label.sprite,
       redrawLabel: label.redraw,
       flatE: flat(p.xyz1977),
@@ -232,8 +243,22 @@ export function createMap(ctx) {
   let lastSelItem = null;
   let needLayout = true;
 
+  // entering Act II from Act I, the record's lift ceremony runs first: the
+  // flat map fades in as the lifted engraving crossfades out (record.js
+  // timeline: crossfade 1.6→2.3 s, so we hold fade until 1.6 s and the
+  // unfold until 2.2 s)
+  let fadeHold = 0, unfoldHold = 0;
+  let prevAct = state.act;
   bus.addEventListener('act', (e) => {
     const act = e.detail.act;
+    if (act === 'map' && prevAct === 'record' && !prefersReducedMotion) {
+      fadeHold = 1.6;
+      unfoldHold = 2.2;
+    } else {
+      fadeHold = 0;
+      unfoldHold = 0;
+    }
+    prevAct = act;
     actTarget = act === 'record' ? 0 : 1;
     unfoldT = act === 'record' ? 0 : 1;
     labelT = act === 'pulsars' || act === 'verdict' || act === 'finders' ? 1 : 0;
@@ -314,6 +339,13 @@ export function createMap(ctx) {
       it.mEnd.copy(_m);
       setEnd(it.eLine, _e);
       setEnd(it.mLine, _m);
+      {
+        const la = it.link.geometry.attributes.position.array;
+        la[0] = _e.x; la[1] = _e.y; la[2] = _e.z;
+        la[3] = _m.x; la[4] = _m.y; la[5] = _m.z;
+        it.link.geometry.attributes.position.needsUpdate = true;
+        it.link.computeLineDistances();
+      }
       it.eBeacon.position.copy(_e);
       it.eHit.position.copy(_e);
       it.mBeacon.position.copy(_m);
@@ -331,13 +363,15 @@ export function createMap(ctx) {
   // ---- per-frame -----------------------------------------------------------------
   function update(dt, t) {
     const k = prefersReducedMotion ? 1 : Math.min(1, dt * 3.5); // ~0.8 s settles
-    actFade += (actTarget - actFade) * k;
+    if (fadeHold > 0) fadeHold -= dt;
+    else actFade += (actTarget - actFade) * k;
     engFade += (engT - engFade) * k;
     modFade += (modT - modFade) * k;
     arcFade += (arcT - arcFade) * k;
     labelFade += (labelT - labelFade) * k;
 
-    if (prefersReducedMotion) unfold = unfoldT;
+    if (unfoldHold > 0) unfoldHold -= dt;
+    else if (prefersReducedMotion) unfold = unfoldT;
     else if (unfold !== unfoldT) {
       unfold = unfoldT > unfold
         ? Math.min(unfoldT, unfold + dt / 1.6)
@@ -384,8 +418,12 @@ export function createMap(ctx) {
       }
 
       // lines
-      const eOp = Math.min(1, 1.0 * engFade * actFade * it.selF * lineLife);
-      const mOp = Math.min(1, 0.9 * modFade * actFade * it.selF * lineLife);
+      // in the overlay, pull the engraved set back so modern reads against it
+      const eOp = Math.min(1, 1.0 * engFade * actFade * it.selF * lineLife) * (1 - 0.3 * arcFade);
+      const mOp = Math.min(1, 1.0 * modFade * actFade * it.selF * lineLife);
+      const lkOp = 0.85 * arcFade * engFade * modFade * actFade * it.selF * lineLife;
+      it.link.material.opacity = lkOp;
+      it.link.visible = lkOp > 0.005;
       it.eLine.material.opacity = eOp;
       it.mLine.material.opacity = mOp;
       it.eLine.visible = eOp > 0.005;

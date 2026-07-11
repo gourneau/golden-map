@@ -1,223 +1,224 @@
 // The Golden Map — record.js
-// Act I hero: the golden record with the REAL engraved cover design.
-// The face is the actual Voyager plaque artwork (public domain, NASA/JPL;
-// vectorization VectorVoyager via Wikimedia Commons), rasterized from
-// js/data/coverArt.js onto two coincident face textures:
-//   - the gold face: dark engraving on bright mirror gold (Act I, the artifact)
-//   - the night face: the same design as glowing gold lines on near-black
-// Act I → II crossfades between them ("ignition") before map3d unfolds the
-// lines into 3D. This module also owns the scene lighting (everything else
-// is mostly unlit).
+// Act I hero: the golden record with the REAL cover design — parsed from the
+// public-domain plaque SVG into crisp vector lines (no rasterized artwork
+// textures, no moiré). At Act II the pulsar-map portion of the engraving
+// ignites, lifts off the disc, lays down into the galactic plane and hands
+// off 1:1 to map3d's flat map, which then unfolds into true 3D.
+// This module also owns the scene lighting (everything else is mostly unlit).
 
-import { plaqueSvg, svgToDataUri } from './data/coverArt.js';
+import { plaqueSvg } from './data/coverArt.js';
+import { SVGLoader } from 'three/addons/loaders/SVGLoader.js';
+
+// ---- measured artwork geometry (SVG user units, viewBox "106 261 505 500") --
+const DISK_C = { x: 358.5, y: 511 }; // disk center
+const DISK_R = 250;                  // disk radius
+const MAP_C = { x: 263.8, y: 628.9 };// pulsar-map burst point (the Sun)
+const MAP_R = 190;                   // radius enclosing all map lines
+const GC_LEN_SVG = 183.5;            // galactic-center line length
+// neighbors inside MAP_R that are NOT part of the map (excluded from the lift)
+const EXCLUDE = [
+  { x0: 338, y0: 472, x1: 415, y1: 535 }, // video calibration frame
+  { x0: 338, y0: 573, x1: 418, y1: 632 }, // hydrogen atoms glyph
+  { x0: 203, y0: 462, x1: 322, y1: 497 }, // elevation-view binary marks
+];
+
+// ---- lift timeline (seconds; map3d.js delays must match) --------------------
+const T_FREEZE = 0.5;  // disc rotation settles, rest of design fades
+const T_LIFT_END = 2.1;// lift group reaches the galactic plane
+const T_XF_START = 1.6;// lift lines start crossfading out (map3d fades in)
+const T_XF_END = 2.3;
+
+const ENGRAVE = 0x3e3220;   // dark engraving on bright gold
+const GLOW = 0xe8c968;      // ignited line gold
 
 export function createRecord(ctx) {
-  const { THREE, bus, prefersReducedMotion } = ctx;
+  const { THREE, bus, prefersReducedMotion, R0 } = ctx;
 
   const group = new THREE.Group();
   group.name = 'record';
   group.rotation.x = -0.26; // tip the face gently toward the camera
 
-  // ---- face bases (procedural, drawn immediately — never a blank frame) ----
-  // The plaque SVG composites on top asynchronously when its Image loads.
-  function drawFaceBase(goldMode) {
-    const S = 2048;
-    const cv = document.createElement('canvas');
-    cv.width = cv.height = S;
-    const c = cv.getContext('2d');
-    const cx = S / 2, cy = S / 2, R = S / 2;
-
-    if (goldMode) {
-      // mirror gold: specular core offset up-left so it reads as lit metal
-      const g = c.createRadialGradient(
-        cx - R * 0.32, cy - R * 0.38, R * 0.05,
-        cx, cy, R * 1.12
-      );
-      g.addColorStop(0, '#fff3c4');
-      g.addColorStop(0.28, '#f0c85a');
-      g.addColorStop(0.55, '#e8b633');
-      g.addColorStop(0.82, '#a97a1c');
-      g.addColorStop(1, '#7a5510');
-      c.fillStyle = g;
-      c.fillRect(0, 0, S, S);
-
-      // broad soft radial sheen streaks, like light fanning on a polished disc
-      for (const [a0, spread, alpha] of [
-        [-1.05, 0.30, 0.10],
-        [0.55, 0.22, 0.07],
-        [2.35, 0.34, 0.06],
-      ]) {
-        const steps = 7;
-        for (let i = 0; i < steps; i++) {
-          const w = spread * (1 - i / steps);
-          c.beginPath();
-          c.moveTo(cx, cy);
-          c.arc(cx, cy, R, a0 - w, a0 + w);
-          c.closePath();
-          c.fillStyle = `rgba(255, 243, 196, ${(alpha / steps).toFixed(4)})`;
-          c.fill();
-        }
-      }
-
-      // fine concentric grooves over the outer band, very subtle
-      c.lineWidth = 1.5;
-      for (let r = R * 0.98; r > R * 0.36; r -= 6) {
-        c.beginPath();
-        c.arc(cx, cy, r, 0, Math.PI * 2);
-        c.strokeStyle = `rgba(74, 50, 10, ${0.04 + 0.04 * Math.random()})`;
-        c.stroke();
-      }
-
-      // smoother label-like disc region at the center
-      const lg = c.createRadialGradient(
-        cx - R * 0.08, cy - R * 0.1, R * 0.02,
-        cx, cy, R * 0.34
-      );
-      lg.addColorStop(0, '#f4d476');
-      lg.addColorStop(0.7, '#e2ae30');
-      lg.addColorStop(1, '#c1902a');
-      c.beginPath();
-      c.arc(cx, cy, R * 0.33, 0, Math.PI * 2);
-      c.fillStyle = lg;
-      c.fill();
-      c.lineWidth = 3;
-      c.strokeStyle = 'rgba(74, 50, 10, 0.18)';
-      c.stroke();
-    } else {
-      // night face: near-black with a faint warm vignette
-      c.fillStyle = '#0a0805';
-      c.fillRect(0, 0, S, S);
-      const g = c.createRadialGradient(cx, cy, R * 0.1, cx, cy, R);
-      g.addColorStop(0, 'rgba(58, 47, 20, 0.16)');
-      g.addColorStop(0.6, 'rgba(58, 47, 20, 0.05)');
-      g.addColorStop(1, 'rgba(0, 0, 0, 0.35)');
-      c.fillStyle = g;
-      c.fillRect(0, 0, S, S);
-    }
-
-    // spindle hole with a hub ring (both faces)
-    c.beginPath();
-    c.arc(cx, cy, R * 0.026, 0, Math.PI * 2);
-    c.fillStyle = '#050403';
-    c.fill();
-    c.beginPath();
-    c.arc(cx, cy, R * 0.036, 0, Math.PI * 2);
-    c.lineWidth = 4;
-    c.strokeStyle = goldMode ? 'rgba(74, 50, 10, 0.55)' : 'rgba(201, 162, 39, 0.5)';
-    c.stroke();
-
-    return cv;
-  }
-
-  // ---- the playing side: mirror gold, finely grooved ------------------------
-  function drawBack() {
+  // ==== the disc body: smooth gold, low-frequency shading only (no fine
+  // rings — 1px canvas rings are what moiréd during camera motion) ==========
+  function drawFace() {
     const S = 1024;
     const cv = document.createElement('canvas');
     cv.width = cv.height = S;
     const c = cv.getContext('2d');
     const cx = S / 2, cy = S / 2, R = S / 2;
-    const g = c.createRadialGradient(
-      cx - R * 0.3, cy - R * 0.35, R * 0.05,
-      cx, cy, R * 1.1
-    );
+    const g = c.createRadialGradient(cx - R * 0.35, cy - R * 0.4, R * 0.05, cx, cy, R * 1.05);
     g.addColorStop(0, '#fff3c4');
-    g.addColorStop(0.3, '#efc554');
-    g.addColorStop(0.6, '#e8b633');
+    g.addColorStop(0.35, '#eec14a');
+    g.addColorStop(0.7, '#c9962e');
     g.addColorStop(1, '#7a5510');
     c.fillStyle = g;
     c.fillRect(0, 0, S, S);
-    c.lineWidth = 1;
-    for (let r = S * 0.49; r > S * 0.08; r -= 3) {
+    // a few broad, soft tonal bands — sheen, not grooves
+    for (let i = 0; i < 5; i++) {
+      const r = R * (0.45 + i * 0.115);
       c.beginPath();
       c.arc(cx, cy, r, 0, Math.PI * 2);
-      c.strokeStyle = `rgba(74, 50, 10, ${0.04 + 0.06 * Math.random()})`;
+      c.lineWidth = 26;
+      c.strokeStyle = `rgba(122, 85, 16, ${0.045 + 0.01 * (i % 2)})`;
       c.stroke();
     }
-    c.beginPath();
-    c.arc(cx, cy, S * 0.026, 0, Math.PI * 2);
-    c.fillStyle = '#0a0806';
-    c.fill();
+    // smoother label region
+    const lg = c.createRadialGradient(cx - R * 0.08, cy - R * 0.1, R * 0.02, cx, cy, R * 0.34);
+    lg.addColorStop(0, '#f4d476');
+    lg.addColorStop(0.7, '#e2ae30');
+    lg.addColorStop(1, '#c1902a');
+    c.beginPath(); c.arc(cx, cy, R * 0.33, 0, Math.PI * 2);
+    c.fillStyle = lg; c.fill();
+    // spindle hole + hub ring
+    c.beginPath(); c.arc(cx, cy, R * 0.028, 0, Math.PI * 2);
+    c.fillStyle = '#0a0805'; c.fill();
+    c.beginPath(); c.arc(cx, cy, R * 0.05, 0, Math.PI * 2);
+    c.lineWidth = 5; c.strokeStyle = 'rgba(122, 85, 16, 0.5)'; c.stroke();
+    return cv;
+  }
+
+  function drawBack() {
+    const S = 512;
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = S;
+    const c = cv.getContext('2d');
+    const cx = S / 2, cy = S / 2;
+    const g = c.createRadialGradient(cx - 60, cy - 70, 20, cx, cy, S / 2);
+    g.addColorStop(0, '#f6de8e');
+    g.addColorStop(0.6, '#d3a637');
+    g.addColorStop(1, '#8a6c1f');
+    c.fillStyle = g;
+    c.fillRect(0, 0, S, S);
+    for (let i = 0; i < 4; i++) { // broad bands, not 1px grooves
+      c.beginPath();
+      c.arc(cx, cy, S * (0.17 + i * 0.09), 0, Math.PI * 2);
+      c.lineWidth = 14;
+      c.strokeStyle = 'rgba(60, 44, 10, 0.06)';
+      c.stroke();
+    }
+    c.beginPath(); c.arc(cx, cy, S * 0.03, 0, Math.PI * 2);
+    c.fillStyle = '#0a0806'; c.fill();
     return cv;
   }
 
   const maxAniso = ctx.renderer.capabilities.getMaxAnisotropy();
   const makeTex = (canvas) => {
-    const tex = new THREE.CanvasTexture(canvas);
-    tex.colorSpace = THREE.SRGBColorSpace;
-    tex.anisotropy = maxAniso;
-    return tex;
+    const t = new THREE.CanvasTexture(canvas);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.anisotropy = maxAniso;
+    return t;
   };
-
-  const goldCanvas = drawFaceBase(true);
-  const nightCanvas = drawFaceBase(false);
-  const goldTex = makeTex(goldCanvas);
-  const nightTex = makeTex(nightCanvas);
+  const faceTex = makeTex(drawFace());
   const backTex = makeTex(drawBack());
 
-  // ---- composite the real cover design onto both faces (async) -------------
-  // viewBox is "106 261 505 500": the disk is a circle inscribed in the box
-  // (diameter 500, the box height). Scale uniformly so the SVG's disk rim
-  // meets the canvas circle rim (canvas circle radius = S/2), center it; the
-  // ~5 extra SVG units of width are harmless overflow.
-  function compositeSvg(canvas, tex, stroke) {
-    const img = new Image();
-    img.onload = () => {
-      const c = canvas.getContext('2d');
-      const S = canvas.width;
-      const s = S / 500; // disk diameter 500 SVG units → full canvas
-      const w = 505 * s, h = 500 * s;
-      c.drawImage(img, (S - w) / 2, (S - h) / 2, w, h);
-      tex.needsUpdate = true;
-    };
-    img.onerror = () => {}; // procedural base still looks fine
-    img.src = svgToDataUri(plaqueSvg({ stroke, disk: 'none' }));
-  }
-  compositeSvg(goldCanvas, goldTex, '#3e3220');  // dark engraving on gold
-  compositeSvg(nightCanvas, nightTex, '#c9a227'); // glowing lines on black
-
-  // ---- materials -------------------------------------------------------------
   const sideMat = new THREE.MeshStandardMaterial({
     color: 0xe8b633, metalness: 1.0, roughness: 0.3, transparent: true,
   });
   const backMat = new THREE.MeshStandardMaterial({
     map: backTex, metalness: 1.0, roughness: 0.25, transparent: true,
   });
-  // bottom cap sits behind the two face circles; keep it dark so the
-  // mid-crossfade blend reads as the gold dimming into night
-  const capMat = new THREE.MeshStandardMaterial({
-    color: 0x0a0805, metalness: 0.4, roughness: 0.6, transparent: true,
-  });
-  const goldMat = new THREE.MeshStandardMaterial({
-    // fully-metallic PBR with no envMap renders near-black, so the painted
-    // mirror-gold gradient carries the shine: self-illuminate it instead
-    map: goldTex, metalness: 0.35, roughness: 0.5, transparent: true,
-    emissive: 0xfff2d0, emissiveMap: goldTex, emissiveIntensity: 0.78,
-  });
-  const nightMat = new THREE.MeshStandardMaterial({
-    map: nightTex, metalness: 0.4, roughness: 0.5, transparent: true,
-    emissive: 0xc9a227, emissiveMap: nightTex, emissiveIntensity: 1.0,
+  // the face: painted mirror gold, self-illuminated (full-metal PBR with no
+  // envMap goes black). Its color/emissive dim to near-dark during the lift.
+  const faceMat = new THREE.MeshStandardMaterial({
+    map: faceTex, metalness: 0.35, roughness: 0.5, transparent: true,
+    emissive: 0xfff2d0, emissiveMap: faceTex, emissiveIntensity: 0.78,
+    depthWrite: false,
   });
 
-  // cylinder axis is +Y: side, top (+Y, away from camera), bottom (-Y, facing)
+  // cylinder axis is +Y: [side, top(+Y, away), bottom(-Y, faces camera)]
   const disc = new THREE.Mesh(
     new THREE.CylinderGeometry(1, 1, 0.02, 128),
-    [sideMat, backMat, capMat]
+    [sideMat, backMat, faceMat]
   );
   group.add(disc);
 
-  // two coincident face circles, children of the disc so they spin with it.
-  // CircleGeometry faces +Z; rotation.x = +PI/2 turns the front toward -Y
-  // (the camera side) without mirroring the design.
-  const faceGeo = new THREE.CircleGeometry(1, 128);
-  const goldFace = new THREE.Mesh(faceGeo, goldMat);
-  goldFace.rotation.x = Math.PI / 2;
-  goldFace.position.y = -0.01 - 0.0015;
-  const nightFace = new THREE.Mesh(faceGeo, nightMat);
-  nightFace.rotation.x = Math.PI / 2;
-  nightFace.position.y = -0.01 - 0.003;
-  disc.add(goldFace, nightFace);
+  // ==== the cover design as vector lines ====================================
+  // Parse once; classify every polyline as map (lifts off) or not.
+  const inExclude = (x, y) => EXCLUDE.some((b) => x >= b.x0 && x <= b.x1 && y >= b.y0 && y <= b.y1);
 
-  // ---- lighting (owned here; the rest of the scene is unlit) ---------------
+  const designPts = [];  // face-local line-segment pairs, everything but the map
+  const mapPts = [];     // face-local pairs, the pulsar map as engraved
+  const liftPts = [];    // same map geometry, centered on the burst point
+
+  {
+    const parsed = new SVGLoader().parse(plaqueSvg({ stroke: '#ffffff', disk: 'none' }));
+    for (const path of parsed.paths) {
+      for (const sub of path.subPaths) {
+        const pts = sub.getPoints(20);
+        if (pts.length < 2) continue;
+        let minD = Infinity, len = 0, sx = 0, sy = 0;
+        for (let i = 0; i < pts.length; i++) {
+          const d = Math.hypot(pts[i].x - MAP_C.x, pts[i].y - MAP_C.y);
+          if (d < minD) minD = d;
+          if (i) len += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+          sx += pts[i].x; sy += pts[i].y;
+        }
+        const cx = sx / pts.length, cy = sy / pts.length;
+        const centDist = Math.hypot(cx - MAP_C.x, cy - MAP_C.y);
+        // map = radial lines through the burst, plus their short binary ticks
+        const isMap =
+          (minD < 15 && centDist < MAP_R) ||
+          (len < 16 && centDist < MAP_R && !inExclude(cx, cy));
+        const face = isMap ? mapPts : designPts;
+        for (let i = 1; i < pts.length; i++) {
+          const ax = (pts[i - 1].x - DISK_C.x) / DISK_R, ay = -(pts[i - 1].y - DISK_C.y) / DISK_R;
+          const bx = (pts[i].x - DISK_C.x) / DISK_R, by = -(pts[i].y - DISK_C.y) / DISK_R;
+          face.push(ax, ay, 0, bx, by, 0);
+          if (isMap) {
+            liftPts.push(
+              (pts[i - 1].x - MAP_C.x) / DISK_R, -(pts[i - 1].y - MAP_C.y) / DISK_R, 0,
+              (pts[i].x - MAP_C.x) / DISK_R, -(pts[i].y - MAP_C.y) / DISK_R, 0,
+            );
+          }
+        }
+      }
+    }
+  }
+
+  const segGeo = (arr) => {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(arr), 3));
+    return g;
+  };
+  const designMat = new THREE.LineBasicMaterial({ color: ENGRAVE, transparent: true, opacity: 1 });
+  const mapMat = new THREE.LineBasicMaterial({ color: ENGRAVE, transparent: true, opacity: 1 });
+  const liftMat = new THREE.LineBasicMaterial({
+    color: GLOW, transparent: true, opacity: 0,
+    blending: THREE.AdditiveBlending, depthWrite: false,
+  });
+
+  // design sits on the face plane (local XY → rotate to face -Y), child of the
+  // disc so it spins with the turntable
+  const designGroup = new THREE.Group();
+  designGroup.rotation.x = Math.PI / 2;
+  designGroup.position.y = -0.013;
+  const designLines = new THREE.LineSegments(segGeo(designPts), designMat);
+  const mapLines = new THREE.LineSegments(segGeo(mapPts), mapMat);
+  designLines.renderOrder = 2;
+  mapLines.renderOrder = 2;
+  designGroup.add(designLines, mapLines);
+  disc.add(designGroup);
+
+  // anchor marking the burst point on the face — the lift starts from its
+  // world transform
+  const anchor = new THREE.Object3D();
+  anchor.position.set((MAP_C.x - DISK_C.x) / DISK_R, -(MAP_C.y - DISK_C.y) / DISK_R, 0.002);
+  designGroup.add(anchor);
+
+  // the lift group lives in the SCENE (not the record group), so it stays put
+  // while the record recedes underneath it
+  const liftGroup = new THREE.Group();
+  const liftLines = new THREE.LineSegments(segGeo(liftPts), liftMat);
+  liftLines.frustumCulled = false;
+  liftLines.renderOrder = 3;
+  liftGroup.add(liftLines);
+  liftGroup.visible = false;
+  ctx.scene.add(liftGroup);
+
+  // scale that makes the engraved GC line span the real Sun→GC distance
+  const LIFT_SCALE_END = (ctx.GC ? ctx.GC.length() : 8.2) / (GC_LEN_SVG / DISK_R);
+
+  // ==== lighting (owned here; the rest of the scene is unlit) ================
   const key = new THREE.DirectionalLight(0xffe8b0, 3.2);
   key.position.set(2.5, -3.5, 3);
   const rim = new THREE.DirectionalLight(0x8fa8bd, 0.9);
@@ -225,28 +226,68 @@ export function createRecord(ctx) {
   const ambient = new THREE.AmbientLight(0x2a2114, 1.9);
   group.add(key, rim, ambient);
 
-  // ---- act staging ----------------------------------------------------------
-  let fade = 1;         // overall visibility 0..1
-  let target = 1;       // where fade is headed
+  // ==== act staging ===========================================================
+  let fade = 1;          // overall record visibility
+  let target = 1;
   let receding = false;
-  let igniteMix = 0;    // 0 = engraved gold artifact, 1 = glowing night face
-  let igniteTarget = 0;
+  let lifting = false;   // Act II lift timeline active
+  let liftT = 0;
+  let liftStartPos = new THREE.Vector3();
+  let liftStartQuat = new THREE.Quaternion();
+  let liftCaptured = false;
+  let rotStart = 0;      // disc rotation at lift start (settles to 0 mod 2π)
+  let rotTarget = 0;
+  let spin = true;
+
+  const _q = new THREE.Quaternion();
+  const _engrave = new THREE.Color(ENGRAVE);
+  const _glow = new THREE.Color(GLOW);
+  const _faceEmissive = new THREE.Color(0xfff2d0);
+  const _faceDark = new THREE.Color(0x181006);
+  const ease = (k) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
+  const clamp01 = (v) => Math.min(1, Math.max(0, v));
+
+  function resetToEngraved() {
+    lifting = false;
+    liftCaptured = false;
+    liftT = 0;
+    liftGroup.visible = false;
+    liftMat.opacity = 0;
+    mapLines.visible = true;
+    spin = true;
+    designMat.opacity = 1;
+    mapMat.color.copy(_engrave);
+    faceMat.emissive.copy(_faceEmissive);
+    faceMat.emissiveIntensity = 0.78;
+  }
 
   bus.addEventListener('act', (e) => {
     const act = e.detail.act;
+    const wasRecord = target === 1;
     target = act === 'record' ? 1 : 0;
-    receding = act === 'map'; // Act II: recede slowly rather than vanish
-    igniteTarget = act === 'record' ? 0 : 1;
+    receding = act === 'map';
+    if (act === 'record') {
+      resetToEngraved();
+    } else if (act === 'map' && wasRecord && !prefersReducedMotion) {
+      lifting = true;
+      liftT = 0;
+      liftCaptured = false;
+      spin = false;
+      rotStart = disc.rotation.y;
+      rotTarget = Math.round(rotStart / (Math.PI * 2)) * Math.PI * 2;
+    } else {
+      // jumped past the ceremony (act III+, or reduced motion): no lift
+      lifting = false;
+      liftGroup.visible = false;
+      mapLines.visible = true;
+      spin = act === 'record';
+    }
   });
 
   function apply(t) {
-    sideMat.opacity = backMat.opacity = capMat.opacity = fade;
-    goldMat.opacity = fade * (1 - igniteMix);
-    nightMat.opacity = fade * igniteMix;
-    group.position.y = (1 - fade) * 2.4; // drift away from the camera
-    if (!prefersReducedMotion) {
-      group.position.z = 0.03 * Math.sin(t * 0.5) * fade;
-    }
+    sideMat.opacity = backMat.opacity = faceMat.opacity = fade;
+    group.position.y = (1 - fade) * 2.4;
+    if (!prefersReducedMotion) group.position.z = 0.03 * Math.sin(t * 0.5) * fade;
     group.scale.setScalar(0.7 + 0.3 * fade);
     group.visible = fade > 0.004;
   }
@@ -256,18 +297,60 @@ export function createRecord(ctx) {
     object3d: group,
 
     update(dt, t) {
-      disc.rotation.y += dt * (prefersReducedMotion ? 0.02 : 0.12);
-      const rate = prefersReducedMotion ? 14 : (target > fade ? 2.4 : receding ? 1.1 : 2.8);
+      if (spin) disc.rotation.y += dt * (prefersReducedMotion ? 0.02 : 0.12);
+
+      const rate = prefersReducedMotion ? 14 : (target > fade ? 2.4 : receding ? 1.6 : 2.8);
       fade += (target - fade) * Math.min(1, dt * rate);
       if (Math.abs(target - fade) < 0.003) fade = target;
-      // the ignition crossfade: ~1.2s into Act II, quicker back to Act I
-      if (prefersReducedMotion) {
-        igniteMix = igniteTarget;
-      } else if (igniteTarget > igniteMix) {
-        igniteMix = Math.min(igniteTarget, igniteMix + dt / 1.2);
-      } else {
-        igniteMix = Math.max(igniteTarget, igniteMix - dt / 0.5);
+
+      if (lifting) {
+        liftT += dt;
+
+        // 0 → T_FREEZE: the turntable settles, the rest of the design fades,
+        // the gold face dims to night
+        const settle = ease(clamp01(liftT / T_FREEZE));
+        disc.rotation.y = rotStart + (rotTarget - rotStart) * settle;
+        const dim = ease(clamp01(liftT / 0.9));
+        designMat.opacity = 1 - dim;
+        faceMat.emissive.copy(_faceEmissive).lerp(_faceDark, dim);
+        faceMat.emissiveIntensity = 0.78 - 0.6 * dim;
+        // the map ignites while everything else goes dark
+        mapMat.color.copy(_engrave).lerp(_glow, dim);
+
+        // at T_FREEZE: hand the engraved map to the lift group, seamlessly
+        if (!liftCaptured && liftT >= T_FREEZE) {
+          liftCaptured = true;
+          anchor.getWorldPosition(liftStartPos);
+          anchor.getWorldQuaternion(liftStartQuat);
+          liftGroup.position.copy(liftStartPos);
+          liftGroup.quaternion.copy(liftStartQuat);
+          liftGroup.scale.setScalar(group.scale.x);
+          liftMat.color.copy(mapMat.color);
+          liftMat.opacity = 1;
+          liftGroup.visible = true;
+          mapLines.visible = false;
+        }
+
+        if (liftCaptured) {
+          // T_FREEZE → T_LIFT_END: rise off the face, lay down into the
+          // galactic plane, grow to true scale (GC line → 8.2 kpc)
+          const k = ease(clamp01((liftT - T_FREEZE) / (T_LIFT_END - T_FREEZE)));
+          liftGroup.position.lerpVectors(liftStartPos, new THREE.Vector3(0, 0, 0), k);
+          _q.identity();
+          liftGroup.quaternion.slerpQuaternions(liftStartQuat, _q, k);
+          const s0 = group.scale.x;
+          liftGroup.scale.setScalar(s0 * Math.pow(LIFT_SCALE_END / s0, k)); // log-lerp
+          liftMat.color.copy(_glow);
+          // T_XF_START → T_XF_END: hand off to map3d's flat vector map
+          const xf = clamp01((liftT - T_XF_START) / (T_XF_END - T_XF_START));
+          liftMat.opacity = 1 - xf;
+          if (xf >= 1) {
+            lifting = false;
+            liftGroup.visible = false;
+          }
+        }
       }
+
       apply(t);
     },
 

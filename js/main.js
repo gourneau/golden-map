@@ -49,7 +49,9 @@ renderer.toneMappingExposure = 1.1;
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x050403);
 
-const camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.001, 500);
+// near plane 0.02 (not 0.001): a tighter depth range is what keeps coplanar
+// geometry from z-fighting/shimmering while the camera moves
+const camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.02, 500);
 camera.position.set(0, -4.2, 2.4);
 camera.up.set(0, 0, 1); // galactic plane is the XY plane; +Z = north galactic pole
 
