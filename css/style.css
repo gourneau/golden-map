@@ -1,0 +1,154 @@
+/* ============================================================
+   THE GOLDEN MAP — design system
+   Palette grounded in the artifact: gold-plated copper record,
+   black anodized aluminum cover, deep space. The one contrast
+   color is cold starlight — reserved for MODERN/corrected data,
+   so warm gold = as engraved (1969), pale blue-white = reality.
+   ============================================================ */
+
+@font-face {
+  font-family: 'Marcellus';
+  src: url('../vendor/fonts/marcellus-latest-latin-400-normal.woff2') format('woff2');
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'EB Garamond';
+  src: url('../vendor/fonts/eb-garamond-latest-latin-400-normal.woff2') format('woff2');
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'EB Garamond';
+  src: url('../vendor/fonts/eb-garamond-latest-latin-400-italic.woff2') format('woff2');
+  font-weight: 400; font-style: italic; font-display: swap;
+}
+@font-face {
+  font-family: 'EB Garamond';
+  src: url('../vendor/fonts/eb-garamond-latest-latin-600-normal.woff2') format('woff2');
+  font-weight: 600; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  src: url('../vendor/fonts/ibm-plex-mono-latest-latin-400-normal.woff2') format('woff2');
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'IBM Plex Mono';
+  src: url('../vendor/fonts/ibm-plex-mono-latest-latin-500-normal.woff2') format('woff2');
+  font-weight: 500; font-style: normal; font-display: swap;
+}
+
+:root {
+  /* color */
+  --void: #050403;          /* warm near-black: the anodized cover */
+  --void-lift: #0d0a06;     /* raised panel */
+  --gold: #c9a227;          /* engraved line */
+  --gold-bright: #f2d478;   /* beacon flash, headings */
+  --gold-dim: #6e5a1e;      /* ghost lines, hairlines */
+  --gold-faint: #3a2f14;    /* borders, rules */
+  --copper: #b87333;        /* record body accent */
+  --paper: #e8dcc0;         /* body text on black */
+  --paper-dim: #a89a7c;     /* secondary text */
+  --starlight: #a9c3d4;     /* MODERN / corrected data only */
+  --starlight-dim: #4a5c68;
+  --alarm: #c96a4a;         /* errors on the map, used sparingly */
+
+  /* type */
+  --display: 'Marcellus', 'Times New Roman', serif;
+  --body: 'EB Garamond', Georgia, serif;
+  --mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', monospace;
+
+  /* scale */
+  --step--1: 0.8rem;
+  --step-0: 1.05rem;
+  --step-1: 1.35rem;
+  --step-2: 1.9rem;
+  --step-3: 2.8rem;
+  --step-4: 4.2rem;
+
+  --rail-w: 300px;
+  --panel-w: 400px;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--void);
+  color: var(--paper);
+  font-family: var(--body);
+  font-size: 17px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+#stage {
+  position: fixed;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+#ui {
+  position: fixed;
+  inset: 0;
+  pointer-events: none; /* children opt back in */
+  z-index: 10;
+}
+#ui > * { pointer-events: auto; }
+
+.noscript {
+  position: fixed; inset: 40%;
+  text-align: center; color: var(--gold);
+  font-family: var(--display);
+}
+
+/* shared vocabulary for UI modules */
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+h1, h2, h3, .display {
+  font-family: var(--display);
+  font-weight: 400;
+  color: var(--gold-bright);
+  letter-spacing: 0.02em;
+}
+
+.mono { font-family: var(--mono); }
+.modern { color: var(--starlight); }     /* modern / corrected values */
+.engraved { color: var(--gold); }        /* as-engraved values */
+.flawed { color: var(--alarm); }
+
+.hairline { border: 0; border-top: 1px solid var(--gold-faint); }
+
+::selection { background: var(--gold-dim); color: var(--void); }
+
+a { color: var(--gold); text-decoration-color: var(--gold-faint); text-underline-offset: 3px; }
+a:hover { color: var(--gold-bright); }
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+:focus-visible {
+  outline: 1px solid var(--gold-bright);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001s !important;
+    transition-duration: 0.001s !important;
+  }
+}
