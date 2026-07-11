@@ -13,10 +13,12 @@ const ease = (k) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
 
 // Home viewpoints per act (kpc). The map unfolds toward +X (galactic center).
 const HOMES = {
-  record:  { pos: [0.9, -2.2, 0.5],  target: [0, 0, 0] },      // close portrait of the disc
+  // face-on portrait: 2.6 kpc along the disc's face normal (disc tilts -0.26 rad
+  // about X, so the face looks along ~(0, -0.966, 0.257)) — the engraved design reads whole
+  record:  { pos: [0, -3.05, 0.95],  target: [0, 0, 0.12] },
   map:     { pos: [2, -9, 5],        target: [2, 0, 0] },      // pull back as lines unfold
   pulsars: { pos: [4, -14, 9],       target: [3, 0, 0] },      // hero overview
-  verdict: { pos: [-0.6, -1.4, 9.5], target: [-0.6, 0.2, 0] }, // plan view: the map as drawn
+  verdict: { pos: [-1.6, -1.4, 9.2], target: [-1.6, 0.2, 0] }, // plan view; panel now hugs the left margin
   finders: { pos: [-6, -18, 7],      target: [3, 0, 0] },      // wide cinematic
 };
 
@@ -32,8 +34,9 @@ const ACT_MODE = {
 
 const CLICK_SLOP_PX = 6;      // pointer travel beyond this is a drag, not a click
 const HOVER_INTERVAL_MS = 80; // throttle for hover raycasts
-const ORBIT_IDLE_S = 4;       // seconds of stillness before Act I auto-orbit resumes
-const ORBIT_RATE = 0.045;     // rad/s, Act I drift
+const ORBIT_IDLE_S = 4;       // seconds of stillness before Act I idle sway resumes
+const SWAY_AMPL = 0.05;       // rad, Act I idle sway about the face-on portrait
+const SWAY_RATE = 0.3;        // rad/s of sway phase (~21 s per full sway cycle)
 const BREATH_AMPL = 0.0035;   // fraction of camera–target distance
 
 export function initTour(ctx) {
@@ -223,6 +226,8 @@ export function initTour(ctx) {
 
   // ---- per-frame ----------------------------------------------------------------
   const orbitArm = new THREE.Vector3();
+  let swayPhase = 0;   // sway oscillator
+  let swayPrev = 0;    // last applied sway angle, so each frame rotates by the delta
 
   function update(dt, t) {
     sinceUser += dt;
@@ -240,9 +245,13 @@ export function initTour(ctx) {
 
     camera.position.sub(breath); // undo last frame's breathing before real motion
 
-    // Act I: barely-there auto-orbit around the disc while idle.
+    // Act I: barely-there idle sway (±SWAY_AMPL rad) about the face-on portrait —
+    // a full orbit would swing the disc edge-on and lose the engraved design.
     if (ctx.state.act === 'record' && !ctx.state.selected && sinceUser > ORBIT_IDLE_S) {
-      orbitArm.copy(camera.position).sub(controls.target).applyAxisAngle(Z_UP, dt * ORBIT_RATE);
+      swayPhase += dt * SWAY_RATE;
+      const sway = SWAY_AMPL * Math.sin(swayPhase);
+      orbitArm.copy(camera.position).sub(controls.target).applyAxisAngle(Z_UP, sway - swayPrev);
+      swayPrev = sway;
       camera.position.copy(controls.target).add(orbitArm);
     }
 

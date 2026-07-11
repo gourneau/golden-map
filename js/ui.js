@@ -5,6 +5,7 @@
 // 1972; Russel/DSES; Siegel 2017; ATNF). See the Sources disclosure in Act V.
 
 import { extinctionMyr, displayBlinkSeconds } from './astro.js';
+import { explanationSvg } from './data/coverArt.js';
 
 export function initUI(ctx) {
   const { bus, pulsars, ACTS, state } = ctx;
@@ -88,7 +89,15 @@ export function initUI(ctx) {
       <div class="gm-demo-bits mono" aria-label="binary readout"></div>
       <p class="gm-demo-result mono">× 0.704024 ns = 0.8296830 s →
         <span class="engraved">PSR B1727-47</span></p>
-    </div>`;
+    </div>
+    <details class="gm-cover-fig">
+      <summary class="mono">The full cover, annotated — NASA/JPL</summary>
+      <div class="gm-cover-fig-body"></div>
+      <p class="gm-cover-fig-credit">Public domain, NASA/JPL — annotations outlined as vector paths.</p>
+    </details>`;
+  // the annotated cover diagram, recolored gold-on-dark (huge string — inject once)
+  explainer.querySelector('.gm-cover-fig-body').innerHTML =
+    explanationSvg().replace(/^[\s\S]*?(?=<svg)/, ''); // strip XML prolog for innerHTML
   const demoBox = explainer.querySelector('.gm-demo');
   const demoTicks = explainer.querySelector('.gm-demo-ticks');
   const demoBits = explainer.querySelector('.gm-demo-bits');
@@ -116,7 +125,7 @@ export function initUI(ctx) {
   // 4. PULSAR RAIL (Act III+)
   // ======================================================================
   const rail = el('section', 'gm-panel gm-sheet gm-rail');
-  rail.dataset.acts = 'pulsars verdict finders';
+  rail.dataset.acts = 'pulsars finders'; // hidden in Act IV so the verdict panel + map own the view
   rail.innerHTML = `
     <header class="gm-rail-head">
       <p class="eyebrow">The beacons · engraved order</p>
@@ -157,7 +166,7 @@ export function initUI(ctx) {
 
   // mobile bottom-sheet toggle for the rail
   const railToggle = el('button', 'gm-panel gm-rail-toggle mono', '☰&ensp;the fourteen');
-  railToggle.dataset.acts = 'pulsars verdict finders';
+  railToggle.dataset.acts = 'pulsars finders';
   railToggle.setAttribute('aria-expanded', 'false');
   railToggle.addEventListener('click', () => {
     const open = rail.classList.toggle('sheet-open');
@@ -349,6 +358,7 @@ export function initUI(ctx) {
         <li><a href="https://dses.science/wp-content/uploads/2020/04/18-Galactic-Navigation-using-the-Pioneer-Spacecraft-Pulsar-Map.pdf" target="_blank" rel="noopener">R. Russel — Galactic Navigation using the Pioneer Pulsar Map (DSES)</a></li>
         <li><a href="https://www.forbes.com/sites/startswithabang/2017/08/17/voyagers-cosmic-map-of-earths-location-is-hopelessly-wrong/" target="_blank" rel="noopener">E. Siegel — “…Hopelessly Wrong,” Forbes (2017)</a></li>
         <li><a href="https://www.nationalgeographic.com/magazine/article/nasa-sent-a-map-to-space-to-help-aliens-find-earth-now-it-needs-an-update" target="_blank" rel="noopener">National Geographic — S. Ransom on updating the map</a></li>
+        <li>Cover artwork: NASA/JPL (public domain); vectorization VectorVoyager, Wikimedia Commons.</li>
       </ul>
     </details>`;
 

@@ -125,22 +125,28 @@
 #ui .gm-title { pointer-events: none; }
 .gm-title {
   left: 0; right: 0;
-  bottom: 10vh;
+  bottom: 4vh;
   z-index: 15;
   text-align: center;
-  padding: 0 20px;
+  padding: 1.6rem 20px 0.4rem;
   --gm-in: translateY(22px);
+  /* subtle wash behind the text only — keeps it legible over the bright gold
+     disc without hiding the engraved design */
+  background: radial-gradient(ellipse 42% 115% at 50% 64%,
+    color-mix(in srgb, var(--void) 72%, transparent) 0%,
+    color-mix(in srgb, var(--void) 44%, transparent) 46%,
+    transparent 72%);
 }
 .gm-title h1 {
-  font-size: clamp(2.7rem, 7.5vw, var(--step-4));
-  margin: 0.3em 0 0.25em;
+  font-size: clamp(2.3rem, 5.4vw, 3.2rem);
+  margin: 0.18em 0 0.16em;
   text-shadow: 0 0 44px color-mix(in srgb, var(--gold) 34%, transparent);
 }
 .gm-hook {
-  max-width: 32em;
-  margin: 0 auto 1.7em;
-  font-size: var(--step-1);
-  line-height: 1.5;
+  max-width: 44em;
+  margin: 0 auto 1em;
+  font-size: var(--step-0);
+  line-height: 1.45;
   color: var(--paper);
 }
 .gm-begin {
@@ -230,6 +236,42 @@
   transition: opacity 0.8s var(--ease), transform 0.8s var(--ease);
 }
 .gm-demo.is-done .gm-demo-result { opacity: 1; transform: none; }
+
+/* the annotated cover diagram (Act II disclosure) */
+.gm-cover-fig {
+  margin-top: 1.2em;
+  padding-top: 0.95em;
+  border-top: 1px solid var(--gold-faint);
+}
+.gm-cover-fig summary {
+  cursor: pointer;
+  list-style: none;
+  font-size: 0.58rem;
+  font-weight: 500;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.gm-cover-fig summary::-webkit-details-marker { display: none; }
+.gm-cover-fig summary::after { content: ' +'; color: var(--gold-dim); }
+.gm-cover-fig[open] summary::after { content: ' −'; }
+.gm-cover-fig-body {
+  margin-top: 0.7em;
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid var(--gold-faint);
+  scrollbar-width: thin;
+  scrollbar-color: var(--gold-faint) transparent;
+}
+.gm-cover-fig-body::-webkit-scrollbar { width: 4px; }
+.gm-cover-fig-body::-webkit-scrollbar-thumb { background: var(--gold-faint); }
+.gm-cover-fig-body svg { display: block; width: 100%; height: auto; }
+.gm-cover-fig-credit {
+  margin-top: 0.45em;
+  font-size: 0.72rem;
+  font-style: italic;
+  color: var(--paper-dim);
+}
 
 /* ======================================================================
    4. PULSAR RAIL
@@ -377,7 +419,8 @@
    6. VERDICT PANEL
    ====================================================================== */
 .gm-verdict {
-  left: calc(var(--rail-w) + 40px);
+  /* the rail is hidden in Act IV, so the panel takes the left margin (same rhythm as .gm-rail) */
+  left: 22px;
   top: 96px;
   width: min(430px, calc(100vw - 44px));
   max-height: calc(100vh - 200px);
@@ -570,8 +613,8 @@
 @media (max-width: 900px) {
   .gm-act-t { display: none; }
   .gm-act { padding: 0.5em 0.75em; }
-  .gm-title { bottom: 8vh; }
-  .gm-hook { font-size: var(--step-0); }
+  .gm-title { bottom: 5vh; }
+  .gm-hook { font-size: var(--step--1); }
 
   .gm-left,
   .gm-verdict {
