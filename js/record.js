@@ -6,7 +6,7 @@
 // off 1:1 to map3d's flat map, which then unfolds into true 3D.
 // This module also owns the scene lighting (everything else is mostly unlit).
 
-import { plaqueSvg } from './data/coverArt.js';
+import { loadText, plaqueSvg } from './assets.js';
 import { SVGLoader } from 'three/addons/loaders/SVGLoader.js';
 
 // ---- measured artwork geometry (SVG user units, viewBox "106 261 505 500") --
@@ -139,12 +139,14 @@ export function createRecord(ctx) {
   // Parse once; classify every polyline as map (lifts off) or not.
   const inExclude = (x, y) => EXCLUDE.some((b) => x >= b.x0 && x <= b.x1 && y >= b.y0 && y <= b.y1);
 
-  const designPts = [];  // face-local line-segment pairs, everything but the map
-  const mapPts = [];     // face-local pairs, the pulsar map as engraved
-  const liftPts = [];    // same map geometry, centered on the burst point
+  // The artwork arrives as a plain static file; the three line meshes are
+  // created empty and filled the moment it loads (same-origin, ~instant).
+  function buildFromRaw(raw) {
+    const designPts = [];  // face-local line-segment pairs, everything but the map
+    const mapPts = [];     // face-local pairs, the pulsar map as engraved
+    const liftPts = [];    // same map geometry, centered on the burst point
 
-  {
-    const parsed = new SVGLoader().parse(plaqueSvg({ stroke: '#ffffff', disk: 'none' }));
+    const parsed = new SVGLoader().parse(plaqueSvg(raw, { stroke: '#ffffff', disk: 'none' }));
 
     // First pass: collect every polyline with its stats.
     const polys = [];
@@ -210,11 +212,19 @@ export function createRecord(ctx) {
         }
       }
     }
+
+    const fill = (mesh, arr) => {
+      mesh.geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(arr), 3));
+      mesh.geometry.computeBoundingSphere();
+    };
+    fill(designLines, designPts);
+    fill(mapLines, mapPts);
+    fill(liftLines, liftPts);
   }
 
-  const segGeo = (arr) => {
+  const segGeo = () => {
     const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(arr), 3));
+    g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(0), 3));
     return g;
   };
   const designMat = new THREE.LineBasicMaterial({ color: ENGRAVE, transparent: true, opacity: 1 });
@@ -229,8 +239,8 @@ export function createRecord(ctx) {
   const designGroup = new THREE.Group();
   designGroup.rotation.x = Math.PI / 2;
   designGroup.position.y = -0.013;
-  const designLines = new THREE.LineSegments(segGeo(designPts), designMat);
-  const mapLines = new THREE.LineSegments(segGeo(mapPts), mapMat);
+  const designLines = new THREE.LineSegments(segGeo(), designMat);
+  const mapLines = new THREE.LineSegments(segGeo(), mapMat);
   designLines.renderOrder = 2;
   mapLines.renderOrder = 2;
   designGroup.add(designLines, mapLines);
@@ -245,12 +255,17 @@ export function createRecord(ctx) {
   // the lift group lives in the SCENE (not the record group), so it stays put
   // while the record recedes underneath it
   const liftGroup = new THREE.Group();
-  const liftLines = new THREE.LineSegments(segGeo(liftPts), liftMat);
+  const liftLines = new THREE.LineSegments(segGeo(), liftMat);
   liftLines.frustumCulled = false;
   liftLines.renderOrder = 3;
   liftGroup.add(liftLines);
   liftGroup.visible = false;
   ctx.scene.add(liftGroup);
+
+  // fetch the artwork (a plain static file) and fill the meshes
+  loadText('vendor/art/voyager_golden_plaque.svg')
+    .then(buildFromRaw)
+    .catch(() => {}); // without it, the record is a clean gold disc — never fatal
 
   // scale that makes the engraved GC line span the real Sun→GC distance
   const LIFT_SCALE_END = (ctx.GC ? ctx.GC.length() : 8.2) / (GC_LEN_SVG / DISK_R);
@@ -458,7 +473,11 @@ export function createRecord(ctx) {
         liftGroup.quaternion.identity();
         liftGroup.scale.setScalar(LIFT_SCALE_END);
         liftMat.color.copy(_glow);
-        liftMat.opacity = 0.45 * overlayFade;
+        // fade the overlay away when the camera dives to the origin (the
+        // Earth visit) — up close its kpc-scale strokes are just noise
+        const camDist = ctx.camera.position.length();
+        const closeFade = Math.min(1, Math.max(0, (camDist - 0.15) / 0.5));
+        liftMat.opacity = 0.45 * overlayFade * closeFade;
         liftGroup.visible = liftMat.opacity > 0.004;
       }
 

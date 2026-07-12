@@ -15,7 +15,7 @@ const ease = (k) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
 const HOMES = {
   // face-on portrait: 2.6 kpc along the disc's face normal (disc tilts -0.26 rad
   // about X, so the face looks along ~(0, -0.966, 0.257)) — the engraved design reads whole
-  record:  { pos: [0, -3.05, 0.95],  target: [0, 0, 0.12] },
+  record:  { pos: [0, -3.55, 1.1],   target: [0, 0, 0.18] }, // whole disc clear of the title card
   map:     { pos: [2, -9, 5],        target: [2, 0, 0] },      // pull back as lines unfold
   // Act II with the explainer panel expanded: shift the scene right, clear of it
   mapOpen: { pos: [0.6, -9, 5],      target: [0.6, 0, 0] },
@@ -192,11 +192,23 @@ export function initTour(ctx) {
     flyTo(new THREE.Vector3(0.055, -0.1, 0.045), new THREE.Vector3(0.018, 0, 0), 2.6);
   }
 
+  // The Act I easter egg: frame the drifting probe. Read its live world
+  // position (voyager.js freezes the orbit while selected, so this holds).
+  function frameVoyager() {
+    const obj = ctx.modules?.voyager?.object3d;
+    if (!obj) { goHome(1.6); return; }
+    const p = obj.getWorldPosition(new THREE.Vector3());
+    // ~1.7 units out, offset toward the Act I camera side (-y), slightly above
+    const off = new THREE.Vector3(0.25, -1.0, 0.35).normalize().multiplyScalar(1.7);
+    flyTo(p.clone().add(off), p, 2.0);
+  }
+
   bus.addEventListener('select', (e) => {
     const target = e.detail.target;
     if (target == null) goHome(1.6);
     else if (target === 'gc') frameGC();
     else if (target === 'earth') frameEarth();
+    else if (target === 'voyager') frameVoyager();
     else framePulsar(target);
   });
 
@@ -213,8 +225,9 @@ export function initTour(ctx) {
 
   bus.addEventListener('mapmode', () => {
     // A selected pulsar's endpoint moves with the mode — keep it framed.
+    // ('voyager' is not a pulsar and has no engraved/modern endpoints.)
     const sel = ctx.state.selected;
-    if (sel && sel !== 'gc') framePulsar(sel);
+    if (sel && sel !== 'gc' && sel !== 'voyager') framePulsar(sel);
   });
 
   // ---- picking ------------------------------------------------------------

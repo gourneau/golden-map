@@ -6,21 +6,15 @@ the question: *if someone reconstructed this map, would it actually point home?*
 
 ## Run it
 
-`index.html` is fully self-contained — Three.js, styles, and fonts are all
-inlined. Double-click it, serve it, or email it; no network needed.
-
-For development, the readable source lives in `js/`, `css/`, and `vendor/`,
-entered through `dev.html`:
+A plain static site — no build step, no dependencies. Serve the folder from
+anywhere (GitHub Pages hosts it as-is):
 
 ```sh
-python3 -m http.server 8123   # then open http://localhost:8123/dev.html
+python3 -m http.server 8123   # then open http://localhost:8123
 ```
 
-Rebuild the single file after changing the source:
-
-```sh
-node build.mjs
-```
+Source lives in `js/` and `css/`; third-party code and public-domain assets
+(Three.js, fonts, NASA artwork/model/texture, star catalog) in `vendor/`.
 
 ## What it shows
 
@@ -48,3 +42,10 @@ Catalogue; R. Russel's DSES reconstruction; NASA/JPL Voyager documentation.
 Coordinate conventions, the binary encoding, and the epoch math live in
 `js/astro.js`; the dataset in `js/data/pulsars.js`. Module architecture is
 documented in `CONTRACTS.md`.
+
+Background stars are the real sky: every star brighter than magnitude 4.5, at
+its true position, from the [HYG database](https://github.com/astronexus/HYG-Database)
+v3 (David Nash, astronexus.com, CC BY-SA 4.0). The spacecraft is NASA's
+[Voyager 3D model](https://science.nasa.gov/resource/voyager-3d-model/) (public
+domain, mesh-optimized); the Earth texture is NASA's cloud-free
+[Blue Marble](https://visibleearth.nasa.gov/images/57752) (public domain).

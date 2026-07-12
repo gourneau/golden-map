@@ -5,7 +5,7 @@
 // 1972; Russel/DSES; Siegel 2017; ATNF). See the Sources disclosure in Act V.
 
 import { extinctionMyr, displayBlinkSeconds } from './astro.js';
-import { explanationSvg } from './data/coverArt.js';
+import { loadText, explanationSvg } from './assets.js';
 
 export function initUI(ctx) {
   const { bus, pulsars, ACTS, state } = ctx;
@@ -73,16 +73,21 @@ export function initUI(ctx) {
   const explainer = el('section', 'gm-panel gm-sheet gm-left gm-explainer');
   explainer.dataset.acts = 'map';
   explainer.innerHTML = `
-    <p class="eyebrow">Act II · How to read it</p>
-    <h2>Fourteen clocks, one ruler</h2>
-    <p class="gm-body">A pulsar is the burnt-out core of an exploded star.
-      It spins, sweeping a radio beam past us like a lighthouse. Each one
-      flashes at its own perfectly steady rate. No two are alike — so a
-      flash rate works like a name tag. This map names fourteen of them.</p>
-    <p class="gm-body">To write those rates down, you need a unit of time an
-      alien would also know. The map uses hydrogen — the most common atom in
-      the universe. Hydrogen ticks at one exact rate, everywhere, for
-      everyone. That tick is the map’s ruler.</p>
+    <p class="eyebrow">Act II · How the map works</p>
+    <h2>How do you draw a map an alien could read?</h2>
+    <p class="gm-body">Someday, someone might find this spacecraft — maybe
+      millions of years from now, maybe someone not from Earth. NASA wanted
+      them to know where it came from. But how? No shared language. No shared
+      numbers. Not even a shared idea of a “year.”</p>
+    <p class="gm-body">The answer: use landmarks the whole galaxy can see.
+      A pulsar is the burnt-out core of an exploded star. It spins, sweeping
+      a radio beam past us like a lighthouse — flashing at its own perfectly
+      steady rate. No two flash alike. So a flash rate works like a name tag,
+      anywhere in the galaxy. This map points to fourteen of them.</p>
+    <p class="gm-body">And for a unit of time, the map uses hydrogen — the
+      most common atom in the universe. Hydrogen ticks at one exact rate,
+      everywhere, for everyone. Any chemist in the galaxy could measure it.
+      That tick is the map’s ruler.</p>
     <p class="gm-fine">The tick is drawn on the cover as two hydrogen atoms
       and the digit 1. Its value: <span class="mono gm-nowrap">7.04024 × 10⁻¹⁰
       seconds</span>. Every number on the record counts in this unit.</p>
@@ -108,9 +113,12 @@ export function initUI(ctx) {
       <div class="gm-cover-fig-body"></div>
       <p class="gm-cover-fig-credit">Public domain, NASA/JPL — annotations outlined as vector paths.</p>
     </details>`;
-  // the annotated cover diagram, recolored gold-on-dark (huge string — inject once)
-  explainer.querySelector('.gm-cover-fig-body').innerHTML =
-    explanationSvg().replace(/^[\s\S]*?(?=<svg)/, ''); // strip XML prolog for innerHTML
+  // the annotated cover diagram, recolored gold-on-dark — a plain static file,
+  // fetched when needed and injected once
+  loadText('vendor/art/voyager_cover_explanation.svg').then((raw) => {
+    explainer.querySelector('.gm-cover-fig-body').innerHTML =
+      explanationSvg(raw).replace(/^[\s\S]*?(?=<svg)/, ''); // strip XML prolog for innerHTML
+  }).catch(() => {});
   const demoBox = explainer.querySelector('.gm-demo');
   const demoTicks = explainer.querySelector('.gm-demo-ticks');
   const demoBits = explainer.querySelector('.gm-demo-bits');
@@ -264,6 +272,26 @@ export function initUI(ctx) {
 
   function renderDetail(target) {
     if (!target) return;
+    if (target === 'voyager') {
+      detailBody.innerHTML = `
+        <p class="eyebrow">You found it</p>
+        <h2 class="gm-detail-name">Voyager</h2>
+        <p class="gm-detail-sub mono">the messenger itself · NASA 3D model</p>
+        <p class="gm-body">Two of these were launched in 1977 — Voyager 1 and
+          Voyager 2. Each carries a golden record bolted to its side, with
+          this map engraved on the cover. They are the farthest human-made
+          objects in existence, and they are still going.</p>
+        ${kv('launched', '1977 — and still flying')}
+        ${kv('distance today', 'over 15 billion miles')}
+        ${kv('power left', 'science operations into the 2030s')}
+        <p class="gm-detail-note">The big dish points back at Earth. Below it
+          sits the record. Long after the transmitters fall silent, the map
+          rides on.</p>
+        <p class="gm-fine">Spacecraft model: NASA (public domain), from NASA’s
+          3D resources — simplified for the web. Voyager 1 is ~168 AU out,
+          the farthest spacecraft from Earth.</p>`;
+      return;
+    }
     if (target === 'earth') {
       detailBody.innerHTML = `
         <p class="eyebrow">You are here</p>
@@ -476,6 +504,17 @@ export function initUI(ctx) {
       <p class="gm-drake-tie">The last term, <em>L</em>, is the question this
         map asks back — how long does anyone stay findable?</p>
     </details>
+    <details class="gm-listen">
+      <summary class="mono">♫ Hear the record</summary>
+      <p class="gm-body">NASA streams parts of the real record for free — the
+        greetings in 55 languages and the “Sounds of Earth.” (The music tracks
+        are still under copyright, so NASA links those separately.)</p>
+      <ul>
+        <li><a href="https://science.nasa.gov/mission/voyager/golden-record-contents/sounds/" target="_blank" rel="noopener">NASA — Golden Record sounds &amp; contents</a></li>
+        <li><a href="https://soundcloud.com/nasa/sets/golden-record-sounds-of" target="_blank" rel="noopener">NASA on SoundCloud — Sounds of Earth (playlist)</a></li>
+        <li><a href="https://soundcloud.com/nasa/sets/golden-record-greetings-to-the" target="_blank" rel="noopener">NASA on SoundCloud — Greetings to the Universe (playlist)</a></li>
+      </ul>
+    </details>
     <details class="gm-sources">
       <summary class="mono">Sources</summary>
       <ul>
@@ -487,6 +526,8 @@ export function initUI(ctx) {
         <li><a href="https://www.forbes.com/sites/startswithabang/2017/08/17/voyagers-cosmic-map-of-earths-location-is-hopelessly-wrong/" target="_blank" rel="noopener">E. Siegel — “…Hopelessly Wrong,” Forbes (2017)</a></li>
         <li><a href="https://www.nationalgeographic.com/magazine/article/nasa-sent-a-map-to-space-to-help-aliens-find-earth-now-it-needs-an-update" target="_blank" rel="noopener">National Geographic — S. Ransom on updating the map</a></li>
         <li>Cover artwork: NASA/JPL (public domain); vectorization VectorVoyager, Wikimedia Commons.</li>
+        <li>Spacecraft model: <a href="https://science.nasa.gov/resource/voyager-3d-model/" target="_blank" rel="noopener">NASA Voyager 3D model</a> (public domain), simplified for the web. Earth texture: <a href="https://visibleearth.nasa.gov/images/57752" target="_blank" rel="noopener">NASA Blue Marble</a> (public domain).</li>
+        <li>Background stars: all stars brighter than magnitude 4.5 (~925), placed at their true positions — from the <a href="https://github.com/astronexus/HYG-Database" target="_blank" rel="noopener">HYG star database</a> v3 by David Nash (astronexus.com), a merger of the Hipparcos, Yale Bright Star, and Gliese catalogs, licensed <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>.</li>
       </ul>
     </details>`;
 
@@ -529,7 +570,9 @@ export function initUI(ctx) {
     '<span aria-hidden="true">⌖</span>&ensp;you are here');
   earthChip.dataset.acts = 'map pulsars verdict finders';
   earthChip.title = 'Zoom in to Earth, at the center of the map';
-  earthChip.addEventListener('click', () => ctx.select('earth'));
+  // toggles: a second click returns you to where the act's view was
+  earthChip.addEventListener('click', () =>
+    ctx.select(state.selected === 'earth' ? null : 'earth'));
   bus.addEventListener('select', (e) => {
     earthChip.classList.toggle('is-active', e.detail.target === 'earth');
   });
@@ -547,7 +590,9 @@ export function initUI(ctx) {
       ? 'Galactic Center'
       : pulsar === 'earth'
         ? 'Earth — you are here'
-        : `${pulsar.bname}${pulsar.alias ? ` · ${pulsar.alias}` : ''} · ${sig4(pulsar.periodEncoded)} s`;
+        : pulsar === 'voyager'
+          ? 'Voyager — the messenger itself'
+          : `${pulsar.bname}${pulsar.alias ? ` · ${pulsar.alias}` : ''} · ${sig4(pulsar.periodEncoded)} s`;
     tip.classList.add('is-on');
     // offset up-right of the cursor, clamped to the viewport
     const r = tip.getBoundingClientRect();
@@ -566,7 +611,9 @@ export function initUI(ctx) {
   const DETAIL_ACTS = new Set(['pulsars', 'verdict', 'finders']);
 
   function paintDetailVisibility() {
-    detail.classList.toggle('is-on', !!state.selected && DETAIL_ACTS.has(state.act));
+    // the Voyager easter egg lives in Act I — its card may show there too
+    detail.classList.toggle('is-on', !!state.selected &&
+      (DETAIL_ACTS.has(state.act) || state.selected === 'voyager'));
   }
   // Act V: the finders panel and the detail panel share the right column —
   // yield to the detail panel while something is selected, restore on deselect

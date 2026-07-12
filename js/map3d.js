@@ -83,46 +83,13 @@ export function createMap(ctx) {
   sunHalo.renderOrder = 3;
   group.add(sunCore, sunHalo);
 
-  // ---- Earth: a small stylized globe beside the Sun, only visible up close ---
+  // ---- Earth: a small globe beside the Sun, only visible up close -----------
   // (wildly not to scale — at true scale it would be a billionth of a pixel)
-  function drawEarthTexture() {
-    const cv = document.createElement('canvas');
-    cv.width = 256; cv.height = 128;
-    const c = cv.getContext('2d');
-    const g = c.createLinearGradient(0, 0, 0, 128);
-    g.addColorStop(0, '#1d3d5c');
-    g.addColorStop(0.5, '#1f4f78');
-    g.addColorStop(1, '#16324d');
-    c.fillStyle = g;
-    c.fillRect(0, 0, 256, 128);
-    // stylized continents: soft green-brown blobs
-    c.fillStyle = 'rgba(94, 118, 62, 0.95)';
-    const blob = (x, y, r, squish = 0.62) => {
-      c.beginPath();
-      c.ellipse(x, y, r, r * squish, 0, 0, TAU);
-      c.fill();
-    };
-    blob(52, 46, 20); blob(66, 70, 13); blob(60, 92, 9);       // americas-ish
-    blob(126, 44, 16); blob(140, 72, 18); blob(122, 66, 10);   // africa/europe-ish
-    blob(180, 52, 22); blob(206, 84, 9); blob(226, 96, 7);     // asia/oceania-ish
-    c.fillStyle = 'rgba(112, 132, 84, 0.5)';
-    blob(90, 58, 8); blob(160, 90, 7); blob(240, 40, 9);
-    // polar caps
-    c.fillStyle = 'rgba(235, 242, 246, 0.9)';
-    c.fillRect(0, 0, 256, 7);
-    c.fillRect(0, 121, 256, 7);
-    // cloud wisps
-    c.fillStyle = 'rgba(255, 255, 255, 0.16)';
-    for (let i = 0; i < 12; i++) {
-      c.beginPath();
-      c.ellipse((i * 47 + 20) % 256, 18 + ((i * 31) % 92), 22, 4, 0, 0, TAU);
-      c.fill();
-    }
-    return cv;
-  }
+  // Texture: NASA Blue Marble, cloud-free (public domain), embedded.
   const EARTH_POS = new THREE.Vector3(0.018, 0, 0);
-  const earthTex = new THREE.CanvasTexture(drawEarthTexture());
+  const earthTex = new THREE.TextureLoader().load('vendor/art/earth_1024.jpg');
   earthTex.colorSpace = THREE.SRGBColorSpace;
+  earthTex.anisotropy = ctx.renderer.capabilities.getMaxAnisotropy();
   const earth = new THREE.Mesh(
     new THREE.SphereGeometry(0.008, 32, 24),
     new THREE.MeshBasicMaterial({ map: earthTex, transparent: true, opacity: 0 }),
@@ -493,8 +460,11 @@ export function createMap(ctx) {
     group.visible = actFade > 0.004;
     if (!group.visible) {
       // the raycaster tests pickables directly, ignoring hidden ancestors —
-      // so a hidden map must explicitly retract its hit targets
-      for (const o of pickables) o.visible = false;
+      // so a hidden map must explicitly retract its hit targets (but only its
+      // OWN: voyager.js parks its easter-egg hit in this array too)
+      for (const o of pickables) {
+        if (o.userData.pulsar !== 'voyager') o.visible = false;
+      }
       return;
     }
 
@@ -509,6 +479,12 @@ export function createMap(ctx) {
     const myr = state.timeMyr;
     const selP = selected && selected !== 'gc' ? selected : null;
     const kSel = prefersReducedMotion ? 1 : Math.min(1, dt * 6);
+
+    // deep-zoom cleanup: as the camera closes on the origin (the Earth visit),
+    // the beacon sprites/embers/links stop meaning anything — just colored
+    // dots — so fade them out and leave the clean radial lines + Earth + Sun
+    const camDist = camera.position.length();
+    const closeFade = Math.min(1, Math.max(0, (camDist - 0.15) / 0.5));
 
     for (const it of items) {
       // selection emphasis
@@ -532,7 +508,7 @@ export function createMap(ctx) {
       // in the overlay, pull the engraved set back so modern reads against it
       const eOp = Math.min(1, 1.0 * engFade * actFade * it.selF * lineLife) * (1 - 0.3 * arcFade);
       const mOp = Math.min(1, 1.0 * modFade * actFade * it.selF * lineLife);
-      const lkOp = 0.85 * arcFade * engFade * modFade * actFade * it.selF * lineLife;
+      const lkOp = 0.85 * arcFade * engFade * modFade * actFade * it.selF * lineLife * closeFade;
       it.link.material.opacity = lkOp;
       it.link.visible = lkOp > 0.005;
       it.eLine.material.opacity = eOp;
@@ -551,17 +527,17 @@ export function createMap(ctx) {
       const scl = (0.085 + 0.11 * pulse) * boost;
 
       it.eBeacon.material.color.lerpColors(GOLD_BEACON, EMBER, deadK);
-      it.eBeacon.material.opacity = Math.min(1, inten * engFade * actFade * it.selF);
+      it.eBeacon.material.opacity = Math.min(1, inten * engFade * actFade * it.selF) * closeFade;
       it.eBeacon.scale.set(scl, scl, 1);
       it.eBeacon.visible = it.eBeacon.material.opacity > 0.004;
 
       it.mBeacon.material.color.lerpColors(STAR_BEACON, EMBER, deadK);
-      it.mBeacon.material.opacity = Math.min(1, inten * modFade * actFade * it.selF);
+      it.mBeacon.material.opacity = Math.min(1, inten * modFade * actFade * it.selF) * closeFade;
       it.mBeacon.scale.set(scl, scl, 1);
       it.mBeacon.visible = it.mBeacon.material.opacity > 0.004;
 
       // dead: a tiny dark red-brown remnant
-      it.remnant.material.opacity = (deadK >= 1 ? 0.8 : deadK * 0.25) * actFade;
+      it.remnant.material.opacity = (deadK >= 1 ? 0.8 : deadK * 0.25) * actFade * closeFade;
       it.remnant.visible = it.remnant.material.opacity > 0.004;
 
       // label, fading with distance

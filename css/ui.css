@@ -753,8 +753,8 @@
 }
 .gm-drake-tie em { color: var(--gold-bright); font-style: normal; }
 
-.gm-sources { margin-top: 1em; border-top: 1px solid var(--gold-faint); padding-top: 0.7em; }
-.gm-sources summary {
+.gm-sources, .gm-listen { margin-top: 1em; border-top: 1px solid var(--gold-faint); padding-top: 0.7em; }
+.gm-sources summary, .gm-listen summary {
   cursor: pointer;
   list-style: none;
   font-size: 0.58rem;
@@ -763,11 +763,13 @@
   text-transform: uppercase;
   color: var(--gold);
 }
-.gm-sources summary::-webkit-details-marker { display: none; }
-.gm-sources summary::after { content: ' +'; color: var(--gold-dim); }
-.gm-sources[open] summary::after { content: ' −'; }
-.gm-sources ul { list-style: none; margin-top: 0.6em; display: grid; gap: 0.3em; }
-.gm-sources li { font-size: 0.82rem; }
+.gm-sources summary::-webkit-details-marker,
+.gm-listen summary::-webkit-details-marker { display: none; }
+.gm-sources summary::after, .gm-listen summary::after { content: ' +'; color: var(--gold-dim); }
+.gm-sources[open] summary::after, .gm-listen[open] summary::after { content: ' −'; }
+.gm-sources ul, .gm-listen ul { list-style: none; margin-top: 0.6em; display: grid; gap: 0.3em; }
+.gm-sources li, .gm-listen li { font-size: 0.82rem; }
+.gm-listen .gm-body { margin-top: 0.6em; font-size: 0.9rem; color: var(--paper-dim); }
 
 /* ======================================================================
    9. CORNER MARK
