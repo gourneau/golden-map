@@ -15,6 +15,8 @@ execSync(
     '--alias:three=./vendor/three.module.js',
     `'--alias:three/addons/controls/OrbitControls.js=./vendor/OrbitControls.js'`,
     `'--alias:three/addons/loaders/SVGLoader.js=./vendor/SVGLoader.js'`,
+    `'--alias:three/addons/loaders/GLTFLoader.js=./vendor/loaders/GLTFLoader.js'`,
+    `'--alias:three/addons/libs/meshopt_decoder.module.js=./vendor/meshopt_decoder.module.js'`,
     `--outfile=${bundle}`,
   ].join(' '),
   { stdio: 'inherit', cwd: new URL('.', import.meta.url).pathname },

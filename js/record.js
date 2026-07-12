@@ -276,6 +276,9 @@ export function createRecord(ctx) {
   let rotTarget = 0;
   let spin = true;
   let act = ctx.state.act;               // current act, tracked for the overlay
+  let restoring = false;                 // Act I re-light in progress
+  let restoreT = 0;
+  let restoreFrom = null;
   let artifact = !!ctx.state.artifact;   // persistent-overlay toggle
   let overlayFade = 0;                   // overlay opacity ease, 0..1
   const OVERLAY_ACTS = ['map', 'pulsars', 'verdict'];
@@ -304,6 +307,30 @@ export function createRecord(ctx) {
     faceMat.emissiveIntensity = 0.78;
   }
 
+  // Returning to Act I: instead of snapping, the record re-lights over ~1.2 s
+  // (the reverse of the ignite — face brightens, the design fades back in,
+  // the map lines cool from glow to engraving) while map3d fades itself out.
+  function beginRestore() {
+    lifting = false;
+    liftCaptured = false;
+    liftT = 0;
+    overlayFade = 0;
+    liftGroup.visible = false;
+    liftMat.opacity = 0;
+    mapLines.visible = true;
+    spin = true;
+    if (prefersReducedMotion) { resetToEngraved(); return; }
+    restoring = true;
+    restoreT = 0;
+    // capture where the dimming left things so the reverse starts seamlessly
+    restoreFrom = {
+      design: designMat.opacity,
+      emissive: faceMat.emissive.clone(),
+      intensity: faceMat.emissiveIntensity,
+      mapColor: mapMat.color.clone(),
+    };
+  }
+
   bus.addEventListener('artifact', (e) => { artifact = !!e.detail.show; });
 
   bus.addEventListener('act', (e) => {
@@ -312,8 +339,9 @@ export function createRecord(ctx) {
     target = act === 'record' ? 1 : 0;
     receding = act === 'map';
     if (act === 'record') {
-      resetToEngraved();
+      beginRestore();
     } else if (act === 'map' && wasRecord && !prefersReducedMotion) {
+      restoring = false;
       lifting = true;
       liftT = 0;
       liftCaptured = false;
@@ -347,6 +375,18 @@ export function createRecord(ctx) {
       const rate = prefersReducedMotion ? 14 : (target > fade ? 2.4 : receding ? 1.6 : 2.8);
       fade += (target - fade) * Math.min(1, dt * rate);
       if (Math.abs(target - fade) < 0.003) fade = target;
+
+      if (restoring) {
+        // the reverse of the ignite: re-light over 1.2 s from wherever the
+        // dimming left off
+        restoreT += dt;
+        const k = ease(clamp01(restoreT / 1.2));
+        designMat.opacity = restoreFrom.design + (1 - restoreFrom.design) * k;
+        faceMat.emissive.copy(restoreFrom.emissive).lerp(_faceEmissive, k);
+        faceMat.emissiveIntensity = restoreFrom.intensity + (0.78 - restoreFrom.intensity) * k;
+        mapMat.color.copy(restoreFrom.mapColor).lerp(_engrave, k);
+        if (k >= 1) restoring = false;
+      }
 
       if (lifting) {
         liftT += dt;

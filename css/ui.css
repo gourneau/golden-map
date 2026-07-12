@@ -151,6 +151,18 @@
   background: var(--gold);
   transition: width 0.9s var(--ease);
 }
+/* current-act title for compact nav — shown only ≤560px, below the hairline
+   so the progress bar never shifts */
+.gm-nav-title {
+  display: none;
+  pointer-events: none;
+  margin-top: 7px;
+  font-family: var(--display);
+  font-size: 0.74rem;
+  letter-spacing: 0.14em;
+  text-align: center;
+  color: var(--gold-bright);
+}
 
 /* ======================================================================
    2. TITLE CARD
@@ -379,6 +391,7 @@
 .gm-rail-note { font-size: 0.74rem; font-style: italic; color: var(--paper-dim); }
 .gm-pulse-ctl {
   display: flex;
+  flex-wrap: wrap; /* three buttons + label must fit a 390px drawer head */
   align-items: baseline;
   gap: 0.35em;
   margin-top: 0.55rem;
@@ -590,14 +603,16 @@
    7. FINDERS PANEL + 8. SOURCES
    ====================================================================== */
 .gm-finders {
-  left: 0; right: 0;
-  bottom: 22px;
-  margin: 0 auto;
-  width: min(660px, calc(100vw - 32px));
-  max-height: calc(100vh - 120px);
+  /* right column, same rhythm as .gm-detail — never covers the map.
+     While a beacon is selected in Act V the detail panel takes this slot
+     and ui.js drops the panel's is-on (restored on deselect). */
+  right: 22px;
+  top: 96px;
+  width: min(var(--panel-w), calc(100vw - 44px));
+  max-height: calc(100vh - 200px);
   overflow-y: auto;
   z-index: 25;
-  --gm-in: translateY(18px);
+  --gm-in: translateX(18px);
 }
 .gm-finders-intro {
   margin-top: 0.55em;
@@ -608,8 +623,9 @@
 .gm-finders-intro em { color: var(--gold-bright); font-style: normal; }
 .gm-time-row {
   display: flex;
+  flex-wrap: wrap; /* in the 400px column the beacons readout wraps under T+ */
   justify-content: space-between;
-  gap: 1em;
+  gap: 0.2em 1em;
   margin-top: 0.8em;
   font-size: 0.72rem;
   letter-spacing: 0.06em;
@@ -799,6 +815,8 @@
   border-color: var(--gold);
   background: color-mix(in srgb, var(--gold) 10%, transparent);
 }
+/* "you are here" sits just above the engraving chip */
+.gm-earth-chip { bottom: 58px; }
 
 /* ======================================================================
    11. HOVER TOOLTIP — floating chip near the cursor, fed by bus 'hover'
@@ -825,29 +843,25 @@
    ====================================================================== */
 @media (max-width: 900px) {
   .gm-act-t { display: none; }
-  .gm-act { padding: 0.5em 0.75em; }
+  .gm-act { padding: 0.5em 0.75em; min-height: 40px; }
   .gm-title { bottom: 5vh; }
   .gm-hook { font-size: var(--step--1); }
 
+  /* every bottom sheet caps at 46vh — the 3D scene always owns the top half */
   .gm-left,
-  .gm-verdict {
-    left: 12px; right: 12px;
-    top: auto; bottom: 12px;
-    width: auto;
-    max-height: 56vh;
-  }
+  .gm-verdict,
   .gm-detail {
     left: 12px; right: 12px;
     top: auto; bottom: 12px;
     width: auto;
-    max-height: 62vh;
+    max-height: 46vh;
   }
 
   .gm-rail {
     left: 0; right: 0;
     top: auto; bottom: 0;
     width: auto;
-    max-height: 64vh;
+    max-height: 46vh;
     border-left: none;
     border-right: none;
     border-bottom: none;
@@ -859,15 +873,60 @@
     transform: translateY(8%);
   }
   .gm-rail.is-on.sheet-open { opacity: 1; visibility: visible; transform: none; }
-  .gm-rail-toggle { display: block; }
+  /* the drawer toggle moves bottom-LEFT so the chips own the right corner
+     (the corner mark is hidden here, so the spot is free) */
+  .gm-rail-toggle { display: block; right: auto; left: 14px; min-height: 40px; }
 
-  .gm-finders { bottom: 60px; width: calc(100vw - 24px); }
+  .gm-finders {
+    left: 12px; right: 12px;
+    top: auto; bottom: 60px; /* clears the rail-toggle row */
+    width: auto;
+    max-height: 46vh;
+    --gm-in: translateY(18px);
+  }
   .gm-corner { display: none; }
 
   /* the explainer is a bottom sheet here — collapse control is a no-op */
   .gm-exp-toggle { display: none; }
-  /* clear the rail toggle's bottom-right spot (both show in Act III) */
-  .gm-artifact { right: 14px; bottom: 60px; z-index: 45; }
+
+  /* the two chips: tight right-side stack, above the sheets' fold */
+  .gm-artifact {
+    right: 12px; bottom: 8px;
+    z-index: 46;
+    font-size: 0.52rem;
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+  }
+  .gm-earth-chip { bottom: 48px; }
+
+  /* tap targets ≥40px */
+  .gm-close {
+    min-width: 40px;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .gm-mode { min-height: 40px; }
+  .gm-pulse-ctl { align-items: center; }
+  .gm-row { min-height: 44px; }
+  .gm-begin { min-height: 44px; }
+}
+
+/* ======================================================================
+   COMPACT NAV — small portrait phones: numerals only, current-act title
+   beneath the progress hairline (so the hairline itself never moves)
+   ====================================================================== */
+@media (max-width: 560px) {
+  .gm-nav-row { gap: 6px; }
+  .gm-act { min-width: 44px; min-height: 44px; justify-content: center; }
+  .gm-nav-title { display: block; }
+  .gm-corner { display: none; }
+
+  /* Act I: smaller type so the disc has room */
+  .gm-title h1 { font-size: clamp(2rem, 5.4vw, 3.2rem); }
+  .gm-hook { font-size: 0.92rem; }
 }
 
 /* ======================================================================

@@ -83,6 +83,71 @@ export function createMap(ctx) {
   sunHalo.renderOrder = 3;
   group.add(sunCore, sunHalo);
 
+  // ---- Earth: a small stylized globe beside the Sun, only visible up close ---
+  // (wildly not to scale — at true scale it would be a billionth of a pixel)
+  function drawEarthTexture() {
+    const cv = document.createElement('canvas');
+    cv.width = 256; cv.height = 128;
+    const c = cv.getContext('2d');
+    const g = c.createLinearGradient(0, 0, 0, 128);
+    g.addColorStop(0, '#1d3d5c');
+    g.addColorStop(0.5, '#1f4f78');
+    g.addColorStop(1, '#16324d');
+    c.fillStyle = g;
+    c.fillRect(0, 0, 256, 128);
+    // stylized continents: soft green-brown blobs
+    c.fillStyle = 'rgba(94, 118, 62, 0.95)';
+    const blob = (x, y, r, squish = 0.62) => {
+      c.beginPath();
+      c.ellipse(x, y, r, r * squish, 0, 0, TAU);
+      c.fill();
+    };
+    blob(52, 46, 20); blob(66, 70, 13); blob(60, 92, 9);       // americas-ish
+    blob(126, 44, 16); blob(140, 72, 18); blob(122, 66, 10);   // africa/europe-ish
+    blob(180, 52, 22); blob(206, 84, 9); blob(226, 96, 7);     // asia/oceania-ish
+    c.fillStyle = 'rgba(112, 132, 84, 0.5)';
+    blob(90, 58, 8); blob(160, 90, 7); blob(240, 40, 9);
+    // polar caps
+    c.fillStyle = 'rgba(235, 242, 246, 0.9)';
+    c.fillRect(0, 0, 256, 7);
+    c.fillRect(0, 121, 256, 7);
+    // cloud wisps
+    c.fillStyle = 'rgba(255, 255, 255, 0.16)';
+    for (let i = 0; i < 12; i++) {
+      c.beginPath();
+      c.ellipse((i * 47 + 20) % 256, 18 + ((i * 31) % 92), 22, 4, 0, 0, TAU);
+      c.fill();
+    }
+    return cv;
+  }
+  const EARTH_POS = new THREE.Vector3(0.018, 0, 0);
+  const earthTex = new THREE.CanvasTexture(drawEarthTexture());
+  earthTex.colorSpace = THREE.SRGBColorSpace;
+  const earth = new THREE.Mesh(
+    new THREE.SphereGeometry(0.008, 32, 24),
+    new THREE.MeshBasicMaterial({ map: earthTex, transparent: true, opacity: 0 }),
+  );
+  earth.position.copy(EARTH_POS);
+  earth.rotation.x = Math.PI / 2 - 0.41; // axial tilt against the galactic frame
+  const earthGlow = makeSprite(beaconTex, 0x7fb2d9, 0.026);
+  earthGlow.position.copy(EARTH_POS);
+  earthGlow.renderOrder = 5;
+  // a faint orbit hint around the Sun
+  const orbitPts = [];
+  for (let i = 0; i <= 64; i++) {
+    const a = (i / 64) * TAU;
+    orbitPts.push(new THREE.Vector3(Math.cos(a) * 0.018, Math.sin(a) * 0.018, 0));
+  }
+  const orbit = new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints(orbitPts),
+    new THREE.LineBasicMaterial({ color: 0x7fb2d9, transparent: true, opacity: 0, depthWrite: false }),
+  );
+  orbit.frustumCulled = false;
+  const earthHit = new THREE.Mesh(new THREE.SphereGeometry(0.03, 8, 6), hitMat);
+  earthHit.position.copy(EARTH_POS);
+  earthHit.userData.pulsar = 'earth';
+  group.add(earth, earthGlow, orbit, earthHit);
+
   // ---- the galactic-center line ------------------------------------------------
   const gcArr = new Float32Array([0, 0, 0, GC.x, GC.y, GC.z]);
   const gcLine = makeLine(0xe4c25a, gcArr);
@@ -101,6 +166,42 @@ export function createMap(ctx) {
   const ticks = new THREE.LineSegments(tickGeo, tickMat);
   ticks.frustumCulled = false;
   group.add(ticks);
+
+  // ---- depth stalks: verticals from the galactic plane up to each star ------
+  // (the engraved map's end-tick concept, made literal — instantly reads 3D)
+  const mkStalks = (color) => {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pulsars.length * 6), 3));
+    const m = new THREE.LineBasicMaterial({
+      color, transparent: true, opacity: 0, depthWrite: false,
+    });
+    const l = new THREE.LineSegments(g, m);
+    l.frustumCulled = false;
+    group.add(l);
+    return l;
+  };
+  const eStalks = mkStalks(0xc9a227);
+  const mStalks = mkStalks(0xbcd6e8);
+
+  // ---- plane rings: a whisper of structure to anchor the galactic plane -----
+  const ringGroup = new THREE.Group();
+  {
+    const ringMat = new THREE.LineBasicMaterial({
+      color: 0x6e5a1e, transparent: true, opacity: 0, depthWrite: false,
+    });
+    for (const r of [2, 4, 6, 8]) {
+      const pts = [];
+      for (let i = 0; i <= 96; i++) {
+        const a = (i / 96) * TAU;
+        pts.push(new THREE.Vector3(Math.cos(a) * r, Math.sin(a) * r, 0));
+      }
+      const ring = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), ringMat);
+      ring.frustumCulled = false;
+      ringGroup.add(ring);
+    }
+    ringGroup.userData.mat = ringMat;
+  }
+  group.add(ringGroup);
 
   // ---- labels ------------------------------------------------------------------
   function makeLabel(text) {
@@ -197,7 +298,7 @@ export function createMap(ctx) {
       selF: 1,
     };
   });
-  pickables.push(gcHit);
+  pickables.push(gcHit, earthHit);
   group.userData.pickables = pickables;
   const byPulsar = new Map(items.map((it) => [it.p, it]));
 
@@ -249,6 +350,7 @@ export function createMap(ctx) {
   // unfold until 2.2 s)
   let fadeHold = 0, unfoldHold = 0;
   let prevAct = state.act;
+  let curAct = state.act;
   bus.addEventListener('act', (e) => {
     const act = e.detail.act;
     if (act === 'map' && prevAct === 'record' && !prefersReducedMotion) {
@@ -259,6 +361,7 @@ export function createMap(ctx) {
       unfoldHold = 0;
     }
     prevAct = act;
+    curAct = act;
     actTarget = act === 'record' ? 0 : 1;
     unfoldT = act === 'record' ? 0 : 1;
     labelT = act === 'pulsars' || act === 'verdict' || act === 'finders' ? 1 : 0;
@@ -330,6 +433,8 @@ export function createMap(ctx) {
     const u = unfold * unfold * (3 - 2 * unfold); // smoothstep the unfolding
     const myr = state.timeMyr;
     const tickArr = tickGeo.attributes.position.array;
+    const esArr = eStalks.geometry.attributes.position.array;
+    const msArr = mStalks.geometry.attributes.position.array;
     for (let i = 0; i < items.length; i++) {
       const it = items[i];
       _e.lerpVectors(it.flatE, it.p.xyz1977, u);
@@ -354,9 +459,15 @@ export function createMap(ctx) {
       it.label.position.set(_e.x, _e.y, _e.z + 0.16);
       tickArr[i * 6 + 0] = _e.x; tickArr[i * 6 + 1] = _e.y; tickArr[i * 6 + 2] = _e.z - 0.07;
       tickArr[i * 6 + 3] = _e.x; tickArr[i * 6 + 4] = _e.y; tickArr[i * 6 + 5] = _e.z + 0.07;
+      esArr[i * 6 + 0] = _e.x; esArr[i * 6 + 1] = _e.y; esArr[i * 6 + 2] = 0;
+      esArr[i * 6 + 3] = _e.x; esArr[i * 6 + 4] = _e.y; esArr[i * 6 + 5] = _e.z;
+      msArr[i * 6 + 0] = _m.x; msArr[i * 6 + 1] = _m.y; msArr[i * 6 + 2] = 0;
+      msArr[i * 6 + 3] = _m.x; msArr[i * 6 + 4] = _m.y; msArr[i * 6 + 5] = _m.z;
       if (it.arc) layoutArc(it);
     }
     tickGeo.attributes.position.needsUpdate = true;
+    eStalks.geometry.attributes.position.needsUpdate = true;
+    mStalks.geometry.attributes.position.needsUpdate = true;
   }
   layout();
 
@@ -455,8 +566,11 @@ export function createMap(ctx) {
 
       // label, fading with distance
       const dist = camera.position.distanceTo(it.label.position);
+      // Act V's camera sits far out — extend the label range so names still read
+      const labelRange = curAct === 'finders' ? 6.5 : 3.2;
       const lOp = labelFade * actFade
-        * Math.max(0, Math.min(0.85, 3.2 / dist - 0.2))
+        * Math.max(0, Math.min(0.85, labelRange / dist - 0.2))
+        * Math.min(1, Math.max(0, (dist - 0.5) / 1.0)) // gone when the camera is up close (Earth zoom)
         * (selP && selP !== it.p ? 0.45 : 1);
       it.label.material.opacity = lOp;
       it.label.visible = lOp > 0.004;
@@ -472,6 +586,30 @@ export function createMap(ctx) {
     // z-ticks belong to the engraved notation
     tickMat.opacity = 0.55 * engFade * actFade;
     ticks.visible = tickMat.opacity > 0.005;
+
+    // depth cues appear with the labels (acts III+): stalks tie each star to
+    // the plane; the rings anchor the plane itself
+    eStalks.material.opacity = 0.2 * engFade * actFade * labelFade;
+    eStalks.visible = eStalks.material.opacity > 0.005;
+    mStalks.material.opacity = 0.2 * modFade * actFade * labelFade;
+    mStalks.visible = mStalks.material.opacity > 0.005;
+    ringGroup.userData.mat.opacity = 0.055 * actFade * labelFade;
+    ringGroup.visible = ringGroup.userData.mat.opacity > 0.004;
+
+    // Earth: fades in as the camera closes on the origin, spins slowly
+    {
+      const dist = camera.position.distanceTo(EARTH_POS);
+      const near = Math.min(1, Math.max(0, (0.6 - dist) / 0.45)); // 0 beyond 0.6 kpc
+      const eOpE = near * actFade;
+      earth.material.opacity = eOpE;
+      earth.visible = eOpE > 0.004;
+      earthGlow.material.opacity = 0.5 * eOpE;
+      earthGlow.visible = earth.visible;
+      orbit.material.opacity = 0.3 * eOpE;
+      orbit.visible = earth.visible;
+      earthHit.visible = actFade > 0.05; // clickable whenever the map is up
+      if (earth.visible && !prefersReducedMotion) earth.rotation.y += dt * 0.5;
+    }
 
     // the Sun breathes, gently
     sunCore.material.opacity = actFade;

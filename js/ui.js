@@ -45,7 +45,11 @@ export function initUI(ctx) {
     navRow.appendChild(b);
   }
   const progress = el('div', 'gm-nav-progress', '<i></i>');
-  nav.append(navRow, progress);
+  // compact-nav act title (≤560px, where the buttons show numerals only) —
+  // sits under the progress hairline so the hairline never shifts
+  const navTitle = el('div', 'gm-nav-title');
+  navTitle.setAttribute('aria-hidden', 'true'); // aria-current on the button already says it
+  nav.append(navRow, progress, navTitle);
 
   // ======================================================================
   // 2. TITLE CARD (Act I)
@@ -55,9 +59,10 @@ export function initUI(ctx) {
   title.innerHTML = `
     <p class="eyebrow">Launched 1977 · Still transmitting silence</p>
     <h1>The Golden Map</h1>
-    <p class="gm-hook">Two spacecraft are leaving the solar system carrying an
-      engraved return address for Earth, written in the periods of fourteen
-      dead stars. This is that map — reconstructed with modern data.</p>
+    <p class="gm-hook">In 1977, NASA launched two spacecraft carrying a golden
+      record. Engraved on it: a map that shows any finder where Earth is,
+      using fourteen flashing stars as landmarks. This is that map — rebuilt
+      with today’s data.</p>
     <button class="gm-begin mono">Begin — unfold the map&ensp;<span aria-hidden="true">→</span></button>`;
   title.querySelector('.gm-begin').addEventListener('click', () => ctx.setAct('map'));
 
@@ -70,24 +75,26 @@ export function initUI(ctx) {
   explainer.innerHTML = `
     <p class="eyebrow">Act II · How to read it</p>
     <h2>Fourteen clocks, one ruler</h2>
-    <p class="gm-body">A pulsar is a collapsed star that sweeps a radio beam
-      past us with clock-like regularity — and each one ticks at its own
-      unmistakable rate. This map names fourteen of them by that rate.</p>
-    <p class="gm-body">The ruler is hydrogen, the most common atom in the
-      universe. One particular flip of its electron ticks at an exact,
-      universal rate — <span class="mono engraved gm-nowrap">7.04024 × 10⁻¹⁰ s</span> —
-      so any scientist anywhere (or any alien) can reproduce it. Two hydrogen
-      atoms and the digit 1 define it on the cover; every number on the record
-      counts in this unit.</p>
+    <p class="gm-body">A pulsar is the burnt-out core of an exploded star.
+      It spins, sweeping a radio beam past us like a lighthouse. Each one
+      flashes at its own perfectly steady rate. No two are alike — so a
+      flash rate works like a name tag. This map names fourteen of them.</p>
+    <p class="gm-body">To write those rates down, you need a unit of time an
+      alien would also know. The map uses hydrogen — the most common atom in
+      the universe. Hydrogen ticks at one exact rate, everywhere, for
+      everyone. That tick is the map’s ruler.</p>
+    <p class="gm-fine">The tick is drawn on the cover as two hydrogen atoms
+      and the digit 1. Its value: <span class="mono gm-nowrap">7.04024 × 10⁻¹⁰
+      seconds</span>. Every number on the record counts in this unit.</p>
     <ul class="gm-how">
-      <li><b>The binary</b>Long tick = 1, short dash = 0 — a number written
-        along each line: how fast that pulsar spins.</li>
-      <li><b>The length</b>How far away it is, measured against the long
-        line to the center of the galaxy.</li>
-      <li><b>The end tick</b>How far above or below the flat disc of our
-        galaxy. The map is three-dimensional.</li>
-      <li><b>The clock</b>Pulsars slow down at known rates, so the map also
-        says <em>when</em> it was made.</li>
+      <li><b>The binary</b>The marks along each line spell a number: how fast
+        that star flashes. Long tick = 1, short dash = 0.</li>
+      <li><b>The length</b>Longer line = farther away. Everything is measured
+        against the long line pointing to the center of the galaxy.</li>
+      <li><b>The end tick</b>The small mark at each line’s end: how far the
+        star sits above or below the galaxy’s flat disc. The map is 3D.</li>
+      <li><b>The clock</b>Pulsars slow down over time, at known rates. So the
+        map also tells you <em>when</em> it was made.</li>
     </ul>
     <div class="gm-demo">
       <p class="eyebrow">Line 1 · decoding</p>
@@ -257,6 +264,25 @@ export function initUI(ctx) {
 
   function renderDetail(target) {
     if (!target) return;
+    if (target === 'earth') {
+      detailBody.innerHTML = `
+        <p class="eyebrow">You are here</p>
+        <h2 class="gm-detail-name">Earth</h2>
+        <p class="gm-detail-sub mono">the point every line converges on</p>
+        <p class="gm-body">This is what the map is for. Fourteen lines, read
+          anywhere in the galaxy, all cross at one unremarkable yellow star —
+          and the third planet out is home. Everyone who has ever lived,
+          everything on both Voyager records, started here.</p>
+        ${kv('distance from the Sun', '≈ 8 light-minutes')}
+        ${kv('place on the map', 'the center — by construction')}
+        <p class="gm-detail-note">Enormously not to scale: drawn at true scale,
+          Earth would be about a billion times smaller than this little globe —
+          far tinier than a single pixel.</p>
+        <p class="gm-fine">On the engraved map the origin is really the Sun;
+          at galactic scale the Sun and Earth are the same point. The blue
+          globe is a marker, not a measurement.</p>`;
+      return;
+    }
     if (target === 'gc') {
       detailBody.innerHTML = `
         <p class="eyebrow">The fifteenth line</p>
@@ -306,9 +332,8 @@ export function initUI(ctx) {
     <h2>So — is the map wrong?</h2>
     <p class="gm-verdict-lede">Partially — <em>but not the way the internet
       says.</em></p>
-    <p class="gm-body">Its distances are decades out of date — yet every one
-      of the fourteen pulsars can still be identified, and the map still
-      points home.</p>
+    <p class="gm-body">Some of it is out of date. But it still works: all
+      fourteen stars can be identified, and the map still points home.</p>
 
     <p class="gm-k gm-modes-label">show the map</p>
     <div class="gm-modes" role="group" aria-label="Map mode">
@@ -319,22 +344,21 @@ export function initUI(ctx) {
 
     <h3 class="gm-block-h mono">What’s genuinely off</h3>
     <ul class="gm-list">
-      <li>The distances are the real problem — most lines are drawn far too
-        long or too short, off by 2–10×.
-        <span class="gm-fine">Superseded 1970s dispersion-measure data, not an
-          engraving mistake. Russel (DSES) measured over 220% average error;
-          only 3 of the 14 line lengths come within 3%.</span></li>
-      <li>Three lines point the wrong way — off by 10 to 18 degrees.
+      <li>The line lengths are the real problem. In 1977, nobody knew these
+        distances well. Most stars are really much closer — or much farther —
+        than the map says.
+        <span class="gm-fine">Off by 2–10×: superseded 1970s dispersion-measure
+          data, not an engraving mistake. Russel (DSES) measured over 220%
+          average error; only 3 of the 14 line lengths come within 3%.</span></li>
+      <li>Three lines point a few degrees in the wrong direction.
         <span class="gm-fine">B0950+08 by ~10.6°, B1642-03 by ~13.3°,
           B0823+26 by ~17.6° — all among the pulsars sitting farthest above
           the galaxy’s flat disc.</span></li>
-      <li>Two stars that sit close together in the sky — the Crab and its
-        neighbor — are drawn in each other’s places.
+      <li>Two neighboring stars got swapped — each drawn in the other’s place.
         <span class="gm-fine">Russel’s reconstruction found B0531+21 (Crab) and
           B0525+21 — only 1.4° apart on the sky — positionally swapped
           relative to reality.</span></li>
-      <li>One number was written with far more digits than anyone actually
-        knew.
+      <li>One number was written with more digits than anyone actually knew.
         <span class="gm-fine">B1240-64’s period, known to 3 significant digits
           in 1971, was engraved to ~30 binary digits — spurious
           precision.</span></li>
@@ -342,22 +366,22 @@ export function initUI(ctx) {
 
     <h3 class="gm-block-h mono">What still works</h3>
     <ul class="gm-list">
-      <li>All fourteen pulsars can still be identified from their engraved
-        spin rates — and the drift in those rates dates the map to
-        1969.7 ± 1.2.
+      <li>In 2007, a researcher took only the engraved numbers — and found all
+        fourteen stars. The numbers even revealed <em>when</em> the map was
+        made: 1969.7 ± 1.2.
         <span class="gm-fine">Johnston (2007): most periods match to better
           than 1 ppm (one part per million); one twin-period pair also needed
-          line direction to separate; the epoch falls out of spin-down.</span></li>
-      <li>From the angles alone, the Sun’s place in the galaxy can be found
-        to within ~4%.
+          line direction to separate; the date falls out of the spin-down.</span></li>
+      <li>Another study used only the line directions — and located the Sun
+        to within 4%.
         <span class="gm-fine">Russel (DSES) triangulated the Sun’s galactic
           position using only the engraved bearings.</span></li>
     </ul>
 
     <h3 class="gm-block-h mono">The verdict</h3>
-    <p class="gm-body">The strong claim — <em>reconstruct it and it points to the
-      wrong place</em> — is a myth. Every documented reconstruction has
-      succeeded.</p>
+    <p class="gm-body">The internet claim — <em>“read the map and it points to
+      the wrong place”</em> — is a myth. Every real attempt to read it has
+      worked. The drawing has flaws. The address is still good.</p>
     <details class="gm-fine-more">
       <summary>for the technically curious</summary>
       <p class="gm-fine">Siegel’s “hopelessly wrong” (Forbes, 2017) — the likely
@@ -401,10 +425,10 @@ export function initUI(ctx) {
   const fmtMyr = (m) => (m < 0.05 ? '0' : m < 10 ? m.toFixed(1) : String(Math.round(m)));
   const eraLine = (m) => {
     if (m < 1) return 'All fourteen beacons burning. A finder today — or in a million years — could still read this.';
-    if (m <= 10) return 'The periods have drifted. A finder must rewind the spin-down.';
-    if (m <= 40) return 'The ordinary pulsars are guttering out.';
-    if (m <= 90) return 'Most beacons dark. Only the geometry remains — and it is warping.';
-    return 'Half a galactic orbit gone. Shear has torn the map apart. Home is unfindable.';
+    if (m <= 10) return 'The flash rates have drifted. A finder would need to wind the clocks back.';
+    if (m <= 40) return 'The ordinary stars are going dark, one by one.';
+    if (m <= 90) return 'Most beacons are dead. And the map’s shape is starting to warp.';
+    return 'Half a lap around the galaxy. The map has been torn apart. Home is unfindable.';
   };
 
   const finders = el('section', 'gm-panel gm-sheet gm-finders');
@@ -415,9 +439,9 @@ export function initUI(ctx) {
   finders.innerHTML = `
     <p class="eyebrow">Act V · For the finders</p>
     <p class="gm-body gm-finders-intro">This map was built to be read
-      <em>millions of years</em> from now. For the first million years it
-      stays essentially intact — drag time forward and watch how long Earth’s
-      return address survives.</p>
+      <em>millions of years</em> from now. For its first million years, it
+      stays basically perfect. Drag time forward and watch how long Earth’s
+      address lasts.</p>
     <div class="gm-time-row mono">
       <span class="gm-tplus">T + 0 Myr</span>
       <span class="gm-beacons" title="Extinction times are illustrative — no peer-reviewed per-pulsar survival table exists">beacons still shining: 14/14</span>
@@ -434,12 +458,11 @@ export function initUI(ctx) {
     </div>
     <details class="gm-drake">
       <summary class="mono">The man who drew the map</summary>
-      <p class="gm-body">The same Frank Drake who computed this map in 1971
-        for the Pioneer plaque had, a decade earlier, written the equation
-        that frames the question — <em>how many civilizations are out there
-        to talk to?</em> — for the first SETI meeting at Green Bank, 1961.
-        He asked who might be listening, then drew the address label for
-        them to find us.</p>
+      <p class="gm-body">One person drew both. In 1961, Frank Drake wrote a
+        famous equation. It asks a simple question: <em>how many alien
+        civilizations could we talk to?</em> Ten years later, he drew this
+        map. First he asked who might be listening. Then he made the address
+        label for them to find us.</p>
       <p class="gm-drake-eq mono">N = R★ · f<sub>p</sub> · n<sub>e</sub> · f<sub>l</sub> · f<sub>i</sub> · f<sub>c</sub> · L</p>
       <ul class="gm-drake-legend">
         <li><span class="gm-drake-t mono">R★</span>rate of star formation</li>
@@ -501,6 +524,16 @@ export function initUI(ctx) {
     artifactChip.setAttribute('aria-pressed', String(show));
   });
 
+  // "you are here" — deep zoom to the little blue dot at the origin
+  const earthChip = el('button', 'gm-panel gm-artifact gm-earth-chip mono',
+    '<span aria-hidden="true">⌖</span>&ensp;you are here');
+  earthChip.dataset.acts = 'map pulsars verdict finders';
+  earthChip.title = 'Zoom in to Earth, at the center of the map';
+  earthChip.addEventListener('click', () => ctx.select('earth'));
+  bus.addEventListener('select', (e) => {
+    earthChip.classList.toggle('is-active', e.detail.target === 'earth');
+  });
+
   // ======================================================================
   // 11. HOVER TOOLTIP — floating chip fed by the tour's raycast (bus 'hover')
   // ======================================================================
@@ -512,7 +545,9 @@ export function initUI(ctx) {
     if (!pulsar) { tip.classList.remove('is-on'); return; }
     tip.textContent = pulsar === 'gc'
       ? 'Galactic Center'
-      : `${pulsar.bname}${pulsar.alias ? ` · ${pulsar.alias}` : ''} · ${sig4(pulsar.periodEncoded)} s`;
+      : pulsar === 'earth'
+        ? 'Earth — you are here'
+        : `${pulsar.bname}${pulsar.alias ? ` · ${pulsar.alias}` : ''} · ${sig4(pulsar.periodEncoded)} s`;
     tip.classList.add('is-on');
     // offset up-right of the cursor, clamped to the viewport
     const r = tip.getBoundingClientRect();
@@ -524,14 +559,20 @@ export function initUI(ctx) {
   });
 
   // ---- assemble ---------------------------------------------------------
-  root.append(nav, title, explainer, rail, railToggle, detail, verdict, finders, corner, artifactChip, tip);
+  root.append(nav, title, explainer, rail, railToggle, detail, verdict, finders, corner, artifactChip, earthChip, tip);
 
   // ---- act / selection plumbing ------------------------------------------
-  const actPanels = [title, explainer, rail, railToggle, verdict, finders, artifactChip];
+  const actPanels = [title, explainer, rail, railToggle, verdict, finders, artifactChip, earthChip];
   const DETAIL_ACTS = new Set(['pulsars', 'verdict', 'finders']);
 
   function paintDetailVisibility() {
     detail.classList.toggle('is-on', !!state.selected && DETAIL_ACTS.has(state.act));
+  }
+  // Act V: the finders panel and the detail panel share the right column —
+  // yield to the detail panel while something is selected, restore on deselect
+  function paintFindersVisibility() {
+    if (state.act !== 'finders') return; // applyAct already switched it off
+    finders.classList.toggle('is-on', !state.selected);
   }
   function applyAct(act) {
     for (const p of actPanels) p.classList.toggle('is-on', p.dataset.acts.includes(act));
@@ -542,10 +583,12 @@ export function initUI(ctx) {
     }
     const i = ACTS.findIndex((a) => a.id === act);
     progress.firstElementChild.style.width = `${(((i < 0 ? 0 : i) + 1) / ACTS.length) * 100}%`;
+    navTitle.textContent = i < 0 ? '' : ACTS[i].title;
     closeSheet();
     if (act === 'map') demoStart();
     else demo.active = false;
     paintDetailVisibility();
+    paintFindersVisibility();
   }
 
   bus.addEventListener('act', (e) => applyAct(e.detail.act));
@@ -554,6 +597,7 @@ export function initUI(ctx) {
     for (const r of rows) r.el.classList.toggle('is-selected', r.target === target);
     if (target) { renderDetail(target); closeSheet(); }
     paintDetailVisibility();
+    paintFindersVisibility();
   });
   bus.addEventListener('mapmode', (e) => paintMode(e.detail.mode));
   bus.addEventListener('timeMyr', (e) => {

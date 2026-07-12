@@ -21,7 +21,8 @@ const HOMES = {
   mapOpen: { pos: [0.6, -9, 5],      target: [0.6, 0, 0] },
   pulsars: { pos: [4, -14, 9],       target: [3, 0, 0] },      // hero overview
   verdict: { pos: [-1.6, -1.4, 9.2], target: [-1.6, 0.2, 0] }, // plan view; panel now hugs the left margin
-  finders: { pos: [-6, -18, 7],      target: [3, 0, 0] },      // wide cinematic
+  // finders panel lives in the RIGHT column (400px): center the map in the rest
+  finders: { pos: [-4.2, -13, 5],    target: [1.6, 0, 0.9] },
 };
 
 // Map rendering mode per act: warm gold engraved for I–III,
@@ -33,6 +34,12 @@ const ACT_MODE = {
   verdict: 'both',
   finders: 'modern',
 };
+
+const PORTRAIT_ASPECT = 0.9;    // below this aspect the viewport counts as portrait
+const PORTRAIT_PUSH_MAX = 2.2;  // cap on the portrait pull-back factor
+const PORTRAIT_DROP = 0.10;     // look-point drop × offset length: raises the subject
+                                // above the bottom sheets on phones
+const RESIZE_DEBOUNCE_MS = 250; // settle time before the resize re-frame check
 
 const CLICK_SLOP_PX = 6;      // pointer travel beyond this is a drag, not a click
 const HOVER_INTERVAL_MS = 80; // throttle for hover raycasts
@@ -58,15 +65,39 @@ export function initTour(ctx) {
     breath.set(0, 0, 0);
   }
 
+  let legs = [];      // queued follow-up tween legs: [{pos, target, dur}, ...]
+
   function cancelTween() {
     if (!tween) return;
     tween = null;
+    legs = [];
     controls.enabled = true;
   }
 
-  function flyTo(pos, target, dur = 1.6) {
+  // Portrait compensation. HOMES and the framing math are tuned for landscape
+  // (~1.5 aspect); on a portrait phone the horizontal field collapses and the
+  // map crops. So: pull the camera farther out along the same offset, and drop
+  // the look-point (lowering it raises the subject on screen, clear of the
+  // bottom sheets). Returns new vectors — never mutates the inputs — and
+  // passes landscape framings through untouched.
+  function portraitize(pos, target) {
+    const aspect = camera.aspect;
+    if (!(aspect < PORTRAIT_ASPECT)) return { pos, target };
+    const off = pos.clone().sub(target)
+      .multiplyScalar(Math.min((PORTRAIT_ASPECT / aspect) ** 0.8, PORTRAIT_PUSH_MAX));
+    const t = target.clone();
+    t.z -= off.length() * PORTRAIT_DROP;
+    return { pos: target.clone().add(off), target: t };
+  }
+
+  function flyTo(rawPos, rawTarget, dur = 1.6) {
     clearHover(); // the tooltip must not linger through a camera move
     stripBreath();
+    legs = []; // a direct fly-to supersedes any queued sweep legs
+    // Every flyTo destination is computed framing — goHome, frameLine (via
+    // framePulsar/frameGC), frameEarth, and the sweep legs — never a user
+    // gesture, so the portrait fix applies here once for all of them.
+    const { pos, target } = portraitize(rawPos, rawTarget);
     if (ctx.prefersReducedMotion || dur <= 0) {
       cancelTween();
       camera.position.copy(pos);
@@ -79,6 +110,18 @@ export function initTour(ctx) {
       t0: controls.target.clone(), t1: target.clone(),
     };
     controls.enabled = false;
+  }
+
+  // A chained camera path: fly the first leg, queue the rest (a user gesture
+  // or any direct flyTo cancels the remainder). Reduced motion: jump to the end.
+  function flyPath(path) {
+    if (ctx.prefersReducedMotion) {
+      const last = path[path.length - 1];
+      flyTo(last.pos, last.target, 0);
+      return;
+    }
+    flyTo(path[0].pos, path[0].target, path[0].dur);
+    legs = path.slice(1);
   }
 
   // ---- framing ----------------------------------------------------------
@@ -123,19 +166,37 @@ export function initTour(ctx) {
   }
 
   // ---- bus: act staging & selection fly-tos -------------------------------
+  let prevAct = ctx.state.act;
   bus.addEventListener('act', () => {
+    const from = prevAct;
+    prevAct = ctx.state.act;
     const mode = ACT_MODE[ctx.state.act];
     if (mode && ctx.state.mapMode !== mode) ctx.setMapMode(mode);
     // leaving Act V must un-wreck the map — earlier acts have no time slider
     if (ctx.state.act !== 'finders' && ctx.state.timeMyr !== 0) ctx.setTimeMyr(0);
-    if (ctx.state.selected != null) ctx.select(null); // its handler flies home
-    else goHome();
+    if (ctx.state.selected != null) { ctx.select(null); return; } // its handler flies home
+    if (ctx.state.act === 'pulsars' && from === 'map') {
+      // the dimensional sweep: swoop to plane level — the stars visibly rise
+      // out of the galactic disc — then climb to the hero overview
+      flyPath([
+        { pos: new THREE.Vector3(4, -11, 0.7), target: new THREE.Vector3(3, 0, 0.5), dur: 2.4 },
+        { pos: new THREE.Vector3(...HOMES.pulsars.pos), target: new THREE.Vector3(...HOMES.pulsars.target), dur: 2.4 },
+      ]);
+      return;
+    }
+    goHome();
   });
+
+  function frameEarth() {
+    // the deep zoom: five orders of magnitude down to the little blue dot
+    flyTo(new THREE.Vector3(0.055, -0.1, 0.045), new THREE.Vector3(0.018, 0, 0), 2.6);
+  }
 
   bus.addEventListener('select', (e) => {
     const target = e.detail.target;
     if (target == null) goHome(1.6);
     else if (target === 'gc') frameGC();
+    else if (target === 'earth') frameEarth();
     else framePulsar(target);
   });
 
@@ -258,6 +319,22 @@ export function initTour(ctx) {
     }
   });
 
+  // ---- resize: portrait re-framing --------------------------------------------
+  // main.js updates camera.aspect on resize. When the viewport crosses the
+  // portrait threshold, the standing framing was computed for the other
+  // orientation — re-home, but never yank a tween, a gesture, or a selection.
+  let wasPortrait = camera.aspect < PORTRAIT_ASPECT;
+  let resizeTimer = 0;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      const isPortrait = camera.aspect < PORTRAIT_ASPECT;
+      const crossed = isPortrait !== wasPortrait;
+      wasPortrait = isPortrait;
+      if (crossed && !tween && !pointerDown && ctx.state.selected == null) goHome(0.9);
+    }, RESIZE_DEBOUNCE_MS);
+  });
+
   // ---- opening move -----------------------------------------------------------
   goHome(2.6); // from the bootstrap camera into the Act I portrait
 
@@ -274,7 +351,18 @@ export function initTour(ctx) {
       const k = ease(Math.min(tween.el / tween.dur, 1));
       camera.position.lerpVectors(tween.p0, tween.p1, k);
       controls.target.lerpVectors(tween.t0, tween.t1, k);
-      if (tween.el >= tween.dur) cancelTween();
+      if (tween.el >= tween.dur) {
+        // chain into the next queued leg, if any (multi-leg sweeps)
+        const next = legs.shift();
+        tween = null;
+        if (next) {
+          const rest = legs;
+          flyTo(next.pos, next.target, next.dur); // clears legs —
+          legs = rest;                            // — restore the queue
+        } else {
+          controls.enabled = true;
+        }
+      }
       return;
     }
 

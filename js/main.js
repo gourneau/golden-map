@@ -9,6 +9,7 @@ import { PULSARS, R0_KPC, SUN_Z_KPC, MAP_EPOCH } from './data/pulsars.js';
 import { pulsarXYZ, periodToBinary, driftPPM } from './astro.js';
 import { createStarfield } from './starfield.js';
 import { createRecord } from './record.js';
+import { createVoyager } from './voyager.js';
 import { createMap } from './map3d.js';
 import { initUI } from './ui.js';
 import { initTour } from './tour.js';
@@ -111,10 +112,11 @@ function register(m) { if (m) modules.push(m); return m; }
 
 const starfield = register(createStarfield(ctx));
 const record = register(createRecord(ctx));
+const voyager = register(createVoyager(ctx));
 const map3d = register(createMap(ctx));
-ctx.modules = { starfield, record, map3d };
+ctx.modules = { starfield, record, voyager, map3d };
 
-for (const m of [starfield, record, map3d]) {
+for (const m of [starfield, record, voyager, map3d]) {
   if (m && m.object3d) scene.add(m.object3d);
 }
 
