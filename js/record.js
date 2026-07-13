@@ -50,40 +50,25 @@ export function createRecord(ctx) {
 
   // ==== the disc body: smooth gold, low-frequency shading only (no fine
   // rings — 1px canvas rings are what moiréd during camera motion) ==========
+  // One clean, uniform gold — a single gentle highlight, no label disc, no
+  // tonal band rings (up close those read as colored grooves).
   function drawFace() {
     const S = 1024;
     const cv = document.createElement('canvas');
     cv.width = cv.height = S;
     const c = cv.getContext('2d');
     const cx = S / 2, cy = S / 2, R = S / 2;
-    const g = c.createRadialGradient(cx - R * 0.35, cy - R * 0.4, R * 0.05, cx, cy, R * 1.05);
-    g.addColorStop(0, '#fff3c4');
-    g.addColorStop(0.35, '#eec14a');
-    g.addColorStop(0.7, '#c9962e');
-    g.addColorStop(1, '#7a5510');
+    const g = c.createRadialGradient(cx - R * 0.3, cy - R * 0.34, R * 0.1, cx, cy, R * 1.35);
+    g.addColorStop(0, '#f4d878');
+    g.addColorStop(0.55, '#e5bb4e');
+    g.addColorStop(1, '#d3a63c');
     c.fillStyle = g;
     c.fillRect(0, 0, S, S);
-    // a few broad, soft tonal bands — sheen, not grooves
-    for (let i = 0; i < 5; i++) {
-      const r = R * (0.45 + i * 0.115);
-      c.beginPath();
-      c.arc(cx, cy, r, 0, Math.PI * 2);
-      c.lineWidth = 26;
-      c.strokeStyle = `rgba(122, 85, 16, ${0.045 + 0.01 * (i % 2)})`;
-      c.stroke();
-    }
-    // smoother label region
-    const lg = c.createRadialGradient(cx - R * 0.08, cy - R * 0.1, R * 0.02, cx, cy, R * 0.34);
-    lg.addColorStop(0, '#f4d476');
-    lg.addColorStop(0.7, '#e2ae30');
-    lg.addColorStop(1, '#c1902a');
-    c.beginPath(); c.arc(cx, cy, R * 0.33, 0, Math.PI * 2);
-    c.fillStyle = lg; c.fill();
-    // spindle hole + hub ring
+    // spindle hole only — a thin dark edge where the metal is pierced
     c.beginPath(); c.arc(cx, cy, R * 0.028, 0, Math.PI * 2);
     c.fillStyle = '#0a0805'; c.fill();
-    c.beginPath(); c.arc(cx, cy, R * 0.05, 0, Math.PI * 2);
-    c.lineWidth = 5; c.strokeStyle = 'rgba(122, 85, 16, 0.5)'; c.stroke();
+    c.beginPath(); c.arc(cx, cy, R * 0.031, 0, Math.PI * 2);
+    c.lineWidth = 3; c.strokeStyle = 'rgba(90, 64, 16, 0.55)'; c.stroke();
     return cv;
   }
 
@@ -93,19 +78,12 @@ export function createRecord(ctx) {
     cv.width = cv.height = S;
     const c = cv.getContext('2d');
     const cx = S / 2, cy = S / 2;
-    const g = c.createRadialGradient(cx - 60, cy - 70, 20, cx, cy, S / 2);
-    g.addColorStop(0, '#f6de8e');
-    g.addColorStop(0.6, '#d3a637');
-    g.addColorStop(1, '#8a6c1f');
+    const g = c.createRadialGradient(cx - 60, cy - 70, 30, cx, cy, S * 0.68);
+    g.addColorStop(0, '#f0d072');
+    g.addColorStop(0.6, '#ddb247');
+    g.addColorStop(1, '#c99e38');
     c.fillStyle = g;
     c.fillRect(0, 0, S, S);
-    for (let i = 0; i < 4; i++) { // broad bands, not 1px grooves
-      c.beginPath();
-      c.arc(cx, cy, S * (0.17 + i * 0.09), 0, Math.PI * 2);
-      c.lineWidth = 14;
-      c.strokeStyle = 'rgba(60, 44, 10, 0.06)';
-      c.stroke();
-    }
     c.beginPath(); c.arc(cx, cy, S * 0.03, 0, Math.PI * 2);
     c.fillStyle = '#0a0806'; c.fill();
     return cv;
@@ -129,10 +107,12 @@ export function createRecord(ctx) {
   });
   // the face: painted mirror gold, self-illuminated (full-metal PBR with no
   // envMap goes black). Its color/emissive dim to near-dark during the lift.
+  // depthWrite ON: the disc must occlude what drifts behind it (the probe and
+  // its caption) — the old depthWrite:false dated from the two-stacked-faces
+  // era and let sprites bleed through the record
   const faceMat = new THREE.MeshStandardMaterial({
     map: faceTex, metalness: 0.35, roughness: 0.5, transparent: true,
     emissive: 0xfff2d0, emissiveMap: faceTex, emissiveIntensity: 0.78,
-    depthWrite: false,
   });
 
   // cylinder axis is +Y: [side, top(+Y, away), bottom(-Y, faces camera)]
