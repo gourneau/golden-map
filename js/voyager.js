@@ -116,12 +116,14 @@ export function createVoyager(ctx) {
         return;
       }
 
-      inner.rotation.y += dt * (held ? 0.015 : 0.06); // slow tumble, near-still while visited
+      // slow tumble in flight; FULLY still while visited, so the user's drag
+      // is the only motion and the spacecraft holds its pose under inspection
+      if (!held) inner.rotation.y += dt * 0.06;
 
       if (held) return; // frozen mid-orbit while the camera pays its visit
 
       phase += dt * OMEGA;
-      const cx = portrait ? 0.55 : 0.8;   // ellipse center, x/y
+      const cx = portrait ? 0.55 : 0.25;  // ellipse center, x/y (wide screens truck the camera left)
       const cy = portrait ? 3.2 : 2.6;    // y stays ≥ 1.4 in both orientations
       const rx = portrait ? 0.9 : 2.2;    // radii
       const ry = portrait ? 0.9 : 1.1;

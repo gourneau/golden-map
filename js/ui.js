@@ -287,6 +287,7 @@ export function initUI(ctx) {
         <p class="gm-detail-note">The big dish points back at Earth. Below it
           sits the record. Long after the transmitters fall silent, the map
           rides on.</p>
+        <p class="gm-k" style="margin-top:0.8em">drag to orbit the spacecraft · scroll to zoom · esc to leave</p>
         <p class="gm-fine">Spacecraft model: NASA (public domain), from NASA’s
           3D resources — simplified for the web. Voyager 1 is ~168 AU out,
           the farthest spacecraft from Earth.</p>`;

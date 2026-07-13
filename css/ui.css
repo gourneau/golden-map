@@ -168,19 +168,31 @@
    2. TITLE CARD
    ====================================================================== */
 #ui .gm-title { pointer-events: none; }
+/* Desktop: a left-column masthead — the record and the probe own the right
+   side of the frame, with nothing overlapping them. */
 .gm-title {
-  left: 0; right: 0;
-  bottom: 4vh;
+  left: 4.5vw;
+  bottom: 12vh;
   z-index: 15;
-  text-align: center;
-  padding: 1.6rem 20px 0.4rem;
+  width: min(420px, 38vw);
+  text-align: left;
+  padding: 0;
   --gm-in: translateY(22px);
-  /* subtle wash behind the text only — keeps it legible over the bright gold
-     disc without hiding the engraved design */
-  background: radial-gradient(ellipse 42% 115% at 50% 64%,
-    color-mix(in srgb, var(--void) 72%, transparent) 0%,
-    color-mix(in srgb, var(--void) 44%, transparent) 46%,
-    transparent 72%);
+}
+@media (max-width: 900px) {
+  /* Phones: back to a compact centered bottom card (the portrait camera
+     already lifts the disc above it), with a legibility wash. */
+  .gm-title {
+    left: 0; right: 0;
+    bottom: 4vh;
+    width: auto;
+    text-align: center;
+    padding: 1.6rem 20px 0.4rem;
+    background: radial-gradient(ellipse 42% 115% at 50% 64%,
+      color-mix(in srgb, var(--void) 72%, transparent) 0%,
+      color-mix(in srgb, var(--void) 44%, transparent) 46%,
+      transparent 72%);
+  }
 }
 .gm-title h1 {
   font-size: clamp(2.3rem, 5.4vw, 3.2rem);
@@ -188,12 +200,13 @@
   text-shadow: 0 0 44px color-mix(in srgb, var(--gold) 34%, transparent);
 }
 .gm-hook {
-  max-width: 44em;
-  margin: 0 auto 1em;
+  max-width: 30em;
+  margin: 0 0 1.1em;
   font-size: var(--step-0);
-  line-height: 1.45;
+  line-height: 1.5;
   color: var(--paper);
 }
+@media (max-width: 900px) { .gm-hook { max-width: 44em; margin: 0 auto 1em; } }
 .gm-begin {
   pointer-events: auto;
   font-size: 0.66rem;

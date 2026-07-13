@@ -15,7 +15,10 @@ const ease = (k) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
 const HOMES = {
   // face-on portrait: 2.6 kpc along the disc's face normal (disc tilts -0.26 rad
   // about X, so the face looks along ~(0, -0.966, 0.257)) — the engraved design reads whole
-  record:  { pos: [0, -3.55, 1.1],   target: [0, 0, 0.18] }, // whole disc clear of the title card
+  record:  { pos: [0, -3.55, 1.1],   target: [0, 0, 0.18] }, // centered (portrait/phones)
+  // wide screens: the title masthead owns the left column, so truck the camera
+  // left — the disc (and the probe's orbit) compose in the right two-thirds
+  recordWide: { pos: [-0.62, -3.45, 1.05], target: [-0.62, 0, 0.16] },
   map:     { pos: [2, -9, 5],        target: [2, 0, 0] },      // pull back as lines unfold
   // Act II with the explainer panel expanded: shift the scene right, clear of it
   mapOpen: { pos: [0.6, -9, 5],      target: [0.6, 0, 0] },
@@ -128,6 +131,7 @@ export function initTour(ctx) {
   function goHome(dur = 2.2) {
     let h = HOMES[ctx.state.act] || HOMES.record;
     if (ctx.state.act === 'map' && explainerOpen) h = HOMES.mapOpen;
+    if (ctx.state.act === 'record' && camera.aspect >= PORTRAIT_ASPECT) h = HOMES.recordWide;
     flyTo(new THREE.Vector3(...h.pos), new THREE.Vector3(...h.target), dur);
   }
 
@@ -203,8 +207,29 @@ export function initTour(ctx) {
     flyTo(p.clone().add(off), p, 2.0);
   }
 
+  // Probe inspect mode: while visiting Voyager, tune OrbitControls for a
+  // close product-viewer feel — slower rotation, zoom clamped so you can
+  // neither clip into the mesh nor drift away. Restored on any deselect.
+  let inspectSaved = null;
+  function setInspect(on) {
+    if (on && !inspectSaved) {
+      inspectSaved = {
+        rotateSpeed: controls.rotateSpeed,
+        minDistance: controls.minDistance,
+        maxDistance: controls.maxDistance,
+      };
+      controls.rotateSpeed = 0.55;
+      controls.minDistance = 0.95;
+      controls.maxDistance = 4.5;
+    } else if (!on && inspectSaved) {
+      Object.assign(controls, inspectSaved);
+      inspectSaved = null;
+    }
+  }
+
   bus.addEventListener('select', (e) => {
     const target = e.detail.target;
+    setInspect(target === 'voyager');
     if (target == null) goHome(1.6);
     else if (target === 'gc') frameGC();
     else if (target === 'earth') frameEarth();
