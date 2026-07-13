@@ -274,7 +274,7 @@ export function initUI(ctx) {
     if (!target) return;
     if (target === 'voyager') {
       detailBody.innerHTML = `
-        <p class="eyebrow">You found it</p>
+        <p class="eyebrow">The messenger</p>
         <h2 class="gm-detail-name">Voyager</h2>
         <p class="gm-detail-sub mono">the messenger itself · NASA 3D model</p>
         <p class="gm-body">Two of these were launched in 1977 — Voyager 1 and
@@ -287,7 +287,7 @@ export function initUI(ctx) {
         <p class="gm-detail-note">The big dish points back at Earth. Below it
           sits the record. Long after the transmitters fall silent, the map
           rides on.</p>
-        <p class="gm-k" style="margin-top:0.8em">drag to orbit the spacecraft · scroll to zoom · esc to leave</p>
+        <p class="gm-k" style="margin-top:0.8em">drag to rotate the spacecraft · scroll to zoom · esc to leave</p>
         <p class="gm-fine">Spacecraft model: NASA (public domain), from NASA’s
           3D resources — simplified for the web. Voyager 1 is ~168 AU out,
           the farthest spacecraft from Earth.</p>`;

@@ -8,10 +8,17 @@
 
 import { loadText, plaqueSvg } from './assets.js';
 import { SVGLoader } from 'three/addons/loaders/SVGLoader.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 // ---- measured artwork geometry (SVG user units, viewBox "106 261 505 500") --
-const DISK_C = { x: 358.5, y: 511 }; // disk center
-const DISK_R = 250;                  // disk radius
+// Disk center/radii measured from the artwork's own gold-disk path (its arc
+// runs rx=290.62, ry=288.91 about local (304.25, 301.318) under a 0.8333
+// scale + (106, 261) translate). Using per-axis radii also circularizes the
+// slightly elliptical drawing onto the round disc mesh.
+const DISK_C = { x: 359.54, y: 512.10 };
+const DISK_RX = 242.18;
+const DISK_RY = 240.76;
+const DISK_R = DISK_RX;              // scalar uses (stroke widths, lift scale)
 const MAP_C = { x: 263.8, y: 628.9 };// pulsar-map burst point (the Sun)
 const MAP_R = 190;                   // radius enclosing all map lines
 const GC_LEN_SVG = 183.5;            // galactic-center line length
@@ -135,20 +142,21 @@ export function createRecord(ctx) {
   );
   group.add(disc);
 
-  // ==== the cover design as vector lines ====================================
-  // Parse once; classify every polyline as map (lifts off) or not.
+  // ==== the cover design as triangulated vector strokes =====================
+  // Parse once; classify every polyline as map (lifts off) or not. Each stroke
+  // is tessellated with true width (SVGLoader.pointsToStroke), so the
+  // engraving scales like real engraving instead of 1px GL hairlines.
   const inExclude = (x, y) => EXCLUDE.some((b) => x >= b.x0 && x <= b.x1 && y >= b.y0 && y <= b.y1);
 
-  // The artwork arrives as a plain static file; the three line meshes are
+  // The artwork arrives as a plain static file; the three stroke meshes are
   // created empty and filled the moment it loads (same-origin, ~instant).
   function buildFromRaw(raw) {
-    const designPts = [];  // face-local line-segment pairs, everything but the map
-    const mapPts = [];     // face-local pairs, the pulsar map as engraved
-    const liftPts = [];    // same map geometry, centered on the burst point
+    const designGeos = []; // face-local stroke geometries, everything but the map
+    const mapGeos = [];    // face-local stroke geometries, the pulsar map as engraved
 
     const parsed = new SVGLoader().parse(plaqueSvg(raw, { stroke: '#ffffff', disk: 'none' }));
 
-    // First pass: collect every polyline with its stats.
+    // First pass: collect every polyline with its stats (and its stroke style).
     const polys = [];
     for (const path of parsed.paths) {
       for (const sub of path.subPaths) {
@@ -165,6 +173,7 @@ export function createRecord(ctx) {
         polys.push({
           pts, minD, len, tip,
           cx: sx / pts.length, cy: sy / pts.length,
+          style: path.userData.style,
         });
       }
     }
@@ -189,6 +198,11 @@ export function createRecord(ctx) {
     };
 
     for (const q of polys) {
+      // Fill-only elements (the gold disk itself, with its center-hole ring)
+      // carry stroke:none — they were never drawn linework and must not be
+      // tessellated, or a bold phantom ring appears at the hub.
+      const style = q.style || {};
+      if (!style.stroke || style.stroke === 'none') continue;
       const centDist = Math.hypot(q.cx - MAP_C.x, q.cy - MAP_C.y);
       // "just the map part": the radial lines themselves, plus short binary
       // ticks that actually sit ON one of those lines — nothing else lifts
@@ -198,28 +212,38 @@ export function createRecord(ctx) {
         radial.includes(q) ||
         (q.len < 16 && centDist < MAP_R && !inExclude(q.cx, q.cy) &&
           distToRadial(q.cx, q.cy) < 8);
-      const face = isMap ? mapPts : designPts;
-      const pts = q.pts;
-      for (let i = 1; i < pts.length; i++) {
-        const ax = (pts[i - 1].x - DISK_C.x) / DISK_R, ay = -(pts[i - 1].y - DISK_C.y) / DISK_R;
-        const bx = (pts[i].x - DISK_C.x) / DISK_R, by = -(pts[i].y - DISK_C.y) / DISK_R;
-        face.push(ax, ay, 0, bx, by, 0);
-        if (isMap) {
-          liftPts.push(
-            (pts[i - 1].x - MAP_C.x) / DISK_R, -(pts[i - 1].y - MAP_C.y) / DISK_R, 0,
-            (pts[i].x - MAP_C.x) / DISK_R, -(pts[i].y - MAP_C.y) / DISK_R, 0,
-          );
-        }
-      }
+      // Triangulated stroke with true width (GL lines are 1px hairlines at
+      // every zoom — up close they read as broken dashes on the gold).
+      const faceLocal = q.pts.map(
+        (p) => new THREE.Vector2((p.x - DISK_C.x) / DISK_RX, -(p.y - DISK_C.y) / DISK_RY),
+      );
+      const geo = SVGLoader.pointsToStroke(faceLocal, {
+        ...style,
+        strokeWidth: (style.strokeWidth || 0.6) * 1.15 / DISK_R,
+        strokeLineJoin: 'round',
+        strokeLineCap: 'round',
+      });
+      if (!geo) continue; // degenerate polyline (all points coincident)
+      (isMap ? mapGeos : designGeos).push(geo);
     }
 
-    const fill = (mesh, arr) => {
-      mesh.geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(arr), 3));
+    const swap = (mesh, merged) => {
+      mesh.geometry.dispose();
+      mesh.geometry = merged || segGeo();
       mesh.geometry.computeBoundingSphere();
     };
-    fill(designLines, designPts);
-    fill(mapLines, mapPts);
-    fill(liftLines, liftPts);
+    const designGeo = designGeos.length ? mergeGeometries(designGeos) : null;
+    const mapGeo = mapGeos.length ? mergeGeometries(mapGeos) : null;
+    // lift copy: same map strokes, re-origined on the burst point (face-local
+    // already flipped y, so the burst offset is (bx, -by') — undo both)
+    const liftGeo = mapGeo
+      ? mapGeo.clone().translate(-(MAP_C.x - DISK_C.x) / DISK_RX, (MAP_C.y - DISK_C.y) / DISK_RY, 0)
+      : null;
+    for (const g of designGeos) g.dispose();
+    for (const g of mapGeos) g.dispose();
+    swap(designLines, designGeo);
+    swap(mapLines, mapGeo);
+    swap(liftLines, liftGeo);
   }
 
   const segGeo = () => {
@@ -227,11 +251,15 @@ export function createRecord(ctx) {
     g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(0), 3));
     return g;
   };
-  const designMat = new THREE.LineBasicMaterial({ color: ENGRAVE, transparent: true, opacity: 1 });
-  const mapMat = new THREE.LineBasicMaterial({ color: ENGRAVE, transparent: true, opacity: 1 });
-  const liftMat = new THREE.LineBasicMaterial({
+  const designMat = new THREE.MeshBasicMaterial({
+    color: ENGRAVE, transparent: true, opacity: 1, side: THREE.DoubleSide,
+  });
+  const mapMat = new THREE.MeshBasicMaterial({
+    color: ENGRAVE, transparent: true, opacity: 1, side: THREE.DoubleSide,
+  });
+  const liftMat = new THREE.MeshBasicMaterial({
     color: GLOW, transparent: true, opacity: 0,
-    blending: THREE.AdditiveBlending, depthWrite: false,
+    blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide,
   });
 
   // design sits on the face plane (local XY → rotate to face -Y), child of the
@@ -239,8 +267,8 @@ export function createRecord(ctx) {
   const designGroup = new THREE.Group();
   designGroup.rotation.x = Math.PI / 2;
   designGroup.position.y = -0.013;
-  const designLines = new THREE.LineSegments(segGeo(), designMat);
-  const mapLines = new THREE.LineSegments(segGeo(), mapMat);
+  const designLines = new THREE.Mesh(segGeo(), designMat);
+  const mapLines = new THREE.Mesh(segGeo(), mapMat);
   designLines.renderOrder = 2;
   mapLines.renderOrder = 2;
   designGroup.add(designLines, mapLines);
@@ -249,13 +277,13 @@ export function createRecord(ctx) {
   // anchor marking the burst point on the face — the lift starts from its
   // world transform
   const anchor = new THREE.Object3D();
-  anchor.position.set((MAP_C.x - DISK_C.x) / DISK_R, -(MAP_C.y - DISK_C.y) / DISK_R, 0.002);
+  anchor.position.set((MAP_C.x - DISK_C.x) / DISK_RX, -(MAP_C.y - DISK_C.y) / DISK_RY, 0.002);
   designGroup.add(anchor);
 
   // the lift group lives in the SCENE (not the record group), so it stays put
   // while the record recedes underneath it
   const liftGroup = new THREE.Group();
-  const liftLines = new THREE.LineSegments(segGeo(), liftMat);
+  const liftLines = new THREE.Mesh(segGeo(), liftMat);
   liftLines.frustumCulled = false;
   liftLines.renderOrder = 3;
   liftGroup.add(liftLines);

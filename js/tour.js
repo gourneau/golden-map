@@ -57,6 +57,7 @@ export function initTour(ctx) {
   // ---- tween ------------------------------------------------------------
   let tween = null;                       // { el, dur, p0, p1, t0, t1 }
   const breath = new THREE.Vector3();     // last applied idle offset
+  let inspecting = false;                 // probe inspect: controls stay OFF (see setInspect)
   let pointerDown = false;
   let sinceUser = ORBIT_IDLE_S;           // seconds since last user gesture
   // Act II explainer panel state (ui.js 'uilayout'). It starts expanded, so the
@@ -74,7 +75,7 @@ export function initTour(ctx) {
     if (!tween) return;
     tween = null;
     legs = [];
-    controls.enabled = true;
+    controls.enabled = !inspecting; // never re-arm OrbitControls mid-inspect
   }
 
   // Portrait compensation. HOMES and the framing math are tuned for landscape
@@ -196,7 +197,7 @@ export function initTour(ctx) {
     flyTo(new THREE.Vector3(0.055, -0.1, 0.045), new THREE.Vector3(0.018, 0, 0), 2.6);
   }
 
-  // The Act I easter egg: frame the drifting probe. Read its live world
+  // The Act I probe visit: frame the drifting spacecraft. Read its live world
   // position (voyager.js freezes the orbit while selected, so this holds).
   function frameVoyager() {
     const obj = ctx.modules?.voyager?.object3d;
@@ -207,21 +208,21 @@ export function initTour(ctx) {
     flyTo(p.clone().add(off), p, 2.0);
   }
 
-  // Probe inspect mode: while visiting Voyager, tune OrbitControls for a
-  // close product-viewer feel — slower rotation, zoom clamped so you can
-  // neither clip into the mesh nor drift away. Restored on any deselect.
+  // Probe inspect mode: while visiting Voyager, OrbitControls goes fully
+  // silent and voyager.js owns the gesture (arcball rotation of the MODEL,
+  // wheel dolly). No competing camera rotation. Restored on any deselect.
   let inspectSaved = null;
   function setInspect(on) {
     if (on && !inspectSaved) {
       inspectSaved = {
-        rotateSpeed: controls.rotateSpeed,
+        enabled: controls.enabled,
         minDistance: controls.minDistance,
         maxDistance: controls.maxDistance,
       };
-      controls.rotateSpeed = 0.55;
-      controls.minDistance = 0.95;
-      controls.maxDistance = 4.5;
+      inspecting = true;
+      controls.enabled = false;
     } else if (!on && inspectSaved) {
+      inspecting = false;
       Object.assign(controls, inspectSaved);
       inspectSaved = null;
     }
@@ -308,6 +309,7 @@ export function initTour(ctx) {
   }, { passive: true, capture: true });
 
   canvas.addEventListener('click', (e) => {
+    if (inspecting) return; // the canvas is a rotation surface during inspect
     if (Math.hypot(e.clientX - downX, e.clientY - downY) > CLICK_SLOP_PX) return;
     const hit = pick(e);
     if (hit) ctx.select(hit);
@@ -317,6 +319,7 @@ export function initTour(ctx) {
   let lastHover = 0;
   canvas.addEventListener('pointermove', (e) => {
     if (pointerDown || tween) return;
+    if (inspecting) return; // voyager.js owns the cursor (grab) + no tooltips here
     const now = performance.now();
     if (now - lastHover < HOVER_INTERVAL_MS) return;
     lastHover = now;
@@ -398,7 +401,9 @@ export function initTour(ctx) {
           flyTo(next.pos, next.target, next.dur); // clears legs —
           legs = rest;                            // — restore the queue
         } else {
-          controls.enabled = true;
+          // arriving AT the probe must not hand the camera to OrbitControls —
+          // voyager.js owns the inspect gesture until deselect restores this
+          controls.enabled = !inspecting;
         }
       }
       return;
