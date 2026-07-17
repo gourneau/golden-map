@@ -221,14 +221,15 @@
      already lifts the disc above it), with a legibility wash. */
   .gm-title {
     left: 0; right: 0;
-    bottom: 62px; /* clears the docked mini player */
+    bottom: 72px; /* clears the docked mini player */
     width: auto;
     text-align: center;
     padding: 1.6rem 20px 0.4rem;
-    background: radial-gradient(ellipse 42% 115% at 50% 64%,
-      color-mix(in srgb, var(--void) 72%, transparent) 0%,
-      color-mix(in srgb, var(--void) 44%, transparent) 46%,
-      transparent 72%);
+    /* stronger wash: the eyebrow can sit over the disc's bottom edge */
+    background: radial-gradient(ellipse 52% 128% at 50% 62%,
+      color-mix(in srgb, var(--void) 88%, transparent) 0%,
+      color-mix(in srgb, var(--void) 62%, transparent) 48%,
+      transparent 74%);
   }
 }
 .gm-title h1 {
@@ -1075,7 +1076,7 @@ body.gm-still .gm-mini { display: none !important; }
 @media (max-width: 900px) {
   .gm-act-t { display: none; }
   .gm-act { padding: 0.5em 0.75em; min-height: 40px; }
-  .gm-title { bottom: 5vh; }
+  .gm-title { bottom: 72px; } /* clears the docked mini player */
   .gm-hook { font-size: var(--step--1); }
 
   /* the mini player docks full-width at the very bottom; everything that

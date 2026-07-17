@@ -605,7 +605,7 @@ export function initUI(ctx) {
       <button class="gm-play-btn gm-pplay is-invite" aria-label="Play"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2l10 6-10 6z"/></svg></button>
       <button class="gm-play-btn gm-pnext" aria-label="Next track"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M11 2h2v12h-2z M2 2l8 6-8 6z"/></svg></button>
       <div class="gm-mini-info">
-        <div class="gm-ptitle mono is-idle">Hear the record</div>
+        <div class="gm-ptitle mono is-idle" aria-live="polite">Hear the record</div>
         <div class="gm-pbar" aria-label="Seek"><i></i></div>
       </div>
       <button class="gm-play-btn gm-msets" aria-label="Choose playlist and credits" aria-expanded="false">♫</button>
