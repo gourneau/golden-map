@@ -1,0 +1,13 @@
+{
+  "name": "The Golden Map",
+  "short_name": "Golden Map",
+  "description": "An interactive 3D reconstruction of the pulsar map on the Voyager Golden Record.",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#050403",
+  "theme_color": "#050403",
+  "icons": [
+    { "src": "art/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "art/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
