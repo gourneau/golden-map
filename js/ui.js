@@ -605,7 +605,9 @@ export function initUI(ctx) {
   // 9. CORNER MARK (always present)
   // ======================================================================
   const corner = el('p', 'gm-panel gm-corner mono is-on',
-    '1 grid unit ≈ 3,260 light-years · you are at the center');
+    '1 grid unit ≈ 3,260 light-years · you are at the center' +
+    '&ensp;·&ensp;<a href="https://github.com/gourneau/golden-map" target="_blank" rel="noopener">code on GitHub</a>' +
+    ' · prompted by <a href="https://x.com/gourneau" target="_blank" rel="noopener">@gourneau</a>');
 
   // ======================================================================
   // 10. ENGRAVING OVERLAY CHIP (Acts II–IV) — mirrors the corner mark,

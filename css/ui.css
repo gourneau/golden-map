@@ -828,6 +828,8 @@
   text-transform: uppercase;
   color: var(--gold-dim);
 }
+.gm-corner a { color: var(--gold); text-decoration: none; }
+.gm-corner a:hover { color: var(--gold-bright); }
 
 /* ======================================================================
    10. ENGRAVING OVERLAY CHIP — bottom-right mirror of the corner mark.
