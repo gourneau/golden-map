@@ -504,8 +504,8 @@ export function initUI(ctx) {
         separately.)</p>
       <div class="gm-player">
         <div class="gm-player-sets" role="group" aria-label="Playlist">
-          <button class="gm-mode is-active" data-set="sounds">Sounds of Earth</button>
-          <button class="gm-mode" data-set="greetings">Greetings · 55 languages</button>
+          <button class="gm-mode is-active" data-set="greetings">Greetings · 55 languages</button>
+          <button class="gm-mode" data-set="sounds">Sounds of Earth</button>
         </div>
         <div class="gm-ptitle mono">press play · via NASA on SoundCloud</div>
         <div class="gm-pbar" aria-label="Seek"><i></i></div>
@@ -617,7 +617,7 @@ export function initUI(ctx) {
   let scWidget = null;
   let scReady = false;
   let scPlaying = false;
-  let scSet = 'sounds';
+  let scSet = 'greetings';
   let scApiPromise = null;
 
   const SVG_PLAY = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2l10 6-10 6z"/></svg>';
