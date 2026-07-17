@@ -48,6 +48,23 @@ export function initUI(ctx) {
     actBtns.set(a.id, b);
     navRow.appendChild(b);
   }
+  // prev/next act arrows book-ending the nav — a visible hint that ←/→ work.
+  // They clamp at the first/last act (no wrap-around), same as the keys.
+  const navArrow = (dir) => {
+    const b = el('button', 'gm-nav-arrow mono', dir < 0 ? '←' : '→');
+    b.title = 'arrow keys work too';
+    b.setAttribute('aria-label', dir < 0 ? 'Previous act (left arrow key)' : 'Next act (right arrow key)');
+    b.addEventListener('click', () => {
+      const ids = ACTS.map((a) => a.id);
+      const j = ids.indexOf(state.act) + dir;
+      if (j >= 0 && j < ids.length) ctx.setAct(ids[j]);
+    });
+    return b;
+  };
+  const prevArrow = navArrow(-1);
+  const nextArrow = navArrow(1);
+  navRow.prepend(prevArrow);
+  navRow.appendChild(nextArrow);
   const progress = el('div', 'gm-nav-progress', '<i></i>');
   // compact-nav act title (≤560px, where the buttons show numerals only) —
   // sits under the progress hairline so the hairline never shifts
@@ -127,35 +144,14 @@ export function initUI(ctx) {
   const demoTicks = explainer.querySelector('.gm-demo-ticks');
   const demoBits = explainer.querySelector('.gm-demo-bits');
 
-  // collapse toggle — desktop only; at ≤900px the panel is a bottom sheet and
-  // this control is hidden so the two systems never fight
-  const expToggle = el('button', 'gm-exp-toggle mono');
-  expToggle.innerHTML = `
-    <span class="gm-exp-chevron" aria-hidden="true">⟨</span>
-    <span class="gm-exp-tab-label">How to read it</span>`;
-  explainer.prepend(expToggle);
-  const expChevron = expToggle.querySelector('.gm-exp-chevron');
+  // The panel is always expanded on desktop (the old collapse-to-a-side-tab
+  // toggle reframed the camera and felt jumpy — removed); at ≤900px it is a
+  // bottom sheet. tour.js still needs to know which framing to use.
   const isSheetMode = () => window.innerWidth <= 900;
-  const explainerOpen = () => !isSheetMode() && !explainer.classList.contains('is-collapsed');
+  const explainerOpen = () => !isSheetMode();
   function emitLayout() {
     bus.dispatchEvent(new CustomEvent('uilayout', { detail: { explainerOpen: explainerOpen() } }));
   }
-  function paintExpToggle() {
-    const collapsed = explainer.classList.contains('is-collapsed');
-    expChevron.textContent = collapsed ? '⟩' : '⟨';
-    expToggle.setAttribute('aria-expanded', String(!collapsed));
-    expToggle.setAttribute('aria-label',
-      collapsed ? 'Expand the how-to-read panel' : 'Collapse the how-to-read panel');
-  }
-  expToggle.addEventListener('click', () => {
-    if (isSheetMode()) return; // no-op in bottom-sheet mode
-    const collapsed = explainer.classList.toggle('is-collapsed');
-    if (collapsed) explainer.scrollTop = 0;
-    paintExpToggle();
-    emitLayout();
-  });
-  if (window.innerWidth < 1100) explainer.classList.add('is-collapsed');
-  paintExpToggle();
 
   const demo = { bits: p0.binary, i: 0, acc: 0, active: false };
   const STEP = 0.09; // seconds per bit
@@ -691,6 +687,8 @@ export function initUI(ctx) {
     const i = ACTS.findIndex((a) => a.id === act);
     progress.firstElementChild.style.width = `${(((i < 0 ? 0 : i) + 1) / ACTS.length) * 100}%`;
     navTitle.textContent = i < 0 ? '' : ACTS[i].title;
+    prevArrow.disabled = i <= 0;
+    nextArrow.disabled = i >= ACTS.length - 1;
     closeSheet();
     if (act === 'map') demoStart();
     else demo.active = false;

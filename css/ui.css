@@ -117,7 +117,20 @@
   padding-top: 16px;
   --gm-in: translateY(-10px);
 }
-.gm-nav-row { display: flex; gap: 7px; pointer-events: auto; }
+.gm-nav-row { display: flex; gap: 7px; pointer-events: auto; align-items: stretch; }
+
+/* prev/next act arrows — quiet ghosts hinting that the arrow keys work */
+.gm-nav-arrow {
+  display: flex;
+  align-items: center;
+  padding: 0.5em 0.55em;
+  font-size: 0.8rem;
+  color: var(--gold-dim);
+  border: 1px solid transparent;
+  transition: color 0.3s var(--ease), border-color 0.3s var(--ease), opacity 0.3s var(--ease);
+}
+.gm-nav-arrow:hover:not(:disabled) { color: var(--gold-bright); border-color: var(--gold-faint); }
+.gm-nav-arrow:disabled { opacity: 0.25; cursor: default; }
 .gm-act {
   display: flex;
   align-items: center;
@@ -253,62 +266,6 @@
   text-transform: uppercase;
   color: var(--gold);
   margin-bottom: 0.2em;
-}
-
-/* collapse toggle + slim tab (desktop only — hidden in bottom-sheet mode) */
-.gm-exp-toggle {
-  position: sticky;
-  top: 0;
-  float: right;
-  z-index: 2;
-  font-size: 0.7rem;
-  line-height: 1;
-  color: var(--paper-dim);
-  padding: 0.35em 0.5em;
-  border: 1px solid transparent;
-  transition: color 0.25s var(--ease), border-color 0.25s var(--ease);
-}
-.gm-exp-toggle:hover { color: var(--gold-bright); border-color: var(--gold-faint); }
-.gm-exp-tab-label { display: none; }
-
-@media (min-width: 901px) {
-  /* slides mostly off-canvas left, leaving a 46px clickable tab.
-     later in the file than .gm-panel.is-on, so this transform wins there */
-  .gm-explainer.is-collapsed {
-    transform: translateX(calc(-100% + 46px));
-    overflow: hidden;
-  }
-  /* park the inner content: unclickable at once, invisible after the slide */
-  .gm-explainer.is-collapsed > :not(.gm-exp-toggle) {
-    visibility: hidden;
-    pointer-events: none;
-    transition: visibility 0s linear 0.6s;
-  }
-  /* the toggle grows into the full-height tab */
-  .gm-explainer.is-collapsed .gm-exp-toggle {
-    position: absolute;
-    float: none;
-    top: 0; right: 0; bottom: 0;
-    width: 46px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1em;
-    padding: 1.15em 0;
-    border: none;
-    border-left: 1px solid var(--gold-faint);
-    color: var(--gold);
-  }
-  .gm-explainer.is-collapsed .gm-exp-toggle:hover { color: var(--gold-bright); }
-  .gm-explainer.is-collapsed .gm-exp-tab-label {
-    display: block;
-    writing-mode: vertical-rl;
-    font-size: 0.58rem;
-    font-weight: 500;
-    letter-spacing: 0.3em;
-    text-transform: uppercase;
-    white-space: nowrap;
-  }
 }
 
 /* the animated binary readout */
@@ -935,18 +892,18 @@
   .gm-corner { display: none; }
 
   /* the explainer is a bottom sheet here — collapse control is a no-op */
-  .gm-exp-toggle { display: none; }
 
-  /* the two chips: tight right-side stack, above the sheets' fold */
+  /* the two chips: top-right stack, under the nav — the old bottom-right
+     spot floated them over the bottom sheets' text */
   .gm-artifact {
-    right: 12px; bottom: 8px;
-    z-index: 46;
+    right: 10px; top: 108px; bottom: auto;
+    z-index: 39; /* under the nav (40), over the canvas */
     font-size: 0.52rem;
     min-height: 40px;
     display: inline-flex;
     align-items: center;
   }
-  .gm-earth-chip { bottom: 48px; }
+  .gm-earth-chip { top: 152px; }
 
   /* tap targets ≥40px */
   .gm-close {

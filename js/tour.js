@@ -336,10 +336,11 @@ export function initTour(ctx) {
   canvas.addEventListener('pointerleave', clearHover);
 
   // ---- keyboard -------------------------------------------------------------
+  // arrow keys step through the acts and stop at either end — no wrap-around
   function cycleAct(step) {
     const ids = ctx.ACTS.map((a) => a.id);
-    const i = ids.indexOf(ctx.state.act);
-    ctx.setAct(ids[(i + step + ids.length) % ids.length]);
+    const j = ids.indexOf(ctx.state.act) + step;
+    if (j >= 0 && j < ids.length) ctx.setAct(ids[j]);
   }
 
   window.addEventListener('keydown', (e) => {

@@ -356,8 +356,107 @@ export function createRecord(ctx) {
 
   bus.addEventListener('artifact', (e) => { artifact = !!e.detail.show; });
 
+  // ==== grab-and-spin: the disc is a turntable ==============================
+  // Dragging the record spins it about its spindle (screen-tangential drag →
+  // rotation.y), with flick inertia that relaxes back to the ambient slow
+  // spin — the same grab-hand language as the probe, but record physics.
+  // rotation.y-only keeps the lift ceremony's settle math valid.
+  const AUTO_SPIN = prefersReducedMotion ? 0.02 : 0.12; // rad/s ambient
+  const FLICK_MAX = 7;      // rad/s cap on release velocity
+  const FLICK_RELAX_S = 1.6;// e-fold time for flick → ambient
+  let spinVel = AUTO_SPIN;
+  let dragging = false;
+  let dragAngle = 0;        // last pointer angle about the disc's screen center
+  let dragVel = 0;          // smoothed angular velocity while dragging
+  let dragAt = 0;           // performance.now() of the last drag sample
+  let hoverGrab = false;    // we own the cursor while the grab hand shows
+
+  const _wp = new THREE.Vector3();
+  const canDrag = () =>
+    act === 'record' && !lifting && fade > 0.5 &&
+    ctx.state.selected !== 'voyager' && group.visible;
+
+  // pointer angle about the disc center, in screen pixels (y-down, so a
+  // visually-clockwise drag increases the angle — matching +rotation.y as
+  // seen from the Act I camera)
+  function pointerAngle(e) {
+    const r = ctx.canvas.getBoundingClientRect();
+    group.getWorldPosition(_wp).project(ctx.camera);
+    const cx = r.left + ((_wp.x + 1) / 2) * r.width;
+    const cy = r.top + ((-_wp.y + 1) / 2) * r.height;
+    return Math.atan2(e.clientY - cy, e.clientX - cx);
+  }
+
+  const _ray = new THREE.Raycaster();
+  const _ndc = new THREE.Vector2();
+  function hitDisc(e) {
+    const r = ctx.canvas.getBoundingClientRect();
+    if (r.width === 0 || r.height === 0) return false;
+    _ndc.set(
+      ((e.clientX - r.left) / r.width) * 2 - 1,
+      -((e.clientY - r.top) / r.height) * 2 + 1,
+    );
+    _ray.setFromCamera(_ndc, ctx.camera);
+    return _ray.intersectObject(disc, false).length > 0;
+  }
+
+  const wrapPi = (a) => ((a + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI;
+
+  function endDrag() {
+    if (!dragging) return;
+    dragging = false;
+    ctx.controls.enabled = true;
+    spinVel = Math.max(-FLICK_MAX, Math.min(FLICK_MAX, dragVel));
+    ctx.canvas.style.cursor = hoverGrab ? 'grab' : '';
+  }
+
+  // capture-phase on window: runs before OrbitControls — when the grab lands
+  // on the disc, controls are switched off so the camera holds still. The
+  // event still propagates: tour.js must see the gesture (it pauses the idle
+  // sway and its hover tooltips while the pointer is down).
+  window.addEventListener('pointerdown', (e) => {
+    if (e.target !== ctx.canvas || e.button !== 0) return;
+    if (!canDrag() || !hitDisc(e)) return;
+    dragging = true;
+    ctx.controls.enabled = false;
+    dragAngle = pointerAngle(e);
+    dragVel = 0;
+    dragAt = performance.now();
+    ctx.canvas.style.cursor = 'grabbing';
+  }, { capture: true });
+
+  window.addEventListener('pointermove', (e) => {
+    if (dragging) {
+      // re-assert every move: a cancelled tween re-arms OrbitControls and
+      // tour's hover handler resets the cursor — both after our pointerdown
+      ctx.controls.enabled = false;
+      ctx.canvas.style.cursor = 'grabbing';
+      const now = performance.now();
+      const dtm = Math.max(1, now - dragAt) / 1000;
+      dragAt = now;
+      const a = pointerAngle(e);
+      const d = wrapPi(a - dragAngle);
+      dragAngle = a;
+      disc.rotation.y += d;
+      // smoothed release velocity (a flick is the last few samples, not one)
+      dragVel += ((d / dtm) - dragVel) * Math.min(1, dtm * 12);
+      return;
+    }
+    // hover: show the grab hand over the disc. This window listener runs
+    // after tour.js's canvas hover handler, so the override wins on the disc
+    // and leaves tour's pointer/default everywhere else.
+    if (e.target !== ctx.canvas) { hoverGrab = false; return; }
+    const over = canDrag() && hitDisc(e);
+    if (over) { ctx.canvas.style.cursor = 'grab'; hoverGrab = true; }
+    else if (hoverGrab) { hoverGrab = false; ctx.canvas.style.cursor = ''; }
+  });
+
+  window.addEventListener('pointerup', endDrag);
+  window.addEventListener('pointercancel', endDrag);
+
   bus.addEventListener('act', (e) => {
     act = e.detail.act;
+    if (act !== 'record') { endDrag(); if (hoverGrab) { hoverGrab = false; ctx.canvas.style.cursor = ''; } }
     const wasRecord = target === 1;
     target = act === 'record' ? 1 : 0;
     receding = act === 'map';
@@ -393,7 +492,11 @@ export function createRecord(ctx) {
     object3d: group,
 
     update(dt, t) {
-      if (spin) disc.rotation.y += dt * (prefersReducedMotion ? 0.02 : 0.12);
+      if (spin && !dragging) {
+        disc.rotation.y += spinVel * dt;
+        // a flick decays back to the ambient turntable rate
+        spinVel += (AUTO_SPIN - spinVel) * Math.min(1, dt / FLICK_RELAX_S);
+      }
 
       const rate = prefersReducedMotion ? 14 : (target > fade ? 2.4 : receding ? 1.6 : 2.8);
       fade += (target - fade) * Math.min(1, dt * rate);
