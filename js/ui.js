@@ -672,6 +672,27 @@ export function initUI(ctx) {
   let scApiPromise = null;
   let scDuration = 0;   // current sound's duration (ms), cached on READY
   let scLastIdx = -1;   // last seen playlist index (NASA sets)
+  let scPriming = false; // silent buffer-warm in progress (volume 0)
+
+  // iOS only honors play commands that land hard on the heels of a real tap —
+  // if the stream still has to BUFFER first, the tap's activation window
+  // expires and the play is dropped (that's why the first tap "did nothing"
+  // and the second worked: the first one buffered). So right after READY the
+  // stream is primed: volume 0, play, pause on the first PLAY, volume back.
+  // By the time a human reads the page and taps, the buffer is hot and the
+  // first tap plays. Blocked-autoplay browsers simply time out harmlessly.
+  const primeStream = () => {
+    if (!scWidget || !scReady || scPlaying || scPriming) return;
+    scPriming = true;
+    scWidget.setVolume(0);
+    scWidget.play();
+    setTimeout(() => {
+      if (scPriming) { scPriming = false; scWidget.setVolume(100); } // play was blocked — fine
+    }, 4000);
+  };
+  const cancelPriming = () => {
+    if (scPriming) { scPriming = false; scWidget.setVolume(100); }
+  };
 
   // SoundCloud's PLAY_PROGRESS events arrive on their own lazy cadence and
   // can leave the title/highlight stale for many seconds after a track
@@ -710,6 +731,7 @@ export function initUI(ctx) {
   // again if playback hasn't started. No-ops everywhere else.
   const pumpPlay = () => {
     if (!scWidget || !scReady) return;
+    cancelPriming(); // a real play intent takes over from the silent warm-up
     scWidget.play();
     setTimeout(() => { if (scWidget && scReady && !scPlaying) scWidget.play(); }, 700);
     setTimeout(() => { if (scWidget && scReady && !scPlaying) scWidget.play(); }, 1800);
@@ -866,10 +888,12 @@ export function initUI(ctx) {
             pTitle.textContent = 'Hear the record';
           }
           if (scWantPlay) { scWantPlay = false; pumpPlay(); }
+          else primeStream(); // no pending intent: warm the buffer for the first tap
           if (!miniFly.hidden) populateTrackList();
           resolve(scWidget);
         });
         scWidget.bind(E.PLAY, () => {
+          if (scPriming) { scWidget.pause(); return; } // buffer is warm — stop the silent run
           scPlaying = true;
           if (pendingSeekMs != null) { scWidget.seekTo(pendingSeekMs); pendingSeekMs = null; }
           pPlay.classList.remove('is-invite'); // the invitation was accepted
@@ -883,9 +907,21 @@ export function initUI(ctx) {
             });
           }
         });
-        scWidget.bind(E.PAUSE, () => { scPlaying = false; paintPlayBtn(); });
+        scWidget.bind(E.PAUSE, () => {
+          if (scPriming) { // silent warm-up finished: rewind, restore volume
+            scPriming = false;
+            scWidget.seekTo(0);
+            scWidget.setVolume(100);
+            return;
+          }
+          scPlaying = false;
+          paintPlayBtn();
+        });
         scWidget.bind(E.FINISH, () => { scPlaying = false; paintPlayBtn(); });
         scWidget.bind(E.PLAY_PROGRESS, (e) => {
+          // the silent warm-up (and its straggler events) must not touch the
+          // UI — only real playback drives the bar and titles
+          if (scPriming || !scPlaying) return;
           pBarFill.style.width = `${((e.relativePosition || 0) * 100).toFixed(1)}%`;
           if (scSet === 'music') {
             const i = musicIdxAt(e.currentPosition || 0);
@@ -945,10 +981,10 @@ export function initUI(ctx) {
       buildWidget(scSet).then((w) => { if (w && wasPlaying) pumpPlay(); });
     });
   }
-  // Pre-warm: build the default widget shortly after load (once the scene's
-  // own heavy assets are in flight) so the first press of play answers
-  // instantly instead of cold-loading the SoundCloud API + iframe handshake.
-  setTimeout(() => { if (!scWidget && !scApiPromise) buildWidget(scSet); }, 1800);
+  // Pre-warm: build the default widget right away so the READY handshake AND
+  // the silent buffer-warm are both done long before a human reads the page
+  // and presses play — that's what makes the first tap play on iOS.
+  setTimeout(() => { if (!scWidget && !scApiPromise) buildWidget(scSet); }, 400);
 
   // ---- the title-card greeting: a one-off "hello" ---------------------------
   // NASA's own recording (a US-government work, public domain), vendored as a
@@ -1132,6 +1168,28 @@ export function initUI(ctx) {
     tip.style.left = `${left}px`;
     tip.style.top = `${top}px`;
   });
+
+  // ---- mobile sheet collapse tabs -----------------------------------------
+  // On phones every act sheet gets a slim header tab (like "the fourteen"):
+  // tapping it drops the sheet down to just the tab so the 3D scene owns the
+  // screen; tapping again brings it back. Desktop hides the tabs entirely.
+  const sheetTab = (panel, label) => {
+    const b = el('button', 'gm-sheet-tab mono');
+    const paint = (collapsed) => {
+      b.innerHTML = `<span aria-hidden="true">${collapsed ? '▴' : '▾'}</span>&ensp;${label}`;
+      b.setAttribute('aria-expanded', String(!collapsed));
+    };
+    paint(false);
+    b.addEventListener('click', () => {
+      const collapsed = panel.classList.toggle('sheet-collapsed');
+      if (collapsed) panel.scrollTop = 0;
+      paint(collapsed);
+    });
+    panel.prepend(b);
+  };
+  sheetTab(explainer, 'How to read it');
+  sheetTab(verdict, 'Is it wrong?');
+  sheetTab(finders, 'For the finders');
 
   // ---- assemble ---------------------------------------------------------
   // `mini` is deliberately NOT in actPanels: the record keeps playing, and

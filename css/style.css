@@ -82,6 +82,9 @@ html, body {
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
 }
+/* app-like touch behavior: no double-tap-to-zoom anywhere (pinch still
+   works); the canvas overrides this itself with touch-action: none */
+body, #ui, #ui * { touch-action: manipulation; }
 
 #stage {
   position: fixed;
