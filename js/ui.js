@@ -130,7 +130,7 @@ export function initUI(ctx) {
       <p class="gm-demo-result mono">× 0.704024 ns = 0.8296830 s →
         <span class="engraved">PSR B1727-47</span></p>
     </div>
-    <details class="gm-cover-fig">
+    <details class="gm-cover-fig" open>
       <summary class="mono">The full cover, annotated — NASA/JPL</summary>
       <div class="gm-cover-fig-body"></div>
       <p class="gm-cover-fig-credit">Public domain, NASA/JPL — annotations outlined as vector paths.</p>
@@ -177,11 +177,13 @@ export function initUI(ctx) {
   // 4. PULSAR RAIL (Act III+)
   // ======================================================================
   const rail = el('section', 'gm-panel gm-sheet gm-rail');
-  rail.dataset.acts = 'pulsars finders'; // hidden in Act IV so the verdict panel + map own the view
+  // Act III only: Act IV belongs to the verdict panel, and Act V's finders
+  // panel gets the space for its own content instead of a repeat of this table
+  rail.dataset.acts = 'pulsars';
   rail.innerHTML = `
     <header class="gm-rail-head">
       <p class="eyebrow">The beacons · engraved order</p>
-      <p class="gm-rail-note">each dot pulses its own period</p>
+      <p class="gm-rail-note">each dot pulses its own period · click one for its story</p>
       <div class="gm-pulse-ctl" role="group" aria-label="Pulse rate">
         <span class="gm-k">pulse rate</span>
         <button class="gm-mode is-active" data-scale="1">slowed 20×</button>
@@ -236,7 +238,7 @@ export function initUI(ctx) {
 
   // mobile bottom-sheet toggle for the rail
   const railToggle = el('button', 'gm-panel gm-rail-toggle mono', '☰&ensp;the fourteen');
-  railToggle.dataset.acts = 'pulsars finders';
+  railToggle.dataset.acts = 'pulsars';
   railToggle.setAttribute('aria-expanded', 'false');
   railToggle.addEventListener('click', () => {
     const open = rail.classList.toggle('sheet-open');
@@ -494,6 +496,30 @@ export function initUI(ctx) {
       <span class="gm-chip mono">40,272 AD — Voyager 1 passes 1.7 ly from Gliese 445</span>
       <span class="gm-chip mono">+296,000 yr — Voyager 2 passes 4.3 ly from Sirius</span>
     </div>
+    <details class="gm-listen" open>
+      <summary class="mono">♫ Hear the record — streamed free by NASA</summary>
+      <p class="gm-body">The real thing: the greetings in 55 languages and the
+        “Sounds of Earth,” streamed from NASA’s official SoundCloud. (The
+        music tracks are still under copyright, so NASA links those
+        separately.)</p>
+      <div class="gm-player">
+        <div class="gm-player-sets" role="group" aria-label="Playlist">
+          <button class="gm-mode is-active" data-set="sounds">Sounds of Earth</button>
+          <button class="gm-mode" data-set="greetings">Greetings · 55 languages</button>
+        </div>
+        <div class="gm-player-row">
+          <button class="gm-play-btn gm-pprev" aria-label="Previous track">‹</button>
+          <button class="gm-play-btn gm-pplay" aria-label="Play">▶</button>
+          <button class="gm-play-btn gm-pnext" aria-label="Next track">›</button>
+          <div class="gm-player-info">
+            <div class="gm-ptitle mono">press play · via NASA on SoundCloud</div>
+            <div class="gm-pbar" aria-label="Seek"><i></i></div>
+          </div>
+        </div>
+        <p class="gm-fine gm-player-credit">Audio: <a href="https://soundcloud.com/nasa" target="_blank" rel="noopener">NASA on SoundCloud</a> · <a href="https://science.nasa.gov/mission/voyager/golden-record-contents/sounds/" target="_blank" rel="noopener">full contents at NASA</a></p>
+        <div class="gm-sc-host" aria-hidden="true"></div>
+      </div>
+    </details>
     <details class="gm-drake">
       <summary class="mono">The man who drew the map</summary>
       <p class="gm-body">One person drew both. In 1961, Frank Drake wrote a
@@ -513,17 +539,6 @@ export function initUI(ctx) {
       </ul>
       <p class="gm-drake-tie">The last term, <em>L</em>, is the question this
         map asks back — how long does anyone stay findable?</p>
-    </details>
-    <details class="gm-listen">
-      <summary class="mono">♫ Hear the record</summary>
-      <p class="gm-body">NASA streams parts of the real record for free — the
-        greetings in 55 languages and the “Sounds of Earth.” (The music tracks
-        are still under copyright, so NASA links those separately.)</p>
-      <ul>
-        <li><a href="https://science.nasa.gov/mission/voyager/golden-record-contents/sounds/" target="_blank" rel="noopener">NASA — Golden Record sounds &amp; contents</a></li>
-        <li><a href="https://soundcloud.com/nasa/sets/golden-record-sounds-of" target="_blank" rel="noopener">NASA on SoundCloud — Sounds of Earth (playlist)</a></li>
-        <li><a href="https://soundcloud.com/nasa/sets/golden-record-greetings-to-the" target="_blank" rel="noopener">NASA on SoundCloud — Greetings to the Universe (playlist)</a></li>
-      </ul>
     </details>
     <details class="gm-sources">
       <summary class="mono">Sources — every number on this page, checked</summary>
@@ -582,9 +597,110 @@ export function initUI(ctx) {
       </ul>
     </details>
     <p class="gm-colophon mono">
-      <a href="https://github.com/gourneau/golden-map" target="_blank" rel="noopener">code on GitHub</a>
+      <a href="https://github.com/gourneau/golden-map" target="_blank" rel="noopener">code &amp; sources on GitHub</a>
       &ensp;·&ensp;prompted by <a href="https://x.com/gourneau" target="_blank" rel="noopener">@gourneau</a>
     </p>`;
+
+  // ---- the record player -------------------------------------------------
+  // NASA's official playlists stream through a visually-hidden SoundCloud
+  // widget; these controls drive it over the Widget API so the player wears
+  // the site's gold instead of SoundCloud's chrome. Loaded lazily on the
+  // first visit to Act V.
+  const SC_SETS = {
+    sounds: 'https://soundcloud.com/nasa/sets/golden-record-sounds-of',
+    greetings: 'https://soundcloud.com/nasa/sets/golden-record-greetings-to-the',
+  };
+  const scHost = finders.querySelector('.gm-sc-host');
+  const pTitle = finders.querySelector('.gm-ptitle');
+  const pBar = finders.querySelector('.gm-pbar');
+  const pBarFill = pBar.querySelector('i');
+  const pPlay = finders.querySelector('.gm-pplay');
+  const setBtns = [...finders.querySelectorAll('.gm-player-sets .gm-mode')];
+  let scWidget = null;
+  let scReady = false;
+  let scPlaying = false;
+  let scSet = 'sounds';
+  let scApiPromise = null;
+
+  const paintPlayBtn = () => {
+    pPlay.textContent = scPlaying ? '❚❚' : '▶';
+    pPlay.setAttribute('aria-label', scPlaying ? 'Pause' : 'Play');
+  };
+  const refreshTitle = () => {
+    if (scWidget) scWidget.getCurrentSound((s) => { if (s) pTitle.textContent = s.title; });
+  };
+
+  const loadScApi = () => {
+    if (!scApiPromise) {
+      scApiPromise = new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://w.soundcloud.com/player/api.js';
+        s.onload = () => resolve(window.SC);
+        s.onerror = () => { scApiPromise = null; reject(new Error('SoundCloud API failed to load')); };
+        document.head.appendChild(s);
+      });
+    }
+    return scApiPromise;
+  };
+
+  function buildWidget(setKey) {
+    return loadScApi().then((SC) => {
+      scReady = false;
+      scPlaying = false;
+      paintPlayBtn();
+      pBarFill.style.width = '0%';
+      scHost.innerHTML = '';
+      const f = document.createElement('iframe');
+      f.allow = 'autoplay';
+      f.title = 'NASA Golden Record audio (SoundCloud)';
+      f.src = 'https://w.soundcloud.com/player/?url=' + encodeURIComponent(SC_SETS[setKey]) +
+        '&auto_play=false&visual=false&show_teaser=false&show_comments=false&color=%23c9a227';
+      scHost.appendChild(f);
+      scWidget = SC.Widget(f);
+      return new Promise((resolve) => {
+        const E = SC.Widget.Events;
+        scWidget.bind(E.READY, () => {
+          scReady = true;
+          refreshTitle();
+          resolve(scWidget);
+        });
+        scWidget.bind(E.PLAY, () => { scPlaying = true; paintPlayBtn(); refreshTitle(); });
+        scWidget.bind(E.PAUSE, () => { scPlaying = false; paintPlayBtn(); });
+        scWidget.bind(E.FINISH, () => { scPlaying = false; paintPlayBtn(); });
+        scWidget.bind(E.PLAY_PROGRESS, (e) => {
+          pBarFill.style.width = `${((e.relativePosition || 0) * 100).toFixed(1)}%`;
+        });
+        scWidget.bind(E.ERROR, () => { pTitle.textContent = 'stream unavailable — links below still work'; });
+      });
+    }).catch(() => { pTitle.textContent = 'stream unavailable — links below still work'; });
+  }
+
+  pPlay.addEventListener('click', () => {
+    if (!scWidget) buildWidget(scSet).then((w) => w && w.play());
+    else if (scReady) scWidget.toggle();
+  });
+  finders.querySelector('.gm-pprev').addEventListener('click', () => { if (scReady) { scWidget.prev(); refreshTitle(); } });
+  finders.querySelector('.gm-pnext').addEventListener('click', () => { if (scReady) { scWidget.next(); refreshTitle(); } });
+  pBar.addEventListener('click', (e) => {
+    if (!scReady) return;
+    const r = pBar.getBoundingClientRect();
+    const frac = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+    scWidget.getDuration((d) => scWidget.seekTo(frac * d));
+  });
+  for (const b of setBtns) {
+    b.addEventListener('click', () => {
+      if (b.dataset.set === scSet) return;
+      scSet = b.dataset.set;
+      for (const x of setBtns) x.classList.toggle('is-active', x === b);
+      const wasPlaying = scPlaying;
+      pTitle.textContent = 'loading…';
+      buildWidget(scSet).then((w) => { if (w && wasPlaying) w.play(); });
+    });
+  }
+  // pre-warm the widget on the first visit to Act V so the play press is instant
+  bus.addEventListener('act', (e) => {
+    if (e.detail.act === 'finders' && !scWidget && !scApiPromise) buildWidget(scSet);
+  });
 
   const slider = finders.querySelector('.gm-slider');
   const tplusEl = finders.querySelector('.gm-tplus');
@@ -603,7 +719,7 @@ export function initUI(ctx) {
   // ======================================================================
   const corner = el('p', 'gm-panel gm-corner mono is-on',
     '1 grid unit ≈ 3,260 light-years · you are at the center' +
-    '&ensp;·&ensp;<a href="https://github.com/gourneau/golden-map" target="_blank" rel="noopener">code on GitHub</a>' +
+    '&ensp;·&ensp;<a href="https://github.com/gourneau/golden-map" target="_blank" rel="noopener">code &amp; sources on GitHub</a>' +
     ' · prompted by <a href="https://x.com/gourneau" target="_blank" rel="noopener">@gourneau</a>');
 
   // ======================================================================

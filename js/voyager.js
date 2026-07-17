@@ -226,9 +226,10 @@ export function createVoyager(ctx) {
       }
 
       if (ctx.still) {
-        // screenshot mode: the probe emerges from under the disc's lower edge
-        group.position.set(0.55, 1.3, -1.75);
-        group.rotation.set(0.3, 0.85, 0.08);
+        // screenshot mode: the probe rides the disc's lower-left edge, big,
+        // dish up, boom sweeping across under the record
+        group.position.set(-0.5, -1.02, -0.55);
+        group.rotation.set(0.3, 2.5, 0.05);
         caption.visible = false;
         return;
       }

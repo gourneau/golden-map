@@ -43,6 +43,26 @@
 }
 .gm-nowrap { white-space: nowrap; }
 
+/* every expandable section's summary reads as a BUTTON, not a plain label —
+   bordered pill, hover glow, with the existing +/− state suffix */
+.gm-cover-fig summary,
+.gm-drake summary,
+.gm-listen summary,
+.gm-sources summary,
+.gm-fine-more summary {
+  display: inline-block;
+  padding: 0.6em 1em;
+  border: 1px solid var(--gold-faint);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--void-lift) 88%, transparent);
+  transition: color 0.25s var(--ease), border-color 0.25s var(--ease);
+}
+.gm-cover-fig summary:hover,
+.gm-drake summary:hover,
+.gm-listen summary:hover,
+.gm-sources summary:hover,
+.gm-fine-more summary:hover { color: var(--gold-bright); border-color: var(--gold-dim); }
+
 /* thin engraved scrollbars */
 .gm-sheet, .gm-rail-list, .gm-detail-body {
   scrollbar-width: thin;
@@ -767,6 +787,59 @@
 .gm-listen summary::-webkit-details-marker { display: none; }
 .gm-sources summary::after, .gm-listen summary::after { content: ' +'; color: var(--gold-dim); }
 .gm-sources[open] summary::after, .gm-listen[open] summary::after { content: ' −'; }
+/* the record player — gold transport over a hidden SoundCloud widget */
+.gm-player { margin-top: 0.8em; }
+.gm-player-sets { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 0.8em; }
+.gm-player-row { display: flex; align-items: center; gap: 9px; }
+.gm-play-btn {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  line-height: 1;
+  color: var(--gold);
+  border: 1px solid var(--gold-faint);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--void-lift) 88%, transparent);
+  transition: color 0.25s var(--ease), border-color 0.25s var(--ease);
+}
+.gm-play-btn:hover { color: var(--gold-bright); border-color: var(--gold-dim); }
+.gm-pplay { width: 46px; height: 46px; font-size: 0.7rem; }
+.gm-pprev, .gm-pnext { font-family: var(--display); font-size: 1.1rem; }
+.gm-player-info { flex: 1; min-width: 0; }
+.gm-ptitle {
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--paper-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 0.55em;
+}
+.gm-pbar {
+  position: relative;
+  height: 3px;
+  background: color-mix(in srgb, var(--gold-faint) 65%, transparent);
+  cursor: pointer;
+}
+.gm-pbar i {
+  display: block;
+  position: absolute;
+  top: 0; bottom: 0; left: 0;
+  width: 0%;
+  background: var(--gold);
+  transition: width 0.25s linear;
+}
+.gm-player-credit { border-top: none; margin-left: 0; }
+/* present for the Widget API, parked out of view */
+.gm-sc-host { position: absolute; left: -9999px; top: 0; width: 320px; height: 100px; overflow: hidden; }
+
 .gm-sources ul, .gm-listen ul { list-style: none; margin-top: 0.6em; display: grid; gap: 0.3em; }
 .gm-sources li, .gm-listen li { font-size: 0.82rem; }
 .gm-listen .gm-body { margin-top: 0.6em; font-size: 0.9rem; color: var(--paper-dim); }
