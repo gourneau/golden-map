@@ -221,7 +221,7 @@
      already lifts the disc above it), with a legibility wash. */
   .gm-title {
     left: 0; right: 0;
-    bottom: 72px; /* clears the docked mini player */
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px)); /* clears the docked mini player */
     width: auto;
     text-align: center;
     padding: 1.6rem 20px 0.4rem;
@@ -1076,13 +1076,29 @@ body.gm-still .gm-mini { display: none !important; }
 @media (max-width: 900px) {
   .gm-act-t { display: none; }
   .gm-act { padding: 0.5em 0.75em; min-height: 40px; }
-  .gm-title { bottom: 72px; } /* clears the docked mini player */
+  .gm-title { bottom: calc(72px + env(safe-area-inset-bottom, 0px)); } /* clears the docked mini player */
+
+  /* tighter masthead: a shorter card leaves the disc room above it */
+  .gm-title h1 { font-size: clamp(1.9rem, 5.4vw, 3.2rem); }
+  .gm-tagline { font-size: 0.95rem; margin-bottom: 0.7em; }
+  .gm-hook { font-size: var(--step--1); }
+  .gm-hello { margin-top: 0.55em; padding: 0.5em 0.85em; font-size: 0.58rem; }
+
+  /* pulse-rate chips fit one row */
+  .gm-pulse-ctl .gm-mode { font-size: 0.52rem; padding: 0.5em 0.7em; letter-spacing: 0.1em; }
   .gm-hook { font-size: var(--step--1); }
 
   /* the mini player docks full-width at the very bottom; everything that
      used to touch the screen edge rides 48px higher */
   .gm-mini { width: auto; bottom: 0; left: 0; right: 0; }
-  .gm-mini-bar { border-radius: 0; border-left: none; border-right: none; border-bottom: none; }
+  .gm-mini-bar {
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    /* clear the iPhone home indicator */
+    padding-bottom: calc(9px + env(safe-area-inset-bottom, 0px));
+  }
   .gm-mini-fly { left: 8px; right: 8px; bottom: calc(100% + 8px); }
 
   /* every bottom sheet caps at 46vh — the 3D scene always owns the top half */
@@ -1090,14 +1106,14 @@ body.gm-still .gm-mini { display: none !important; }
   .gm-verdict,
   .gm-detail {
     left: 12px; right: 12px;
-    top: auto; bottom: 64px;
+    top: auto; bottom: calc(64px + env(safe-area-inset-bottom, 0px));
     width: auto;
     max-height: 46vh;
   }
 
   .gm-rail {
     left: 0; right: 0;
-    top: auto; bottom: 48px;
+    top: auto; bottom: calc(48px + env(safe-area-inset-bottom, 0px));
     width: auto;
     max-height: 46vh;
     border-left: none;
@@ -1113,11 +1129,23 @@ body.gm-still .gm-mini { display: none !important; }
   .gm-rail.is-on.sheet-open { opacity: 1; visibility: visible; transform: none; }
   /* the drawer toggle moves bottom-LEFT so the chips own the right corner
      (the corner mark is hidden here, so the spot is free) */
-  .gm-rail-toggle { display: block; right: auto; left: 14px; bottom: 62px; min-height: 40px; }
+  .gm-rail-toggle {
+    display: block;
+    right: auto;
+    left: 14px;
+    bottom: calc(62px + env(safe-area-inset-bottom, 0px));
+    min-height: 40px;
+  }
+  /* open: the toggle becomes the closer, pinned just above the sheet —
+     never floating over the list rows */
+  .gm-rail-toggle[aria-expanded="true"] {
+    bottom: calc(46vh + 56px + env(safe-area-inset-bottom, 0px));
+    z-index: 46;
+  }
 
   .gm-finders {
     left: 12px; right: 12px;
-    top: auto; bottom: 64px; /* clears the docked mini player */
+    top: auto; bottom: calc(64px + env(safe-area-inset-bottom, 0px)); /* clears the docked mini player */
     width: auto;
     max-height: 46vh;
     --gm-in: translateY(18px);

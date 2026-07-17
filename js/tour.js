@@ -28,6 +28,19 @@ const HOMES = {
   finders: { pos: [-4.2, -13, 5],    target: [1.6, 0, 0.9] },
 };
 
+// Portrait (phone) homes: composed from scratch for tall screens — content
+// centered horizontally with the subject in the upper half (the bottom ~46vh
+// belongs to the sheets). The landscape HOMES bake in x-offsets that clear
+// desktop side panels, which don't exist on phones; portraitize()-ing them
+// left the map hugging a screen edge.
+const PHONE_HOMES = {
+  record:  { pos: [0, -5.6, 1.0],    target: [0, 0, -0.68] },
+  map:     { pos: [1.2, -13, 5.5],   target: [1.2, 0, -1.6] },
+  pulsars: { pos: [1.4, -17, 8],     target: [1.4, 0, -2.2] },
+  verdict: { pos: [1.2, -5, 13],     target: [1.2, -1.2, 0] },
+  finders: { pos: [1.4, -15, 6],     target: [1.4, 0, -2.1] },
+};
+
 // Map rendering mode per act: warm gold engraved for I–III,
 // engraved-vs-modern comparison for the verdict, modern for the finders.
 const ACT_MODE = {
@@ -94,14 +107,14 @@ export function initTour(ctx) {
     return { pos: target.clone().add(off), target: t };
   }
 
-  function flyTo(rawPos, rawTarget, dur = 1.6) {
+  function flyTo(rawPos, rawTarget, dur = 1.6, raw = false) {
     clearHover(); // the tooltip must not linger through a camera move
     stripBreath();
     legs = []; // a direct fly-to supersedes any queued sweep legs
-    // Every flyTo destination is computed framing — goHome, frameLine (via
-    // framePulsar/frameGC), frameEarth, and the sweep legs — never a user
-    // gesture, so the portrait fix applies here once for all of them.
-    const { pos, target } = portraitize(rawPos, rawTarget);
+    // Selection framings (frameLine/frameEarth/frameVoyager) get the portrait
+    // compensation; act homes pass raw=true — on phones they come from
+    // PHONE_HOMES, already composed for portrait.
+    const { pos, target } = raw ? { pos: rawPos, target: rawTarget } : portraitize(rawPos, rawTarget);
     if (ctx.prefersReducedMotion || dur <= 0) {
       cancelTween();
       camera.position.copy(pos);
@@ -130,10 +143,15 @@ export function initTour(ctx) {
 
   // ---- framing ----------------------------------------------------------
   function goHome(dur = 2.2) {
+    if (camera.aspect < PORTRAIT_ASPECT) {
+      const h = PHONE_HOMES[ctx.state.act] || PHONE_HOMES.record;
+      flyTo(new THREE.Vector3(...h.pos), new THREE.Vector3(...h.target), dur, true);
+      return;
+    }
     let h = HOMES[ctx.state.act] || HOMES.record;
     if (ctx.state.act === 'map' && explainerOpen) h = HOMES.mapOpen;
-    if (ctx.state.act === 'record' && camera.aspect >= PORTRAIT_ASPECT) h = HOMES.recordWide;
-    flyTo(new THREE.Vector3(...h.pos), new THREE.Vector3(...h.target), dur);
+    if (ctx.state.act === 'record') h = HOMES.recordWide;
+    flyTo(new THREE.Vector3(...h.pos), new THREE.Vector3(...h.target), dur, true);
   }
 
   // Frame the Sun→end line: target at `lookAt`, camera offset perpendicular-ish
@@ -197,9 +215,10 @@ export function initTour(ctx) {
     // leaving Act V must un-wreck the map — earlier acts have no time slider
     if (ctx.state.act !== 'finders' && ctx.state.timeMyr !== 0) ctx.setTimeMyr(0);
     if (ctx.state.selected != null) { ctx.select(null); return; } // its handler flies home
-    if (ctx.state.act === 'pulsars' && from === 'map') {
+    if (ctx.state.act === 'pulsars' && from === 'map' && camera.aspect >= PORTRAIT_ASPECT) {
       // the dimensional sweep: swoop to plane level — the stars visibly rise
       // out of the galactic disc — then climb to the hero overview
+      // (landscape only: the legs are composed for wide frames)
       flyPath([
         { pos: new THREE.Vector3(4, -11, 0.7), target: new THREE.Vector3(3, 0, 0.5), dur: 2.4 },
         { pos: new THREE.Vector3(...HOMES.pulsars.pos), target: new THREE.Vector3(...HOMES.pulsars.target), dur: 2.4 },

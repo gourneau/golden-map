@@ -247,13 +247,18 @@ export function initUI(ctx) {
   const railToggle = el('button', 'gm-panel gm-rail-toggle mono', '☰&ensp;the fourteen');
   railToggle.dataset.acts = 'pulsars';
   railToggle.setAttribute('aria-expanded', 'false');
-  railToggle.addEventListener('click', () => {
-    const open = rail.classList.toggle('sheet-open');
+  // while the sheet is open the toggle rides above it as the closer — it
+  // must never float over the list rows
+  const paintRailToggle = (open) => {
     railToggle.setAttribute('aria-expanded', String(open));
+    railToggle.innerHTML = open ? '✕&ensp;close' : '☰&ensp;the fourteen';
+  };
+  railToggle.addEventListener('click', () => {
+    paintRailToggle(rail.classList.toggle('sheet-open'));
   });
   const closeSheet = () => {
     rail.classList.remove('sheet-open');
-    railToggle.setAttribute('aria-expanded', 'false');
+    paintRailToggle(false);
   };
 
   // ======================================================================
@@ -499,7 +504,7 @@ export function initUI(ctx) {
       <div class="gm-ticks" aria-hidden="true">${tickMarks}</div>
     </div>
     <p class="gm-era">${eraLine(0)}</p>
-    <details class="gm-drake" open
+    <details class="gm-drake" open>
       <summary class="mono">The man who drew the map</summary>
       <p class="gm-body">One person drew both. In 1961, Frank Drake wrote a
         famous equation. It asks a simple question: <em>how many alien
@@ -849,6 +854,7 @@ export function initUI(ctx) {
             pTitle.classList.add('is-idle');
             pTitle.textContent = 'Hear the record';
           }
+          if (scWantPlay) { scWantPlay = false; scWidget.play(); }
           if (!miniFly.hidden) populateTrackList();
           resolve(scWidget);
         });
@@ -880,9 +886,14 @@ export function initUI(ctx) {
     }).catch(() => { pTitle.textContent = 'stream unavailable — links below still work'; });
   }
 
+  // A tap that lands while the widget is still handshaking must never be
+  // dropped (on phones the READY round-trip is slow — this was the
+  // "press play twice" bug). The intent is remembered and fires on READY.
+  let scWantPlay = false;
   pPlay.addEventListener('click', () => {
-    if (!scWidget) buildWidget(scSet).then((w) => w && w.play());
+    if (!scWidget) { scWantPlay = true; buildWidget(scSet); }
     else if (scReady) scWidget.toggle();
+    else scWantPlay = true;
   });
   // in the music sequence, prev/next hop between cue points inside the one
   // long file; a "prev" more than 3 s into a piece restarts that piece first
