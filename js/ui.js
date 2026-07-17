@@ -496,11 +496,7 @@ export function initUI(ctx) {
       <div class="gm-ticks" aria-hidden="true">${tickMarks}</div>
     </div>
     <p class="gm-era">${eraLine(0)}</p>
-    <div class="gm-chips">
-      <span class="gm-chip mono">40,272 AD — Voyager 1 passes 1.7 ly from Gliese 445</span>
-      <span class="gm-chip mono">+296,000 yr — Voyager 2 passes 4.3 ly from Sirius</span>
-    </div>
-    <details class="gm-drake">
+    <details class="gm-drake" open
       <summary class="mono">The man who drew the map</summary>
       <p class="gm-body">One person drew both. In 1961, Frank Drake wrote a
         famous equation. It asks a simple question: <em>how many alien
@@ -917,6 +913,11 @@ export function initUI(ctx) {
       buildWidget(scSet).then((w) => { if (w && wasPlaying) w.play(); });
     });
   }
+  // Pre-warm: build the default widget shortly after load (once the scene's
+  // own heavy assets are in flight) so the first press of play answers
+  // instantly instead of cold-loading the SoundCloud API + iframe handshake.
+  setTimeout(() => { if (!scWidget && !scApiPromise) buildWidget(scSet); }, 1800);
+
   // ---- the title-card greeting: a one-off "hello" ---------------------------
   // One button, one NASA track — the record's English greeting, spoken by
   // six-year-old Nick Sagan. Its own tiny hidden widget so it never disturbs
@@ -926,14 +927,17 @@ export function initUI(ctx) {
     const hello = title.querySelector('.gm-hello');
     const helloIc = hello.querySelector('.gm-hello-ic');
     let hw = null;
+    let hBuilding = false;
     let hReady = false;
     let hPlaying = false;
+    let hWantPlay = false; // click landed while the widget was still warming up
     const paintHello = () => {
       helloIc.innerHTML = hPlaying ? SVG_PAUSE : SVG_PLAY;
       hello.classList.toggle('is-playing', hPlaying);
     };
-    hello.addEventListener('click', () => {
-      if (hw) { if (hReady) hw.toggle(); return; }
+    const buildHello = () => {
+      if (hBuilding) return;
+      hBuilding = true;
       loadScApi().then((SC) => {
         const f = document.createElement('iframe');
         f.allow = 'autoplay';
@@ -944,14 +948,21 @@ export function initUI(ctx) {
         title.appendChild(f);
         hw = SC.Widget(f);
         const E = SC.Widget.Events;
-        hw.bind(E.READY, () => { hReady = true; hw.play(); });
+        hw.bind(E.READY, () => { hReady = true; if (hWantPlay) { hWantPlay = false; hw.play(); } });
         // deliberately independent of the dock: the three-second greeting may
         // overlay whatever the record is playing
         hw.bind(E.PLAY, () => { hPlaying = true; paintHello(); });
         hw.bind(E.PAUSE, () => { hPlaying = false; paintHello(); });
         hw.bind(E.FINISH, () => { hPlaying = false; paintHello(); hw.seekTo(0); });
-      }).catch(() => {});
+      }).catch(() => { hBuilding = false; });
+    };
+    hello.addEventListener('click', () => {
+      if (hReady) { hw.toggle(); return; }
+      hWantPlay = true;
+      buildHello();
     });
+    // pre-warm alongside the dock so the first press answers instantly
+    setTimeout(buildHello, 2600);
   }
 
   // ---- the Drake equation, playable ------------------------------------------

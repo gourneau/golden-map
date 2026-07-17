@@ -49,3 +49,9 @@ v3 (David Nash, astronexus.com, CC BY-SA 4.0). The spacecraft is NASA's
 [Voyager 3D model](https://science.nasa.gov/resource/voyager-3d-model/) (public
 domain, mesh-optimized); the Earth texture is NASA's cloud-free
 [Blue Marble](https://visibleearth.nasa.gov/images/57752) (public domain).
+
+## Credits
+
+Prompted and art-directed by [@gourneau](https://x.com/gourneau) 🖖. Built with
+[Claude Fable 5](https://www.anthropic.com/claude) (thanks, Claude) — research,
+code, and fact-checking done in [Claude Code](https://claude.com/claude-code).
