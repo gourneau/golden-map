@@ -24,6 +24,10 @@ export function initUI(ctx) {
     const ly = Number((kpc * 3262).toPrecision(2));
     return `≈ ${ly.toLocaleString('en-US')} ly (${Number(kpc.toPrecision(3))} kpc)`;
   };
+  // live ATNF Pulsar Catalogue ephemeris for one pulsar — the primary source
+  // for every modern period, pdot, age, and position on this page
+  const atnfUrl = (jname) =>
+    `https://www.atnf.csiro.au/research/pulsar/psrcat/proc_form.php?version=latest&startUserDefined=true&pulsar_names=${encodeURIComponent(jname)}&ephemeris=long&submit_ephemeris=Get+Ephemeris&state=query`;
   const fmtPPM = (v) => {
     const a = Math.abs(v);
     return `${v < 0 ? '−' : '+'}${a < 10 ? a.toFixed(2) : a.toFixed(0)} ppm`;
@@ -267,7 +271,7 @@ export function initUI(ctx) {
       was known to only 3 significant figures in 1971 — spurious precision, the
       map’s one honest engraving error.`,
     swapped: () => `Russel’s reconstruction found the Crab and B0525+21 — only
-      1.4° apart on the sky — positionally swapped relative to reality.`,
+      1.3° apart on the sky — positionally swapped relative to reality.`,
   };
 
   function renderDetail(target) {
@@ -289,8 +293,8 @@ export function initUI(ctx) {
           rides on.</p>
         <p class="gm-k" style="margin-top:0.8em">drag to rotate the spacecraft · scroll to zoom · esc to leave</p>
         <p class="gm-fine">Spacecraft model: NASA (public domain), from NASA’s
-          3D resources — simplified for the web. Voyager 1 is ~168 AU out,
-          the farthest spacecraft from Earth.</p>`;
+          3D resources — simplified for the web. Voyager 1 is ~170 AU out
+          (JPL Horizons, 2026), the farthest spacecraft from Earth.</p>`;
       return;
     }
     if (target === 'earth') {
@@ -322,13 +326,14 @@ export function initUI(ctx) {
           other line’s angle is measured from it, and its length is the ruler —
           every other line is a fraction of this one.</p>
         ${kv('engraved rule', 'Sun → GC ≡ 1', 'engraved')}
-        ${kv('modern value', fmtLy(8.2), 'modern')}
+        ${kv('modern value', fmtLy(8.28), 'modern')}
         ${kv('sun off midplane', '≈ 68 ly (20.8 pc)', 'modern')}
         <p class="gm-detail-note">The Sun doesn’t sit exactly in the flat disc
           of the galaxy — it rides slightly above it.</p>
-        <p class="gm-fine">Modern Sun-to-center distance from the GRAVITY
-          Collaboration (2019/2021); the Sun’s height above the galactic
-          midplane is ≈ 20.8 pc (Bennett &amp; Bovy 2019).</p>`;
+        <p class="gm-fine">Modern Sun-to-center distance 8.277 ± 0.009 kpc,
+          from the GRAVITY Collaboration’s orbit tracking of stars around the
+          central black hole (2022, A&amp;A 657, L12); the Sun’s height above
+          the galactic midplane is ≈ 20.8 pc (Bennett &amp; Bovy 2019).</p>`;
       return;
     }
     const p = target;
@@ -345,6 +350,10 @@ export function initUI(ctx) {
       ${kv('modern distance', fmtLy(p.distModern), 'modern')}
       <p class="gm-detail-note">${p.distNote}</p>
       ${p.fineNote ? `<p class="gm-fine">${p.fineNote}</p>` : ''}
+      ${p.refs ? `<p class="gm-fine gm-refs">${[
+        ...p.refs.map((r) => `<a href="${r.u}" target="_blank" rel="noopener">${r.t}</a>`),
+        `<a href="${atnfUrl(p.jname)}" target="_blank" rel="noopener">ATNF catalogue entry</a>`,
+      ].join(' · ')}</p>` : ''}
       ${kv('galactic', `ℓ ${p.l.toFixed(1)}° · b ${p.b.toFixed(1)}°`)}
       ${kv('RA / Dec', `${p.ra}&ensp;${p.dec}`)}
       <p class="gm-body gm-detail-story">${p.note}</p>
@@ -376,16 +385,17 @@ export function initUI(ctx) {
       <li>The line lengths are the real problem. In 1977, nobody knew these
         distances well. Most stars are really much closer — or much farther —
         than the map says.
-        <span class="gm-fine">Off by 2–10×: superseded 1970s dispersion-measure
-          data, not an engraving mistake. Russel (DSES) measured over 220%
-          average error; only 3 of the 14 line lengths come within 3%.</span></li>
+        <span class="gm-fine">Off by roughly 2–10×: superseded 1970s
+          dispersion-measure data, not an engraving mistake. Russel (DSES)
+          found over 220% error between the drawn lengths and the real
+          distances; only 3 of the 14 line lengths come within 3%.</span></li>
       <li>Three lines point a few degrees in the wrong direction.
-        <span class="gm-fine">B0950+08 by ~10.6°, B1642-03 by ~13.3°,
-          B0823+26 by ~17.6° — all among the pulsars sitting farthest above
-          the galaxy’s flat disc.</span></li>
+        <span class="gm-fine">B0950+08 by ~10.6°, B1642-03 by ~13.4°,
+          B0823+26 by ~17.6° (Johnston 2007, map vs. modern positions) — the
+          three pulsars sitting farthest above the galaxy’s flat disc.</span></li>
       <li>Two neighboring stars got swapped — each drawn in the other’s place.
         <span class="gm-fine">Russel’s reconstruction found B0531+21 (Crab) and
-          B0525+21 — only 1.4° apart on the sky — positionally swapped
+          B0525+21 — only 1.3° apart on the sky — positionally swapped
           relative to reality.</span></li>
       <li>One number was written with more digits than anyone actually knew.
         <span class="gm-fine">B1240-64’s period, known to 3 significant digits
@@ -398,9 +408,11 @@ export function initUI(ctx) {
       <li>In 2007, a researcher took only the engraved numbers — and found all
         fourteen stars. The numbers even revealed <em>when</em> the map was
         made: 1969.7 ± 1.2.
-        <span class="gm-fine">Johnston (2007): most periods match to better
-          than 1 ppm (one part per million); one twin-period pair also needed
-          line direction to separate; the date falls out of the spin-down.</span></li>
+        <span class="gm-fine">Johnston (2007): ten of the fourteen decoded
+          periods match the 1975 pulsar catalogue to better than 0.4 ppm
+          (parts per million); the young, fast pulsars differ by exactly
+          their five years of spin-down — averaging that drift across the
+          clocks is what dates the map to 1969.7 ± 1.2.</span></li>
       <li>Another study used only the line directions — and located the Sun
         to within 4%.
         <span class="gm-fine">Russel (DSES) triangulated the Sun’s galactic
@@ -517,20 +529,65 @@ export function initUI(ctx) {
       </ul>
     </details>
     <details class="gm-sources">
-      <summary class="mono">Sources</summary>
+      <summary class="mono">Sources — every number on this page, checked</summary>
+      <p class="gm-fine gm-sources-note">Every scientific value on this page
+        was checked against the sources below in July 2026 — the catalogue
+        entries and papers, not summaries of them. Each pulsar’s card links
+        to its own distance measurement and live catalogue entry.</p>
+      <p class="gm-src-h mono">The map itself</p>
       <ul>
-        <li><a href="https://www.johnstonsarchive.net/astro/pulsarmap.html" target="_blank" rel="noopener">W. R. Johnston — Reading the Pioneer/Voyager pulsar map</a></li>
-        <li><a href="https://www.science.org/doi/10.1126/science.175.4024.881" target="_blank" rel="noopener">Sagan, Sagan &amp; Drake — “A Message from Earth,” <em>Science</em> 175, 881 (1972)</a></li>
-        <li><a href="https://science.nasa.gov/mission/voyager/golden-record-cover/" target="_blank" rel="noopener">NASA — Voyager Golden Record cover</a></li>
-        <li><a href="https://www.atnf.csiro.au/research/pulsar/psrcat/" target="_blank" rel="noopener">ATNF Pulsar Catalogue</a></li>
-        <li><a href="https://dses.science/wp-content/uploads/2020/04/18-Galactic-Navigation-using-the-Pioneer-Spacecraft-Pulsar-Map.pdf" target="_blank" rel="noopener">R. Russel — Galactic Navigation using the Pioneer Pulsar Map (DSES)</a></li>
-        <li><a href="https://www.forbes.com/sites/startswithabang/2017/08/17/voyagers-cosmic-map-of-earths-location-is-hopelessly-wrong/" target="_blank" rel="noopener">E. Siegel — “…Hopelessly Wrong,” Forbes (2017)</a></li>
-        <li><a href="https://www.nationalgeographic.com/magazine/article/nasa-sent-a-map-to-space-to-help-aliens-find-earth-now-it-needs-an-update" target="_blank" rel="noopener">National Geographic — S. Ransom on updating the map</a></li>
+        <li><a href="https://doi.org/10.1126/science.175.4024.881" target="_blank" rel="noopener">Sagan, Salzman Sagan &amp; Drake — “A Message from Earth,” <em>Science</em> 175, 881 (1972)</a> — the paper that introduced the pulsar map, by the people who made it.</li>
+        <li><a href="https://science.nasa.gov/mission/voyager/golden-record-cover/" target="_blank" rel="noopener">NASA — Voyager Golden Record cover</a> — NASA’s own explanation of the cover, including the hydrogen time unit and the binary periods.</li>
+        <li><a href="https://www.pbs.org/the-farthest/science/pulsar-map/" target="_blank" rel="noopener">PBS, <em>The Farthest</em> — How to read a pulsar map</a> — Drake’s design, the 14 lines + galactic-center line.</li>
+      </ul>
+      <p class="gm-src-h mono">Reading the map back (the reconstructions)</p>
+      <ul>
+        <li><a href="https://www.johnstonsarchive.net/astro/pulsarmap.html" target="_blank" rel="noopener">W. R. Johnston — Reading the Pioneer/Voyager pulsar map (2003, updated 2007)</a> — decoded all 14 pulsars from the engraving; source of the engraved periods, line-length distances, the three bearing errors, and the 1969.7 ± 1.2 date.</li>
+        <li><a href="https://dses.science/wp-content/uploads/2020/04/18-Galactic-Navigation-using-the-Pioneer-Spacecraft-Pulsar-Map.pdf" target="_blank" rel="noopener">R. Russel — Galactic Navigation using the Pioneer Spacecraft Pulsar Map (DSES, 2019)</a> — triangulated the Sun’s position to ~4% from line directions alone; source of the &gt;220% length error and the Crab/B0525+21 swap.</li>
+        <li><a href="https://ui.adsabs.harvard.edu/abs/1975AJ.....80..794T/abstract" target="_blank" rel="noopener">Taylor &amp; Manchester 1975, AJ 80, 794</a> — the 147-pulsar catalogue Johnston matched the decoded periods against.</li>
+      </ul>
+      <p class="gm-src-h mono">Modern pulsar data (“as it really is”)</p>
+      <ul>
+        <li><a href="https://www.atnf.csiro.au/research/pulsar/psrcat/" target="_blank" rel="noopener">ATNF Pulsar Catalogue</a> (<a href="https://ui.adsabs.harvard.edu/abs/2005AJ....129.1993M/abstract" target="_blank" rel="noopener">Manchester et al. 2005</a>), v2.8.1, queried July 2026 — every modern period, spin-down rate, age, position, and best distance shown here.</li>
+        <li>Distance measurements, per pulsar (also linked on each card):
+          <a href="https://ui.adsabs.harvard.edu/abs/1990Natur.343..240B/abstract" target="_blank" rel="noopener">Bailes et al. 1990</a>,
+          <a href="https://ui.adsabs.harvard.edu/abs/2002ApJ...571..906B/abstract" target="_blank" rel="noopener">Brisken et al. 2002</a>,
+          <a href="https://ui.adsabs.harvard.edu/abs/2004ApJ...604..339C/abstract" target="_blank" rel="noopener">Chatterjee et al. 2004</a>,
+          <a href="https://ui.adsabs.harvard.edu/abs/2009ApJ...698..250C/abstract" target="_blank" rel="noopener">Chatterjee et al. 2009</a>,
+          <a href="https://ui.adsabs.harvard.edu/abs/2003ApJ...596.1137D/abstract" target="_blank" rel="noopener">Dodson et al. 2003</a> (Vela),
+          <a href="https://ui.adsabs.harvard.edu/abs/2019ApJ...875..100D/abstract" target="_blank" rel="noopener">Deller et al. 2019 (PSRπ)</a> — radio-interferometric parallaxes;
+          <a href="https://ui.adsabs.harvard.edu/abs/2012ApJ...755...39V/abstract" target="_blank" rel="noopener">Verbiest et al. 2012</a> — distance bias corrections;
+          <a href="https://ui.adsabs.harvard.edu/abs/2017ApJ...835...29Y/abstract" target="_blank" rel="noopener">Yao et al. 2017 (YMW16)</a> and
+          <a href="https://arxiv.org/abs/astro-ph/0207156" target="_blank" rel="noopener">Cordes &amp; Lazio 2002 (NE2001)</a> — electron-density models;
+          <a href="https://ui.adsabs.harvard.edu/abs/1968AJ.....73..535T/abstract" target="_blank" rel="noopener">Trimble 1968</a> (Crab Nebula);
+          <a href="https://ui.adsabs.harvard.edu/abs/2019ApJ...877...78S/abstract" target="_blank" rel="noopener">Shternin et al. 2019</a> (B1727-47’s remnant).</li>
+      </ul>
+      <p class="gm-src-h mono">Galaxy geometry &amp; constants</p>
+      <ul>
+        <li><a href="https://ui.adsabs.harvard.edu/abs/2022A%26A...657L..12G/abstract" target="_blank" rel="noopener">GRAVITY Collaboration 2022, A&amp;A 657, L12</a> — Sun → Galactic Center = 8.277 ± 0.009 kpc (and <a href="https://ui.adsabs.harvard.edu/abs/2019A%26A...625L..10G/abstract" target="_blank" rel="noopener">2019, A&amp;A 625, L10</a>).</li>
+        <li><a href="https://ui.adsabs.harvard.edu/abs/2019MNRAS.482.1417B/abstract" target="_blank" rel="noopener">Bennett &amp; Bovy 2019, MNRAS 482, 1417</a> — the Sun sits 20.8 ± 0.3 pc above the galactic midplane.</li>
+        <li><a href="https://ui.adsabs.harvard.edu/abs/1970ITIM...19..200H/abstract" target="_blank" rel="noopener">Hellwig et al. 1970</a> — the hydrogen 21 cm hyperfine frequency, 1,420,405,751.77 Hz: the map’s time unit.</li>
+      </ul>
+      <p class="gm-src-h mono">Voyager</p>
+      <ul>
+        <li><a href="https://science.nasa.gov/mission/voyager/frequently-asked-questions/" target="_blank" rel="noopener">NASA — Voyager FAQ</a> — Voyager 1 passes 1.7 ly from Gliese 445 in ~40,272 AD; <a href="https://www.jpl.nasa.gov/videos/whats-up-march-2020/" target="_blank" rel="noopener">JPL</a> — Voyager 2 passes 4.3 ly from Sirius in ~296,000 yr; distances from <a href="https://ssd.jpl.nasa.gov/horizons/" target="_blank" rel="noopener">JPL Horizons</a>.</li>
+      </ul>
+      <p class="gm-src-h mono">The “hopelessly wrong” debate</p>
+      <ul>
+        <li><a href="https://www.forbes.com/sites/startswithabang/2017/08/17/voyagers-cosmic-map-of-earths-location-is-hopelessly-wrong/" target="_blank" rel="noopener">E. Siegel — “…Hopelessly Wrong,” Forbes (2017)</a> — the likely source of the meme; argues million-year decay, concedes the map was sound when made.</li>
+        <li><a href="https://www.nationalgeographic.com/magazine/article/nasa-sent-a-map-to-space-to-help-aliens-find-earth-now-it-needs-an-update" target="_blank" rel="noopener">Drake &amp; Ransom, National Geographic (2020)</a> — co-authored by pulsar astronomer Scott Ransom, on updating the map.</li>
+      </ul>
+      <p class="gm-src-h mono">Artwork &amp; assets</p>
+      <ul>
         <li>Cover artwork: NASA/JPL (public domain); vectorization VectorVoyager, Wikimedia Commons.</li>
         <li>Spacecraft model: <a href="https://science.nasa.gov/resource/voyager-3d-model/" target="_blank" rel="noopener">NASA Voyager 3D model</a> (public domain), simplified for the web. Earth texture: <a href="https://visibleearth.nasa.gov/images/57752" target="_blank" rel="noopener">NASA Blue Marble</a> (public domain).</li>
         <li>Background stars: all stars brighter than magnitude 4.5 (~925), placed at their true positions — from the <a href="https://github.com/astronexus/HYG-Database" target="_blank" rel="noopener">HYG star database</a> v3 by David Nash (astronexus.com), a merger of the Hipparcos, Yale Bright Star, and Gliese catalogs, licensed <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>.</li>
       </ul>
-    </details>`;
+    </details>
+    <p class="gm-colophon mono">
+      <a href="https://github.com/gourneau/golden-map" target="_blank" rel="noopener">code on GitHub</a>
+      &ensp;·&ensp;prompted by <a href="https://x.com/gourneau" target="_blank" rel="noopener">@gourneau</a>
+    </p>`;
 
   const slider = finders.querySelector('.gm-slider');
   const tplusEl = finders.querySelector('.gm-tplus');

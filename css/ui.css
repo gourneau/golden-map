@@ -784,6 +784,37 @@
 .gm-sources li, .gm-listen li { font-size: 0.82rem; }
 .gm-listen .gm-body { margin-top: 0.6em; font-size: 0.9rem; color: var(--paper-dim); }
 
+/* grouped, claim-anchored source list */
+.gm-sources-note { border-top: none; margin: 0.6em 0 0.2em; }
+.gm-src-h {
+  margin-top: 0.9em;
+  font-size: 0.58rem;
+  font-weight: 500;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--gold-dim);
+}
+.gm-sources ul { margin-top: 0.35em; }
+
+/* per-pulsar reference links on the detail card */
+.gm-refs { border-top: none; padding-top: 0; margin-top: 0.3em; }
+.gm-refs a { color: var(--gold-dim); text-decoration-color: color-mix(in srgb, var(--gold-dim) 50%, transparent); }
+.gm-refs a:hover { color: var(--gold-bright); }
+
+/* colophon — repo + author credit */
+.gm-colophon {
+  margin-top: 1em;
+  padding-top: 0.7em;
+  border-top: 1px solid var(--gold-faint);
+  font-size: 0.58rem;
+  font-weight: 500;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--gold-dim);
+}
+.gm-colophon a { color: var(--gold); text-decoration: none; }
+.gm-colophon a:hover { color: var(--gold-bright); }
+
 /* ======================================================================
    9. CORNER MARK
    ====================================================================== */
