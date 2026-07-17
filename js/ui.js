@@ -78,14 +78,18 @@ export function initUI(ctx) {
   const title = el('section', 'gm-panel gm-title');
   title.dataset.acts = 'record';
   title.innerHTML = `
-    <p class="eyebrow">Launched 1977 · Still transmitting silence</p>
+    <p class="eyebrow">Launched 1977 · Now in interstellar space</p>
     <h1>The Golden Record</h1>
     <p class="gm-tagline">Earth’s address, written in dying stars</p>
     <p class="gm-hook">In 1977, NASA launched two spacecraft carrying a golden
       record. Engraved on it: a map that shows any finder where Earth is,
       using fourteen flashing stars as landmarks. This is that map — rebuilt
       with today’s data.</p>
-    <button class="gm-begin mono">Begin — unfold the map&ensp;<span aria-hidden="true">→</span></button>`;
+    <button class="gm-begin mono">Begin — unfold the map&ensp;<span aria-hidden="true">→</span></button>
+    <button class="gm-hello mono" title="the record’s English greeting — from NASA’s official stream">
+      <span class="gm-hello-ic" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M4 2l10 6-10 6z"/></svg></span>
+      <span>“Hello from the children of planet Earth”</span>
+    </button>`;
   title.querySelector('.gm-begin').addEventListener('click', () => ctx.setAct('map'));
 
   // ======================================================================
@@ -605,7 +609,7 @@ export function initUI(ctx) {
       <button class="gm-play-btn gm-pplay is-invite" aria-label="Play"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2l10 6-10 6z"/></svg></button>
       <button class="gm-play-btn gm-pnext" aria-label="Next track"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M11 2h2v12h-2z M2 2l8 6-8 6z"/></svg></button>
       <div class="gm-mini-info">
-        <div class="gm-ptitle mono">♫ hear the record</div>
+        <div class="gm-ptitle mono is-idle">Hear the record</div>
         <div class="gm-pbar" aria-label="Seek"><i></i></div>
       </div>
       <button class="gm-play-btn gm-msets" aria-label="Choose playlist and credits" aria-expanded="false">♫</button>
@@ -624,31 +628,31 @@ export function initUI(ctx) {
   // accumulated into start offsets (seconds) within the single upload.
   // prev/next seek between cues so the one big file plays like a playlist.
   const MUSIC_CUES = [
-    [0,    'Bach — Brandenburg Concerto No. 2, first movement'],
-    [280,  'Java — court gamelan, “Kinds of Flowers”'],
-    [563,  'Senegal — percussion'],
-    [691,  'Zaire — Mbuti girls’ initiation song'],
+    [0,    'Bach — Brandenburg Concerto No. 2, First Movement'],
+    [280,  'Java — Court Gamelan, “Kinds of Flowers”'],
+    [563,  'Senegal — Percussion'],
+    [691,  'Zaire — Mbuti Girls’ Initiation Song'],
     [747,  'Australia — “Morning Star” and “Devil Bird”'],
     [833,  'Mexico — “El Cascabel,” Lorenzo Barcelata'],
     [1027, 'Chuck Berry — “Johnny B. Goode”'],
-    [1185, 'New Guinea — men’s house song'],
-    [1265, 'Japan — shakuhachi, “Tsuru no Sugomori”'],
-    [1556, 'Bach — Gavotte en rondeaux, Arthur Grumiaux'],
-    [1731, 'Mozart — Queen of the Night aria, Edda Moser'],
+    [1185, 'New Guinea — Men’s House Song'],
+    [1265, 'Japan — Shakuhachi, “Tsuru no Sugomori”'],
+    [1556, 'Bach — Gavotte en Rondeaux, Arthur Grumiaux'],
+    [1731, 'Mozart — Queen of the Night Aria, Edda Moser'],
     [1906, 'Georgia — “Tchakrulo”'],
-    [2044, 'Peru — panpipes and drum'],
+    [2044, 'Peru — Panpipes and Drum'],
     [2096, 'Louis Armstrong — “Melancholy Blues”'],
-    [2281, 'Azerbaijan — bagpipes'],
+    [2281, 'Azerbaijan — Bagpipes'],
     [2431, 'Stravinsky — Rite of Spring, Sacrificial Dance'],
-    [2706, 'Bach — Well-Tempered Clavier, Glenn Gould'],
-    [2994, 'Beethoven — Fifth Symphony, first movement'],
+    [2706, 'Bach — The Well-Tempered Clavier, Glenn Gould'],
+    [2994, 'Beethoven — Fifth Symphony, First Movement'],
     [3434, 'Bulgaria — “Izlel je Delyo Hagdutin,” Valya Balkanska'],
     [3733, 'Navajo — Night Chant'],
     [3790, 'Holborne — “The Fairie Round”'],
-    [3867, 'Solomon Islands — panpipes'],
-    [3939, 'Peru — wedding song'],
-    [3977, 'China — guqin, “Flowing Streams,” Guan Pinghu'],
-    [4434, 'India — raga “Jaat Kahan Ho,” Kesarbai Kerkar'],
+    [3867, 'Solomon Islands — Panpipes'],
+    [3939, 'Peru — Wedding Song'],
+    [3977, 'China — Guqin, “Flowing Streams,” Guan Pinghu'],
+    [4434, 'India — Raga “Jaat Kahan Ho,” Kesarbai Kerkar'],
     [4644, 'Blind Willie Johnson — “Dark Was the Night”'],
     [4839, 'Beethoven — Cavatina, Budapest String Quartet'],
   ];
@@ -665,12 +669,39 @@ export function initUI(ctx) {
   let scPlaying = false;
   let scSet = 'music';
   let scApiPromise = null;
+  let scDuration = 0;   // current sound's duration (ms), cached on READY
+  let scLastIdx = -1;   // last seen playlist index (NASA sets)
+
+  // SoundCloud's PLAY_PROGRESS events arrive on their own lazy cadence and
+  // can leave the title/highlight stale for many seconds after a track
+  // change — so while playing, poll the true position once a second and
+  // reconcile everything from it
+  setInterval(() => {
+    if (!scWidget || !scReady || !scPlaying) return;
+    scWidget.getPosition((ms) => {
+      if (scSet === 'music') {
+        if (scDuration > 0) pBarFill.style.width = `${((ms || 0) / scDuration * 100).toFixed(1)}%`;
+        const i = musicIdxAt(ms || 0);
+        if (i !== musicIdx) setMusicTitle(i);
+      }
+    });
+    if (scSet !== 'music') {
+      scWidget.getCurrentSoundIndex((ci) => {
+        if (ci != null && ci !== scLastIdx) {
+          scLastIdx = ci;
+          refreshTitle();
+          if (!miniFly.hidden) markCurrentRow(ci);
+        }
+      });
+    }
+  }, 1000);
 
   miniSets.addEventListener('click', () => {
     miniFly.hidden = !miniFly.hidden;
     miniSets.setAttribute('aria-expanded', String(!miniFly.hidden));
     if (!miniFly.hidden) populateTrackList();
   });
+  let pauseHello = () => {}; // reassigned once the title-card greeting wires up
 
   const SVG_PLAY = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2l10 6-10 6z"/></svg>';
   const SVG_PAUSE = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h3v12H4z M9 2h3v12H9z"/></svg>';
@@ -679,8 +710,10 @@ export function initUI(ctx) {
     pPlay.setAttribute('aria-label', scPlaying ? 'Pause' : 'Play');
   };
   let musicIdx = -1; // current cue in the music sequence (-1 = unknown)
+  let pendingSeekMs = null; // seek applied on the next PLAY (a paused widget drops seeks)
   const setMusicTitle = (i) => {
     musicIdx = i;
+    pTitle.classList.remove('is-idle');
     pTitle.textContent = MUSIC_CUES[i][1]; // numbering lives in the track list
     markCurrentRow(i);
   };
@@ -705,8 +738,35 @@ export function initUI(ctx) {
     if (!scWidget) return;
     if (scSet === 'music') { if (musicIdx < 0) setMusicTitle(0); return; }
     scWidget.getCurrentSound((s) => {
-      if (s) pTitle.textContent = stripGR(s.title);
+      if (s) { pTitle.classList.remove('is-idle'); pTitle.textContent = stripGR(s.title); }
     });
+  };
+
+  // The two NASA playlists are fixed — their track lists are hard-coded
+  // (extracted once from the playlists themselves, titles tidied) so the
+  // browser renders instantly instead of waiting on SoundCloud's lazy
+  // metadata paging. Click order still maps 1:1 to widget.skip(index).
+  const NASA_TRACKS = {
+    sounds: [
+      'Life Signs, Pulsar', 'Kiss, Mother and Child', 'Tractor, Bus, Auto',
+      'Train', 'Horse and Cart', 'Morse Code, Ships', 'Tractor, Riveter',
+      'Herding Sheep, Blacksmith, Sawing', 'Tame Dog', 'Music of the Spheres',
+      'Mud Pots', 'Wind, Rain, Surf', 'Crickets, Frogs',
+      'Birds, Hyena, Elephant', 'Chimpanzee', 'Wild Dog',
+      'Footsteps, Heartbeat, Laughter', 'Fire, Speech', 'The First Tools',
+    ],
+    greetings: [
+      'Akkadian', 'Amoy (Min dialect)', 'Arabic', 'Aramaic', 'Armenian',
+      'Bengali', 'Burmese', 'Cantonese', 'Czech', 'Dutch', 'English',
+      'French', 'German', 'Greek', 'Gujarati', 'Hebrew', 'Hindi', 'Hittite',
+      'Hungarian (Magyar)', 'Ila (Zambia)', 'Indonesian', 'Italian',
+      'Japanese', 'Kannada (Kanarese)', 'Kechua (Quechua)', 'Korean',
+      'Latin', 'Luganda (Ganda)', 'Mandarin Chinese', 'Marathi', 'Nepali',
+      'Nguni (Zulu)', 'Nyanja', 'Oriya', 'Persian', 'Polish', 'Portuguese',
+      'Punjabi', 'Rajasthani', 'Romanian', 'Russian', 'Serbian', 'Sinhalese',
+      'Sotho (Sesotho)', 'Spanish', 'Sumerian', 'Swedish', 'Telugu', 'Thai',
+      'Turkish', 'Ukrainian', 'Urdu', 'Vietnamese', 'Welsh', 'Wu',
+    ],
   };
 
   // ---- track list browser (in the ♫ flyout) --------------------------------
@@ -730,29 +790,25 @@ export function initUI(ctx) {
       renderTrackRows(MUSIC_CUES.map((c) => c[1]), Math.max(0, musicIdx));
       return;
     }
-    if (!scWidget || !scReady) { trackList.innerHTML = ''; return; }
-    // SoundCloud pages its playlist metadata — untitled rows fill in on later
-    // refreshes (each PLAY re-populates)
-    scWidget.getSounds((sounds) => {
-      if (scSet === 'music') return; // set changed while fetching
-      scWidget.getCurrentSoundIndex((ci) => {
-        renderTrackRows(
-          (sounds || []).map((s, i) => stripGR(s && s.title) || `track ${i + 1}`),
-          ci ?? 0,
-        );
-      });
-    });
+    renderTrackRows(NASA_TRACKS[scSet], Math.max(0, scLastIdx));
+    if (scWidget && scReady) {
+      scWidget.getCurrentSoundIndex((ci) => { if (ci != null) markCurrentRow(ci); });
+    }
   }
   function playTrack(i) {
     if (scSet === 'music') {
       setMusicTitle(i);
-      const seekAndPlay = (w) => { w.seekTo(MUSIC_CUES[i][0] * 1000); w.play(); };
-      if (!scWidget) buildWidget('music').then((w) => { if (w) seekAndPlay(w); });
-      else if (scReady) seekAndPlay(scWidget);
+      const ms = MUSIC_CUES[i][0] * 1000;
+      // a widget that isn't playing yet drops seekTo — queue it for PLAY
+      if (!scWidget) { pendingSeekMs = ms; buildWidget('music').then((w) => { if (w) w.play(); }); }
+      else if (scReady) {
+        if (scPlaying) scWidget.seekTo(ms);
+        else { pendingSeekMs = ms; scWidget.play(); }
+      }
       return;
     }
-    if (scWidget && scReady) { scWidget.skip(i); markCurrentRow(i); }
-    else if (!scWidget) buildWidget(scSet).then((w) => { if (w) w.skip(i); });
+    if (scWidget && scReady) { scWidget.skip(i); scWidget.play(); markCurrentRow(i); }
+    else if (!scWidget) buildWidget(scSet).then((w) => { if (w) { w.skip(i); w.play(); } });
   }
 
   const loadScApi = () => {
@@ -773,6 +829,8 @@ export function initUI(ctx) {
       scReady = false;
       scPlaying = false;
       musicIdx = -1;
+      scLastIdx = -1;
+      scDuration = 0;
       paintPlayBtn();
       pBarFill.style.width = '0%';
       scHost.innerHTML = '';
@@ -787,20 +845,24 @@ export function initUI(ctx) {
         const E = SC.Widget.Events;
         scWidget.bind(E.READY, () => {
           scReady = true;
+          scWidget.getDuration((d) => { scDuration = d || 0; });
           refreshTitle();
           if (!miniFly.hidden) populateTrackList();
           resolve(scWidget);
         });
         scWidget.bind(E.PLAY, () => {
           scPlaying = true;
+          pauseHello(); // never two streams at once
+          if (pendingSeekMs != null) { scWidget.seekTo(pendingSeekMs); pendingSeekMs = null; }
           pPlay.classList.remove('is-invite'); // the invitation was accepted
           paintPlayBtn();
           refreshTitle();
-          // keep the flyout list in step (and let lazily-paged NASA playlist
-          // titles fill in as they arrive)
+          // keep the flyout list highlight in step
           if (!miniFly.hidden) {
             if (scSet === 'music') markCurrentRow(Math.max(0, musicIdx));
-            else populateTrackList();
+            else scWidget.getCurrentSoundIndex((ci) => {
+              if (ci != null) { scLastIdx = ci; markCurrentRow(ci); }
+            });
           }
         });
         scWidget.bind(E.PAUSE, () => { scPlaying = false; paintPlayBtn(); });
@@ -860,6 +922,46 @@ export function initUI(ctx) {
       buildWidget(scSet).then((w) => { if (w && wasPlaying) w.play(); });
     });
   }
+  // ---- the title-card greeting: a one-off "hello" ---------------------------
+  // One button, one NASA track — the record's English greeting, spoken by
+  // six-year-old Nick Sagan. Its own tiny hidden widget so it never disturbs
+  // the dock's playlist position; each stream pauses the other.
+  {
+    const HELLO_URL = 'https://soundcloud.com/nasa/golden-record-english-greeting';
+    const hello = title.querySelector('.gm-hello');
+    const helloIc = hello.querySelector('.gm-hello-ic');
+    let hw = null;
+    let hReady = false;
+    let hPlaying = false;
+    const paintHello = () => {
+      helloIc.innerHTML = hPlaying ? SVG_PAUSE : SVG_PLAY;
+      hello.classList.toggle('is-playing', hPlaying);
+    };
+    pauseHello = () => { if (hw && hPlaying) hw.pause(); };
+    hello.addEventListener('click', () => {
+      if (hw) { if (hReady) hw.toggle(); return; }
+      loadScApi().then((SC) => {
+        const f = document.createElement('iframe');
+        f.allow = 'autoplay';
+        f.title = 'NASA Golden Record: English greeting (SoundCloud)';
+        f.src = 'https://w.soundcloud.com/player/?url=' + encodeURIComponent(HELLO_URL) +
+          '&auto_play=false&visual=false&show_teaser=false';
+        f.style.cssText = 'position:absolute;left:-9999px;top:0;width:300px;height:80px;';
+        title.appendChild(f);
+        hw = SC.Widget(f);
+        const E = SC.Widget.Events;
+        hw.bind(E.READY, () => { hReady = true; hw.play(); });
+        hw.bind(E.PLAY, () => {
+          hPlaying = true;
+          if (scWidget && scPlaying) scWidget.pause(); // the greeting takes the floor
+          paintHello();
+        });
+        hw.bind(E.PAUSE, () => { hPlaying = false; paintHello(); });
+        hw.bind(E.FINISH, () => { hPlaying = false; paintHello(); hw.seekTo(0); });
+      }).catch(() => {});
+    });
+  }
+
   const slider = finders.querySelector('.gm-slider');
   const tplusEl = finders.querySelector('.gm-tplus');
   const beaconsEl = finders.querySelector('.gm-beacons');

@@ -253,6 +253,28 @@
   line-height: 1.5;
   color: var(--paper);
 }
+/* the one-off greeting: a quiet second line under Begin */
+.gm-hello {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65em;
+  margin-top: 0.85em;
+  padding: 0.55em 0.95em;
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  color: var(--gold-dim);
+  border: 1px solid var(--gold-faint);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--void-lift) 70%, transparent);
+  transition: color 0.25s var(--ease), border-color 0.25s var(--ease);
+}
+.gm-hello:hover { color: var(--gold-bright); border-color: var(--gold-dim); }
+.gm-hello.is-playing { color: var(--gold); border-color: var(--gold-dim); }
+.gm-hello-ic { display: flex; }
+.gm-hello-ic svg { width: 9px; height: 9px; fill: currentColor; }
+@media (max-width: 900px) { .gm-hello { margin-top: 0.7em; } }
 @media (max-width: 900px) { .gm-hook { max-width: 44em; margin: 0 auto 1em; } }
 .gm-begin {
   pointer-events: auto;
@@ -870,6 +892,16 @@
   overflow: hidden;
   text-overflow: ellipsis;
   margin-bottom: 0.5em;
+}
+/* before anything has played, the bar carries an invitation, not a track —
+   set in the site's italic serif, gold, like the masthead tagline */
+.gm-ptitle.is-idle {
+  font-family: var(--body);
+  font-style: italic;
+  font-size: 0.95rem;
+  font-weight: 400;
+  letter-spacing: 0.03em;
+  color: var(--gold);
 }
 
 /* track list browser in the flyout */
