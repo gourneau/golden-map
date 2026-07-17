@@ -627,7 +627,11 @@ export function initUI(ctx) {
     pPlay.setAttribute('aria-label', scPlaying ? 'Pause' : 'Play');
   };
   const refreshTitle = () => {
-    if (scWidget) scWidget.getCurrentSound((s) => { if (s) pTitle.textContent = s.title; });
+    // every NASA track is prefixed "Golden Record: " — drop it so the actual
+    // track name fits the line
+    if (scWidget) scWidget.getCurrentSound((s) => {
+      if (s) pTitle.textContent = s.title.replace(/^golden record:\s*/i, '');
+    });
   };
 
   const loadScApi = () => {
