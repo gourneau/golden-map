@@ -44,13 +44,15 @@
 .gm-nowrap { white-space: nowrap; }
 
 /* thin engraved scrollbars */
-.gm-sheet, .gm-rail-list, .gm-detail {
+.gm-sheet, .gm-rail-list, .gm-detail-body {
   scrollbar-width: thin;
   scrollbar-color: var(--gold-faint) transparent;
 }
-.gm-sheet::-webkit-scrollbar, .gm-rail-list::-webkit-scrollbar { width: 4px; }
+.gm-sheet::-webkit-scrollbar, .gm-rail-list::-webkit-scrollbar,
+.gm-detail-body::-webkit-scrollbar { width: 4px; }
 .gm-sheet::-webkit-scrollbar-thumb,
-.gm-rail-list::-webkit-scrollbar-thumb { background: var(--gold-faint); }
+.gm-rail-list::-webkit-scrollbar-thumb,
+.gm-detail-body::-webkit-scrollbar-thumb { background: var(--gold-faint); }
 
 /* key–value rows (detail, crab clock) */
 .gm-kv {
@@ -447,28 +449,44 @@
 /* ======================================================================
    5. DETAIL PANEL
    ====================================================================== */
+/* The panel itself never scrolls — the body does, below a fixed header row
+   that owns the close button. Nothing ever slides underneath the ✕. */
 .gm-detail {
   right: 22px;
   top: 96px;
   width: min(var(--panel-w), calc(100vw - 44px));
   max-height: calc(100vh - 200px);
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   z-index: 30;
   --gm-in: translateX(18px);
 }
 .gm-close {
-  position: sticky;
-  top: 0;
-  float: right;
+  flex: none;
+  align-self: flex-end;
+  /* tucked toward the panel corner, clear of the text column */
+  margin: -0.55rem -0.7rem 0.3rem 0;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-family: var(--mono);
   font-size: 0.7rem;
   line-height: 1;
   color: var(--paper-dim);
-  padding: 0.35em 0.45em;
-  border: 1px solid transparent;
+  border: 1px solid var(--gold-faint);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--void-lift) 88%, transparent);
   transition: color 0.25s var(--ease), border-color 0.25s var(--ease);
 }
-.gm-close:hover { color: var(--gold-bright); border-color: var(--gold-faint); }
+.gm-close:hover { color: var(--gold-bright); border-color: var(--gold-dim); }
+.gm-detail-body {
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 0.35rem; /* text clears the thin scrollbar */
+}
 .gm-detail-name { font-size: var(--step-2); margin: 0.3em 0 0.05em; }
 .gm-detail-sub { font-size: 0.62rem; letter-spacing: 0.12em; color: var(--paper-dim); margin-bottom: 1em; }
 .gm-bin-label { display: block; margin: 0.9em 0 0.3em; }
