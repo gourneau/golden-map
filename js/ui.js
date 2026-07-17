@@ -1,8 +1,11 @@
-// The Golden Map — ui.js
+// The Golden Record — ui.js
 // Owns ALL DOM inside #ui. Never touches three.js; speaks to the scene only
 // through ctx methods and reflects state via ctx.bus events.
-// All copy sourced from research/brief-raw.txt (Johnston; Sagan, Sagan & Drake
-// 1972; Russel/DSES; Siegel 2017; ATNF). See the Sources disclosure in Act V.
+// Every scientific claim in this copy was verified against primary sources
+// (July 2026): ATNF v2.8.1, the parallax papers on ADS, Johnston 2007,
+// Russel/DSES 2019, NASA/JPL. The Act V Sources panel carries the full list;
+// per-pulsar provenance lives in js/data/pulsars.js. Keep them in sync when
+// copy changes — never publish an uncited number.
 
 import { extinctionMyr, displayBlinkSeconds } from './astro.js';
 import { loadText, explanationSvg } from './assets.js';
@@ -692,6 +695,7 @@ export function initUI(ctx) {
   miniSets.addEventListener('click', () => {
     miniFly.hidden = !miniFly.hidden;
     miniSets.setAttribute('aria-expanded', String(!miniFly.hidden));
+    miniSets.classList.toggle('is-active', !miniFly.hidden); // lit while open
     if (!miniFly.hidden) populateTrackList();
   });
 
@@ -838,7 +842,13 @@ export function initUI(ctx) {
         scWidget.bind(E.READY, () => {
           scReady = true;
           scWidget.getDuration((d) => { scDuration = d || 0; });
-          refreshTitle();
+          // never clobber the idle invitation just because the pre-warm
+          // finished — the real title arrives with the first PLAY. A set
+          // switch mid-session shows 'loading…'; restore the idle voice.
+          if (pTitle.textContent === 'loading…') {
+            pTitle.classList.add('is-idle');
+            pTitle.textContent = 'Hear the record';
+          }
           if (!miniFly.hidden) populateTrackList();
           resolve(scWidget);
         });
@@ -919,50 +929,26 @@ export function initUI(ctx) {
   setTimeout(() => { if (!scWidget && !scApiPromise) buildWidget(scSet); }, 1800);
 
   // ---- the title-card greeting: a one-off "hello" ---------------------------
-  // One button, one NASA track — the record's English greeting, spoken by
-  // six-year-old Nick Sagan. Its own tiny hidden widget so it never disturbs
-  // the dock's playlist position; each stream pauses the other.
+  // NASA's own recording (a US-government work, public domain), vendored as a
+  // plain file and played with a bare <audio> element — deliberately NOT a
+  // SoundCloud widget, because SoundCloud widgets pause one another. The
+  // four-second greeting overlays the music without interrupting it.
   {
-    const HELLO_URL = 'https://soundcloud.com/nasa/golden-record-english-greeting';
     const hello = title.querySelector('.gm-hello');
     const helloIc = hello.querySelector('.gm-hello-ic');
-    let hw = null;
-    let hBuilding = false;
-    let hReady = false;
-    let hPlaying = false;
-    let hWantPlay = false; // click landed while the widget was still warming up
-    const paintHello = () => {
-      helloIc.innerHTML = hPlaying ? SVG_PAUSE : SVG_PLAY;
-      hello.classList.toggle('is-playing', hPlaying);
+    const ha = new Audio('vendor/audio/english-greeting.wav');
+    ha.preload = 'auto';
+    const paintHello = (playing) => {
+      helloIc.innerHTML = playing ? SVG_PAUSE : SVG_PLAY;
+      hello.classList.toggle('is-playing', playing);
     };
-    const buildHello = () => {
-      if (hBuilding) return;
-      hBuilding = true;
-      loadScApi().then((SC) => {
-        const f = document.createElement('iframe');
-        f.allow = 'autoplay';
-        f.title = 'NASA Golden Record: English greeting (SoundCloud)';
-        f.src = 'https://w.soundcloud.com/player/?url=' + encodeURIComponent(HELLO_URL) +
-          '&auto_play=false&visual=false&show_teaser=false';
-        f.style.cssText = 'position:absolute;left:-9999px;top:0;width:300px;height:80px;';
-        title.appendChild(f);
-        hw = SC.Widget(f);
-        const E = SC.Widget.Events;
-        hw.bind(E.READY, () => { hReady = true; if (hWantPlay) { hWantPlay = false; hw.play(); } });
-        // deliberately independent of the dock: the three-second greeting may
-        // overlay whatever the record is playing
-        hw.bind(E.PLAY, () => { hPlaying = true; paintHello(); });
-        hw.bind(E.PAUSE, () => { hPlaying = false; paintHello(); });
-        hw.bind(E.FINISH, () => { hPlaying = false; paintHello(); hw.seekTo(0); });
-      }).catch(() => { hBuilding = false; });
-    };
+    ha.addEventListener('play', () => paintHello(true));
+    ha.addEventListener('pause', () => paintHello(false)); // also fires on ended
+    ha.addEventListener('ended', () => { ha.currentTime = 0; });
     hello.addEventListener('click', () => {
-      if (hReady) { hw.toggle(); return; }
-      hWantPlay = true;
-      buildHello();
+      if (ha.paused) ha.play().catch(() => {});
+      else { ha.pause(); ha.currentTime = 0; }
     });
-    // pre-warm alongside the dock so the first press answers instantly
-    setTimeout(buildHello, 2600);
   }
 
   // ---- the Drake equation, playable ------------------------------------------

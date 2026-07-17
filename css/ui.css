@@ -878,6 +878,11 @@
 }
 .gm-play-btn svg { width: 11px; height: 11px; fill: currentColor; }
 .gm-play-btn:hover { color: var(--gold-bright); border-color: var(--gold-dim); }
+.gm-play-btn.is-active {
+  color: var(--gold-bright);
+  border-color: var(--gold-dim);
+  background: color-mix(in srgb, var(--gold) 12%, transparent);
+}
 .gm-pplay { width: 42px; height: 42px; }
 .gm-pplay svg { width: 14px; height: 14px; }
 .gm-msets { font-size: 0.85rem; line-height: 1; }
