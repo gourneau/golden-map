@@ -20,9 +20,14 @@ export function plaqueSvg(raw, { stroke = '#3e3220', disk = 'none' } = {}) {
     .replaceAll('fill:#d4af37', 'fill:' + disk);
 }
 
-// The explanation diagram, restyled for the page's dark theme.
-export function explanationSvg(raw, { stroke = '#c9a227', fill = '#0d0a06' } = {}) {
+// The explanation diagram, restyled for the page's dark theme. The label
+// text is outlined as paths with NO fill/stroke attributes — SVG defaults
+// those to black (invisible on our void), so an injected rule turns exactly
+// that set gold and readable.
+export function explanationSvg(raw, { stroke = '#c9a227', fill = '#0d0a06', text = '#e8cf7a' } = {}) {
   return raw
     .replaceAll('stroke="#000000"', 'stroke="' + stroke + '"')
-    .replaceAll('fill="#FFFFFF"', 'fill="' + fill + '"');
+    .replaceAll('fill="#FFFFFF"', 'fill="' + fill + '"')
+    .replace(/<svg\b[^>]*>/, (m) =>
+      `${m}<style>path:not([fill]):not([stroke]){fill:${text}}</style>`);
 }
