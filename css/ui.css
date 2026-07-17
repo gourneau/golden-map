@@ -856,6 +856,13 @@
   -webkit-backdrop-filter: blur(10px);
 }
 .gm-mini-fly .gm-fine { border-top: none; margin: 0.7em 0 0; padding-top: 0; }
+/* no shouting in the player: mixed case for its heading and playlist chips */
+.gm-mini .gm-k,
+.gm-mini .gm-mode {
+  text-transform: none;
+  letter-spacing: 0.06em;
+  font-size: 0.68rem;
+}
 .gm-player-sets { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 0.55em; }
 .gm-play-btn {
   flex: none;

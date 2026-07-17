@@ -591,7 +591,7 @@ export function initUI(ctx) {
   mini.setAttribute('aria-label', 'Hear the record');
   mini.innerHTML = `
     <div class="gm-mini-fly" hidden>
-      <p class="gm-k">hear the record</p>
+      <p class="gm-k">Hear the record</p>
       <div class="gm-player-sets" role="group" aria-label="Playlist">
         <button class="gm-mode is-active" data-set="music">Music from Earth · 27</button>
         <button class="gm-mode" data-set="sounds">Sounds of Earth · 19</button>
@@ -599,10 +599,9 @@ export function initUI(ctx) {
       </div>
       <div class="gm-tracklist mono" role="list" aria-label="Tracks"></div>
       <p class="gm-fine">Greetings &amp; sounds stream from
-        <a href="https://soundcloud.com/nasa" target="_blank" rel="noopener">NASA’s official SoundCloud</a>;
+        <a href="https://science.nasa.gov/mission/voyager/golden-record-contents/sounds/" target="_blank" rel="noopener">NASA’s Golden Record</a>;
         the music from a
-        <a href="https://soundcloud.com/the-film-effect/voyager-golden-record-music-from-earth" target="_blank" rel="noopener">community upload</a>.
-        <a href="https://science.nasa.gov/mission/voyager/golden-record-contents/sounds/" target="_blank" rel="noopener">Full track list at NASA</a>.</p>
+        <a href="https://soundcloud.com/the-film-effect/voyager-golden-record-music-from-earth" target="_blank" rel="noopener">community upload</a>.</p>
     </div>
     <div class="gm-mini-bar">
       <button class="gm-play-btn gm-pprev" aria-label="Previous track"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 2h2v12H3z M14 2 6 8l8 6z"/></svg></button>
