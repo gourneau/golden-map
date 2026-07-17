@@ -47,7 +47,6 @@
    bordered pill, hover glow, with the existing +/− state suffix */
 .gm-cover-fig summary,
 .gm-drake summary,
-.gm-listen summary,
 .gm-sources summary,
 .gm-fine-more summary {
   display: inline-block;
@@ -59,7 +58,6 @@
 }
 .gm-cover-fig summary:hover,
 .gm-drake summary:hover,
-.gm-listen summary:hover,
 .gm-sources summary:hover,
 .gm-fine-more summary:hover { color: var(--gold-bright); border-color: var(--gold-dim); }
 
@@ -742,14 +740,6 @@
   color: var(--paper);
   min-height: 1.6em;
 }
-.gm-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 0.85em; }
-.gm-chip {
-  font-size: 0.56rem;
-  letter-spacing: 0.06em;
-  color: var(--paper-dim);
-  border: 1px solid var(--gold-faint);
-  padding: 0.55em 0.75em;
-}
 /* the Drake card — same disclosure chrome as Sources */
 .gm-drake { margin-top: 1em; border-top: 1px solid var(--gold-faint); padding-top: 0.7em; }
 .gm-drake summary {
@@ -803,8 +793,8 @@
 }
 .gm-drake-tie em { color: var(--gold-bright); font-style: normal; }
 
-.gm-sources, .gm-listen { margin-top: 1em; border-top: 1px solid var(--gold-faint); padding-top: 0.7em; }
-.gm-sources summary, .gm-listen summary {
+.gm-sources { margin-top: 1em; border-top: 1px solid var(--gold-faint); padding-top: 0.7em; }
+.gm-sources summary {
   cursor: pointer;
   list-style: none;
   font-size: 0.58rem;
@@ -813,10 +803,9 @@
   text-transform: uppercase;
   color: var(--gold);
 }
-.gm-sources summary::-webkit-details-marker,
-.gm-listen summary::-webkit-details-marker { display: none; }
-.gm-sources summary::after, .gm-listen summary::after { content: ' +'; color: var(--gold-dim); }
-.gm-sources[open] summary::after, .gm-listen[open] summary::after { content: ' −'; }
+.gm-sources summary::-webkit-details-marker { display: none; }
+.gm-sources summary::after { content: ' +'; color: var(--gold-dim); }
+.gm-sources[open] summary::after { content: ' −'; }
 /* ======================================================================
    THE RECORD PLAYER — a persistent mini dock, bottom-center on every act.
    Gold transport over a hidden SoundCloud widget.
@@ -966,9 +955,8 @@
 /* present for the Widget API, parked out of view */
 .gm-sc-host { position: absolute; left: -9999px; top: 0; width: 320px; height: 100px; overflow: hidden; }
 
-.gm-sources ul, .gm-listen ul { list-style: none; margin-top: 0.6em; display: grid; gap: 0.3em; }
-.gm-sources li, .gm-listen li { font-size: 0.82rem; }
-.gm-listen .gm-body { margin-top: 0.6em; font-size: 0.9rem; color: var(--paper-dim); }
+.gm-sources ul { list-style: none; margin-top: 0.6em; display: grid; gap: 0.3em; }
+.gm-sources li { font-size: 0.82rem; }
 
 /* grouped, claim-anchored source list */
 .gm-sources-note { border-top: none; margin: 0.6em 0 0.2em; }

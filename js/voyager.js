@@ -1,7 +1,7 @@
-// The Golden Map — voyager.js
+// The Golden Record — voyager.js
 // Act I set dressing: the Voyager spacecraft itself, drifting in the middle
 // distance behind the record. NASA's official model (public domain),
-// meshopt-optimized from 3.1 MB to ~250 KB and embedded in js/data/.
+// meshopt-optimized from 3.1 MB to ~250 KB, served as vendor/art/voyager.glb.
 
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';

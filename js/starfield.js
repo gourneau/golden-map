@@ -1,4 +1,4 @@
-// The Golden Map — starfield.js
+// The Golden Record — starfield.js
 // Deep-space backdrop: the REAL night sky. Every star brighter than apparent
 // magnitude 4.5 (~925 stars, HYG database v3 — Hipparcos/Yale BSC/Gliese,
 // David Nash, astronexus.com, CC BY-SA) is placed on the far backdrop sphere

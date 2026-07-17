@@ -1,4 +1,4 @@
-// The Golden Map — bootstrap and orchestration.
+// The Golden Record — bootstrap and orchestration.
 // Owns: renderer, camera, shared context (ctx), render loop, act definitions.
 // Scene modules (starfield, record, map3d), UI (ui.js) and the tour (tour.js)
 // plug into ctx and communicate only via ctx.bus events. See CONTRACTS.md.

@@ -1,4 +1,4 @@
-// The Golden Map — map3d.js
+// The Golden Record — map3d.js
 // The 3D pulsar map itself. Sun at the origin; for each pulsar an engraved
 // line (gold, 1977 distance) and a modern line (starlight), each with a
 // blinking beacon at its end pulsing at the pulsar's real period (scaled to

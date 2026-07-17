@@ -1,4 +1,4 @@
-// The Golden Map — tour: camera choreography and interaction.
+// The Golden Record — tour: camera choreography and interaction.
 // Owns: tweened fly-tos (camera.position + controls.target), act staging,
 // raycast picking on the canvas, keyboard navigation, and idle motion.
 // Never fights OrbitControls: controls are disabled while a tween runs,

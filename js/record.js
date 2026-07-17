@@ -1,4 +1,4 @@
-// The Golden Map — record.js
+// The Golden Record — record.js
 // Act I hero: the golden record with the REAL cover design — parsed from the
 // public-domain plaque SVG into crisp vector lines (no rasterized artwork
 // textures, no moiré). At Act II the pulsar-map portion of the engraving
