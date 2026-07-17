@@ -794,6 +794,7 @@ body.gm-still .gm-corner,
 body.gm-still .gm-artifact,
 body.gm-still .gm-earth-chip,
 body.gm-still .gm-tip { display: none !important; }
+body.gm-still .gm-title { bottom: 20vh; }
 
 /* colophon — repo + author credit */
 .gm-colophon {

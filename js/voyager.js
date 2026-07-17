@@ -226,9 +226,9 @@ export function createVoyager(ctx) {
       }
 
       if (ctx.still) {
-        // screenshot mode: the probe holds the hero pose beside the record
-        group.position.set(0.72, -0.55, 0.28);
-        group.rotation.set(0.1, 0.75, 0.02);
+        // screenshot mode: the probe emerges from under the disc's lower edge
+        group.position.set(0.55, 1.3, -1.75);
+        group.rotation.set(0.3, 0.85, 0.08);
         caption.visible = false;
         return;
       }

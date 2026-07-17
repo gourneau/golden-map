@@ -380,8 +380,8 @@ export function initTour(ctx) {
   // ---- opening move -----------------------------------------------------------
   if (ctx.still) {
     // ?still=1 screenshot mode: pin the canonical Act I still frame
-    camera.position.set(-0.62, -3.3, 0.72);
-    controls.target.set(-0.62, 0, -0.45);
+    camera.position.set(-0.62, -2.95, 0.55);
+    controls.target.set(-0.62, 0, -0.18);
   } else {
     goHome(2.6); // from the bootstrap camera into the Act I portrait
   }
