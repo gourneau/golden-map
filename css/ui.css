@@ -862,16 +862,48 @@
   .gm-pplay.is-invite { animation: none; border-color: var(--gold); }
 }
 .gm-ptitle {
-  font-size: 0.66rem;
+  font-size: 0.74rem;
   font-weight: 500;
-  letter-spacing: 0.13em;
-  text-transform: uppercase;
+  letter-spacing: 0.05em;
   color: var(--paper);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   margin-bottom: 0.5em;
 }
+
+/* track list browser in the flyout */
+.gm-tracklist {
+  margin-top: 0.75em;
+  max-height: min(230px, 34vh);
+  overflow-y: auto;
+  display: grid;
+  gap: 1px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--gold-faint) transparent;
+}
+.gm-tracklist::-webkit-scrollbar { width: 4px; }
+.gm-tracklist::-webkit-scrollbar-thumb { background: var(--gold-faint); }
+.gm-track {
+  display: flex;
+  align-items: baseline;
+  gap: 0.7em;
+  padding: 0.38em 0.5em;
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  text-align: left;
+  color: var(--paper-dim);
+  border: 1px solid transparent;
+  transition: color 0.2s var(--ease), border-color 0.2s var(--ease);
+}
+.gm-track:hover { color: var(--gold-bright); }
+.gm-track.is-current {
+  color: var(--gold);
+  border-color: var(--gold-faint);
+  background: color-mix(in srgb, var(--gold) 6%, transparent);
+}
+.gm-track-n { flex: none; color: var(--gold-dim); }
+.gm-track-t { min-width: 0; }
 .gm-pbar {
   position: relative;
   height: 3px;

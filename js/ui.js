@@ -589,16 +589,15 @@ export function initUI(ctx) {
     <div class="gm-mini-fly" hidden>
       <p class="gm-k">hear the record</p>
       <div class="gm-player-sets" role="group" aria-label="Playlist">
-        <button class="gm-mode is-active" data-set="sounds">Sounds of Earth</button>
+        <button class="gm-mode is-active" data-set="music">Music from Earth · 27</button>
+        <button class="gm-mode" data-set="sounds">Sounds of Earth · 19</button>
         <button class="gm-mode" data-set="greetings">Greetings · 55 languages</button>
-        <button class="gm-mode" data-set="music">Music from Earth · 27</button>
       </div>
+      <div class="gm-tracklist mono" role="list" aria-label="Tracks"></div>
       <p class="gm-fine">Greetings &amp; sounds stream from
-        <a href="https://soundcloud.com/nasa" target="_blank" rel="noopener">NASA’s official SoundCloud</a>.
-        The music itself is still under copyright — the first recordings
-        unlock in 2028–29 — so it streams from a
-        <a href="https://soundcloud.com/the-film-effect/voyager-golden-record-music-from-earth" target="_blank" rel="noopener">community upload</a>
-        and may not last.
+        <a href="https://soundcloud.com/nasa" target="_blank" rel="noopener">NASA’s official SoundCloud</a>;
+        the music from a
+        <a href="https://soundcloud.com/the-film-effect/voyager-golden-record-music-from-earth" target="_blank" rel="noopener">community upload</a>.
         <a href="https://science.nasa.gov/mission/voyager/golden-record-contents/sounds/" target="_blank" rel="noopener">Full track list at NASA</a>.</p>
     </div>
     <div class="gm-mini-bar">
@@ -664,12 +663,13 @@ export function initUI(ctx) {
   let scWidget = null;
   let scReady = false;
   let scPlaying = false;
-  let scSet = 'sounds';
+  let scSet = 'music';
   let scApiPromise = null;
 
   miniSets.addEventListener('click', () => {
     miniFly.hidden = !miniFly.hidden;
     miniSets.setAttribute('aria-expanded', String(!miniFly.hidden));
+    if (!miniFly.hidden) populateTrackList();
   });
 
   const SVG_PLAY = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2l10 6-10 6z"/></svg>';
@@ -681,7 +681,8 @@ export function initUI(ctx) {
   let musicIdx = -1; // current cue in the music sequence (-1 = unknown)
   const setMusicTitle = (i) => {
     musicIdx = i;
-    pTitle.textContent = `${i + 1}/${MUSIC_CUES.length} · ${MUSIC_CUES[i][1]}`;
+    pTitle.textContent = MUSIC_CUES[i][1]; // numbering lives in the track list
+    markCurrentRow(i);
   };
   const musicIdxAt = (ms) => {
     let i = 0;
@@ -690,15 +691,69 @@ export function initUI(ctx) {
     }
     return i;
   };
+  // NASA's SoundCloud titles are inconsistently cased and prefixed
+  // ("Golden Record: Kiss, Mother And Child", "…(Min Dialect)Greeting") —
+  // strip the prefix, restore missing spaces, lower-case the joining words
+  const SMALL_WORDS = new Set(['and', 'or', 'the', 'of', 'in', 'a', 'an', 'to', 'from', 'with', 'by']);
+  const stripGR = (t) => (t || '')
+    .replace(/^golden record:\s*/i, '')
+    .replace(/\)([A-Za-z])/g, ') $1')
+    .split(' ')
+    .map((w, i) => (i > 0 && SMALL_WORDS.has(w.toLowerCase()) ? w.toLowerCase() : w))
+    .join(' ');
   const refreshTitle = () => {
     if (!scWidget) return;
     if (scSet === 'music') { if (musicIdx < 0) setMusicTitle(0); return; }
-    // every NASA track is prefixed "Golden Record: " — drop it so the actual
-    // track name fits the line
     scWidget.getCurrentSound((s) => {
-      if (s) pTitle.textContent = s.title.replace(/^golden record:\s*/i, '');
+      if (s) pTitle.textContent = stripGR(s.title);
     });
   };
+
+  // ---- track list browser (in the ♫ flyout) --------------------------------
+  const trackList = mini.querySelector('.gm-tracklist');
+  function markCurrentRow(i) {
+    [...trackList.children].forEach((r, k) => r.classList.toggle('is-current', k === i));
+  }
+  function renderTrackRows(labels, currentIdx) {
+    trackList.innerHTML = '';
+    labels.forEach((label, i) => {
+      const b = el('button', 'gm-track' + (i === currentIdx ? ' is-current' : ''),
+        `<span class="gm-track-n">${String(i + 1).padStart(2, '0')}</span><span class="gm-track-t"></span>`);
+      b.querySelector('.gm-track-t').textContent = label;
+      b.setAttribute('role', 'listitem');
+      b.addEventListener('click', () => playTrack(i));
+      trackList.appendChild(b);
+    });
+  }
+  function populateTrackList() {
+    if (scSet === 'music') {
+      renderTrackRows(MUSIC_CUES.map((c) => c[1]), Math.max(0, musicIdx));
+      return;
+    }
+    if (!scWidget || !scReady) { trackList.innerHTML = ''; return; }
+    // SoundCloud pages its playlist metadata — untitled rows fill in on later
+    // refreshes (each PLAY re-populates)
+    scWidget.getSounds((sounds) => {
+      if (scSet === 'music') return; // set changed while fetching
+      scWidget.getCurrentSoundIndex((ci) => {
+        renderTrackRows(
+          (sounds || []).map((s, i) => stripGR(s && s.title) || `track ${i + 1}`),
+          ci ?? 0,
+        );
+      });
+    });
+  }
+  function playTrack(i) {
+    if (scSet === 'music') {
+      setMusicTitle(i);
+      const seekAndPlay = (w) => { w.seekTo(MUSIC_CUES[i][0] * 1000); w.play(); };
+      if (!scWidget) buildWidget('music').then((w) => { if (w) seekAndPlay(w); });
+      else if (scReady) seekAndPlay(scWidget);
+      return;
+    }
+    if (scWidget && scReady) { scWidget.skip(i); markCurrentRow(i); }
+    else if (!scWidget) buildWidget(scSet).then((w) => { if (w) w.skip(i); });
+  }
 
   const loadScApi = () => {
     if (!scApiPromise) {
@@ -733,6 +788,7 @@ export function initUI(ctx) {
         scWidget.bind(E.READY, () => {
           scReady = true;
           refreshTitle();
+          if (!miniFly.hidden) populateTrackList();
           resolve(scWidget);
         });
         scWidget.bind(E.PLAY, () => {
@@ -740,6 +796,12 @@ export function initUI(ctx) {
           pPlay.classList.remove('is-invite'); // the invitation was accepted
           paintPlayBtn();
           refreshTitle();
+          // keep the flyout list in step (and let lazily-paged NASA playlist
+          // titles fill in as they arrive)
+          if (!miniFly.hidden) {
+            if (scSet === 'music') markCurrentRow(Math.max(0, musicIdx));
+            else populateTrackList();
+          }
         });
         scWidget.bind(E.PAUSE, () => { scPlaying = false; paintPlayBtn(); });
         scWidget.bind(E.FINISH, () => { scPlaying = false; paintPlayBtn(); });
@@ -794,6 +856,7 @@ export function initUI(ctx) {
       for (const x of setBtns) x.classList.toggle('is-active', x === b);
       const wasPlaying = scPlaying;
       pTitle.textContent = 'loading…';
+      if (!miniFly.hidden) populateTrackList(); // music renders instantly; NASA sets fill on READY
       buildWidget(scSet).then((w) => { if (w && wasPlaying) w.play(); });
     });
   }
