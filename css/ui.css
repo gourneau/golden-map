@@ -825,7 +825,9 @@
 .gm-mini {
   left: 0; right: 0;
   margin-inline: auto;
-  width: min(480px, calc(100vw - 24px));
+  /* as wide as the screen allows — long track titles read whole — while
+     always clearing the corner chips flanking the bar */
+  width: min(720px, calc(100vw - 360px));
   bottom: 40px;
   z-index: 48;
   --gm-in: translateY(10px);
