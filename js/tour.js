@@ -150,7 +150,22 @@ export function initTour(ctx) {
       .addScaledVector(side, d * 0.8)
       .addScaledVector(Z_UP, d * 0.42)
       .addScaledVector(dir, -d * 0.25); // nudge back toward the Sun so both ends read
-    flyTo(pos, lookAt.clone(), 1.6);
+    const target = lookAt.clone();
+    // On wide screens the detail panel covers the right edge of the viewport —
+    // truck the whole framing screen-right by half the panel's width (in world
+    // units at the subject's distance) so the subject centers in the VISIBLE
+    // area instead of hiding under the panel (the Galactic Center, rightmost
+    // thing on the map, was fully covered without this).
+    if (camera.aspect >= PORTRAIT_ASPECT) {
+      const panelFrac = Math.min(0.42, 422 / window.innerWidth); // panel ≈ 400px + margin
+      const dist = pos.distanceTo(target);
+      const halfW = dist * Math.tan((camera.fov * Math.PI) / 360) * camera.aspect;
+      const lookDir = target.clone().sub(pos).normalize();
+      const scrRight = new THREE.Vector3().crossVectors(lookDir, Z_UP).normalize();
+      pos.addScaledVector(scrRight, halfW * panelFrac);
+      target.addScaledVector(scrRight, halfW * panelFrac);
+    }
+    flyTo(pos, target, 1.6);
   }
 
   function framePulsar(p) {
@@ -167,7 +182,9 @@ export function initTour(ctx) {
   }
 
   function frameGC() {
-    frameLine(ctx.GC, ctx.GC.clone().multiplyScalar(0.5), 1.1);
+    // look most of the way out along the line: the center itself is the
+    // subject, and it must land in the visible area left of the detail panel
+    frameLine(ctx.GC, ctx.GC.clone().multiplyScalar(0.78), 1.1);
   }
 
   // ---- bus: act staging & selection fly-tos -------------------------------

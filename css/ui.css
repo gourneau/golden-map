@@ -773,28 +773,27 @@
   color: var(--gold);
 }
 .gm-drake-eq sub { font-size: 0.62em; }
-.gm-drake-legend {
-  list-style: none;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 0.3em 1.4em;
-  margin: 0 0 0.7em;
-  padding-top: 0.55em;
-  border-top: 1px solid color-mix(in srgb, var(--gold-faint) 55%, transparent);
-}
-.gm-drake-legend li {
-  display: flex;
-  align-items: baseline;
-  gap: 0.65em;
-  font-size: 0.82rem;
+/* the playable Drake equation */
+.gm-drake-n {
+  margin: 0.9em 0 0.05em;
+  font-size: 1rem;
   color: var(--paper-dim);
 }
-.gm-drake-t {
-  flex: 0 0 1.9em;
-  font-size: 0.66rem;
-  letter-spacing: 0.06em;
-  color: var(--gold-dim);
+.gm-drake-count { font-size: 1.6rem; color: var(--gold-bright); font-weight: 500; }
+.gm-drake-nsub { font-size: 0.78rem; color: var(--paper-dim); margin-bottom: 0.9em; }
+.gm-drake-presets { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 1em; }
+.gm-drake .gm-mode { text-transform: none; letter-spacing: 0.06em; font-size: 0.68rem; }
+.gm-drake-row { margin-bottom: 0.6em; }
+.gm-drake-rowhead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1em;
+  margin-bottom: 0.1em;
 }
+.gm-drake-rowhead label { font-size: 0.76rem; color: var(--paper-dim); }
+.gm-drake-rowhead output { font-size: 0.7rem; color: var(--gold); white-space: nowrap; }
+.gm-drake-note { border-top: none; margin-left: 0; }
 .gm-drake-tie {
   font-size: 0.9rem;
   font-style: italic;

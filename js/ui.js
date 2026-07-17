@@ -508,15 +508,13 @@ export function initUI(ctx) {
         map. First he asked who might be listening. Then he made the address
         label for them to find us.</p>
       <p class="gm-drake-eq mono">N = R★ · f<sub>p</sub> · n<sub>e</sub> · f<sub>l</sub> · f<sub>i</sub> · f<sub>c</sub> · L</p>
-      <ul class="gm-drake-legend">
-        <li><span class="gm-drake-t mono">R★</span>rate of star formation</li>
-        <li><span class="gm-drake-t mono">f<sub>p</sub></span>fraction of stars with planets</li>
-        <li><span class="gm-drake-t mono">n<sub>e</sub></span>habitable worlds per system</li>
-        <li><span class="gm-drake-t mono">f<sub>l</sub></span>fraction where life begins</li>
-        <li><span class="gm-drake-t mono">f<sub>i</sub></span>… that grows intelligent</li>
-        <li><span class="gm-drake-t mono">f<sub>c</sub></span>… with detectable technology</li>
-        <li><span class="gm-drake-t mono">L</span>how long civilizations last</li>
-      </ul>
+      <div class="gm-drake-n">N ≈ <b class="gm-drake-count mono">—</b></div>
+      <p class="gm-drake-nsub">civilizations in the Milky Way we could talk to right now</p>
+      <div class="gm-drake-presets" role="group" aria-label="Seed with a famous estimate"></div>
+      <div class="gm-drake-x"></div>
+      <p class="gm-fine gm-drake-note">Every dial past f<sub>p</sub> is still argued
+        about — the presets are one common reading of each camp, and the 1961
+        Green Bank numbers were ranges. That’s the fun: drag and see.</p>
       <p class="gm-drake-tie">The last term, <em>L</em>, is the question this
         map asks back — how long does anyone stay findable?</p>
     </details>
@@ -578,7 +576,7 @@ export function initUI(ctx) {
     </details>
     <p class="gm-colophon mono">
       <a href="https://github.com/gourneau/golden-map" target="_blank" rel="noopener">code &amp; sources on GitHub</a>
-      &ensp;·&ensp;prompted by <a href="https://x.com/gourneau" target="_blank" rel="noopener">@gourneau</a>
+      &ensp;·&ensp;prompted by <a href="https://x.com/gourneau" target="_blank" rel="noopener">@gourneau</a> 🖖
     </p>`;
 
   // ---- the record player: a persistent mini dock --------------------------
@@ -700,7 +698,6 @@ export function initUI(ctx) {
     miniSets.setAttribute('aria-expanded', String(!miniFly.hidden));
     if (!miniFly.hidden) populateTrackList();
   });
-  let pauseHello = () => {}; // reassigned once the title-card greeting wires up
 
   const SVG_PLAY = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2l10 6-10 6z"/></svg>';
   const SVG_PAUSE = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h3v12H4z M9 2h3v12H9z"/></svg>';
@@ -851,7 +848,6 @@ export function initUI(ctx) {
         });
         scWidget.bind(E.PLAY, () => {
           scPlaying = true;
-          pauseHello(); // never two streams at once
           if (pendingSeekMs != null) { scWidget.seekTo(pendingSeekMs); pendingSeekMs = null; }
           pPlay.classList.remove('is-invite'); // the invitation was accepted
           paintPlayBtn();
@@ -936,7 +932,6 @@ export function initUI(ctx) {
       helloIc.innerHTML = hPlaying ? SVG_PAUSE : SVG_PLAY;
       hello.classList.toggle('is-playing', hPlaying);
     };
-    pauseHello = () => { if (hw && hPlaying) hw.pause(); };
     hello.addEventListener('click', () => {
       if (hw) { if (hReady) hw.toggle(); return; }
       loadScApi().then((SC) => {
@@ -950,15 +945,97 @@ export function initUI(ctx) {
         hw = SC.Widget(f);
         const E = SC.Widget.Events;
         hw.bind(E.READY, () => { hReady = true; hw.play(); });
-        hw.bind(E.PLAY, () => {
-          hPlaying = true;
-          if (scWidget && scPlaying) scWidget.pause(); // the greeting takes the floor
-          paintHello();
-        });
+        // deliberately independent of the dock: the three-second greeting may
+        // overlay whatever the record is playing
+        hw.bind(E.PLAY, () => { hPlaying = true; paintHello(); });
         hw.bind(E.PAUSE, () => { hPlaying = false; paintHello(); });
         hw.bind(E.FINISH, () => { hPlaying = false; paintHello(); hw.seekTo(0); });
       }).catch(() => {});
     });
+  }
+
+  // ---- the Drake equation, playable ------------------------------------------
+  // Seven log-scale dials, four famous seeds, and N recomputed live. An
+  // exploratory toy: the point is watching the answer swing from "alone"
+  // to "a crowded galaxy" on a couple of honest-feeling drags.
+  {
+    const pctFmt = (v) => {
+      const p = v * 100;
+      return (p >= 10 ? String(Math.round(p)) : p >= 1 ? p.toFixed(1) : p.toPrecision(2)) + '%';
+    };
+    const fmtBig = (n) => {
+      if (n >= 1e9) return parseFloat((n / 1e9).toPrecision(3)) + ' billion';
+      if (n >= 1e6) return parseFloat((n / 1e6).toPrecision(3)) + ' million';
+      return Math.round(n).toLocaleString('en-US');
+    };
+    const F = [
+      { k: 'R',  html: 'R★ — new stars born each year', min: 0.1, max: 100, fmt: (v) => (v < 10 ? v.toFixed(1) : String(Math.round(v))) + ' / yr' },
+      { k: 'fp', html: 'f<sub>p</sub> — stars with planets', min: 0.01, max: 1, fmt: pctFmt },
+      { k: 'ne', html: 'n<sub>e</sub> — habitable worlds per system', min: 0.01, max: 5, fmt: (v) => (v >= 1 ? v.toFixed(1) : v.toFixed(2)) },
+      { k: 'fl', html: 'f<sub>l</sub> — where life actually begins', min: 0.0001, max: 1, fmt: pctFmt },
+      { k: 'fi', html: 'f<sub>i</sub> — where life grows intelligent', min: 0.0001, max: 1, fmt: pctFmt },
+      { k: 'fc', html: 'f<sub>c</sub> — intelligence that builds radios', min: 0.01, max: 1, fmt: pctFmt },
+      { k: 'L',  html: 'L — years a civilization stays detectable', min: 100, max: 1e9, fmt: (v) => fmtBig(v) + ' yr' },
+    ];
+    const PRESETS = [
+      { name: 'Drake, 1961', v: { R: 1, fp: 0.35, ne: 3, fl: 1, fi: 1, fc: 0.15, L: 1e4 } },
+      { name: 'Sagan, hopeful', v: { R: 10, fp: 0.5, ne: 2, fl: 1, fi: 0.1, fc: 0.1, L: 1e7 } },
+      { name: 'The pessimist', v: { R: 1.5, fp: 1, ne: 0.02, fl: 0.13, fi: 0.001, fc: 0.2, L: 300 } },
+      { name: 'Telescope era', v: { R: 2, fp: 1, ne: 0.4, fl: 0.5, fi: 0.05, fc: 0.2, L: 5000 } },
+    ];
+    const box = finders.querySelector('.gm-drake');
+    const xEl = box.querySelector('.gm-drake-x');
+    const nEl = box.querySelector('.gm-drake-count');
+    const nSub = box.querySelector('.gm-drake-nsub');
+    const presetsEl = box.querySelector('.gm-drake-presets');
+    const vals = { ...PRESETS[0].v };
+    const toT = (f, v) => Math.round(1000 * Math.log(v / f.min) / Math.log(f.max / f.min));
+    const toV = (f, t) => f.min * Math.pow(f.max / f.min, t / 1000);
+    const rows = {};
+    function paintN() {
+      const n = vals.R * vals.fp * vals.ne * vals.fl * vals.fi * vals.fc * vals.L;
+      nEl.textContent = n >= 1000 ? fmtBig(n)
+        : n >= 10 ? String(Math.round(n))
+          : n >= 1 ? n.toFixed(1)
+            : parseFloat(n.toPrecision(2)).toString();
+      nSub.textContent = n < 1
+        ? 'civilizations we could talk to — below one: perhaps we are alone'
+        : n < 3 ? 'civilizations in the Milky Way we could talk to — nearly alone'
+          : n < 10000 ? 'civilizations in the Milky Way we could talk to right now'
+            : 'civilizations in the Milky Way we could talk to — a crowded galaxy';
+    }
+    for (const f of F) {
+      const row = el('div', 'gm-drake-row');
+      row.innerHTML = `
+        <div class="gm-drake-rowhead"><label>${f.html}</label><output class="mono"></output></div>
+        <input class="gm-slider" type="range" min="0" max="1000" step="1" aria-label="${f.k}">`;
+      const input = row.querySelector('input');
+      const out = row.querySelector('output');
+      input.value = String(toT(f, vals[f.k]));
+      out.textContent = f.fmt(vals[f.k]);
+      input.addEventListener('input', () => {
+        vals[f.k] = toV(f, +input.value);
+        out.textContent = f.fmt(vals[f.k]);
+        for (const b of presetsEl.children) b.classList.remove('is-active');
+        paintN();
+      });
+      rows[f.k] = { f, input, out };
+      xEl.appendChild(row);
+    }
+    PRESETS.forEach((p, i) => {
+      const b = el('button', 'gm-mode' + (i === 0 ? ' is-active' : ''), p.name);
+      b.addEventListener('click', () => {
+        Object.assign(vals, p.v);
+        for (const f of F) {
+          rows[f.k].input.value = String(toT(f, vals[f.k]));
+          rows[f.k].out.textContent = f.fmt(vals[f.k]);
+        }
+        for (const x of presetsEl.children) x.classList.toggle('is-active', x === b);
+        paintN();
+      });
+      presetsEl.appendChild(b);
+    });
+    paintN();
   }
 
   const slider = finders.querySelector('.gm-slider');
@@ -976,10 +1053,12 @@ export function initUI(ctx) {
   // ======================================================================
   // 9. CORNER MARK (always present)
   // ======================================================================
+  // (the map's scale lives on the detail cards — every distance reads in
+  // light-years and kpc there; the old "1 grid unit ≈ …" line confused more
+  // than it explained)
   const corner = el('p', 'gm-panel gm-corner mono is-on',
-    '1 grid unit ≈ 3,260 light-years · you are at the center' +
-    '&ensp;·&ensp;<a href="https://github.com/gourneau/golden-map" target="_blank" rel="noopener">code &amp; sources on GitHub</a>' +
-    ' · prompted by <a href="https://x.com/gourneau" target="_blank" rel="noopener">@gourneau</a>');
+    '<a href="https://github.com/gourneau/golden-map" target="_blank" rel="noopener">code &amp; sources on GitHub</a>' +
+    ' · prompted by <a href="https://x.com/gourneau" target="_blank" rel="noopener">@gourneau</a> 🖖');
 
   // ======================================================================
   // 10. ENGRAVING OVERLAY CHIP (Acts II–IV) — mirrors the corner mark,
