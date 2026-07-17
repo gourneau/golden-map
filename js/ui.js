@@ -51,7 +51,7 @@ export function initUI(ctx) {
   // prev/next act arrows book-ending the nav — a visible hint that ←/→ work.
   // They clamp at the first/last act (no wrap-around), same as the keys.
   const navArrow = (dir) => {
-    const b = el('button', 'gm-nav-arrow mono', dir < 0 ? '←' : '→');
+    const b = el('button', 'gm-nav-arrow', dir < 0 ? '&lsaquo;' : '&rsaquo;');
     b.title = 'arrow keys work too';
     b.setAttribute('aria-label', dir < 0 ? 'Previous act (left arrow key)' : 'Next act (right arrow key)');
     b.addEventListener('click', () => {
@@ -79,7 +79,8 @@ export function initUI(ctx) {
   title.dataset.acts = 'record';
   title.innerHTML = `
     <p class="eyebrow">Launched 1977 · Still transmitting silence</p>
-    <h1>The Golden Map</h1>
+    <h1>The Golden Record</h1>
+    <p class="gm-tagline">Earth’s address, written in dying stars</p>
     <p class="gm-hook">In 1977, NASA launched two spacecraft carrying a golden
       record. Engraved on it: a map that shows any finder where Earth is,
       using fourteen flashing stars as landmarks. This is that map — rebuilt

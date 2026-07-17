@@ -79,7 +79,11 @@ export const ctx = {
   MAP_EPOCH,
   ACTS,
   prefersReducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+  // ?still=1 — screenshot mode: the canonical Act I composition (record high,
+  // probe close) with no UI chrome and no idle motion. Used to capture art/og.jpg.
+  still: new URLSearchParams(location.search).has('still'),
 };
+if (ctx.still) document.body.classList.add('gm-still');
 
 // helpers for modules
 export function setAct(id) {

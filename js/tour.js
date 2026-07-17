@@ -378,7 +378,13 @@ export function initTour(ctx) {
   });
 
   // ---- opening move -----------------------------------------------------------
-  goHome(2.6); // from the bootstrap camera into the Act I portrait
+  if (ctx.still) {
+    // ?still=1 screenshot mode: pin the canonical Act I still frame
+    camera.position.set(-0.62, -3.3, 0.72);
+    controls.target.set(-0.62, 0, -0.45);
+  } else {
+    goHome(2.6); // from the bootstrap camera into the Act I portrait
+  }
 
   // ---- per-frame ----------------------------------------------------------------
   const orbitArm = new THREE.Vector3();
@@ -386,6 +392,7 @@ export function initTour(ctx) {
   let swayPrev = 0;    // last applied sway angle, so each frame rotates by the delta
 
   function update(dt, t) {
+    if (ctx.still) return; // screenshot mode: the camera is pinned
     sinceUser += dt;
 
     if (tween) {

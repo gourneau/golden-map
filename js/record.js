@@ -492,7 +492,7 @@ export function createRecord(ctx) {
     object3d: group,
 
     update(dt, t) {
-      if (spin && !dragging) {
+      if (spin && !dragging && !ctx.still) { // still mode: engraving stays canonical
         disc.rotation.y += spinVel * dt;
         // a flick decays back to the ambient turntable rate
         spinVel += (AUTO_SPIN - spinVel) * Math.min(1, dt / FLICK_RELAX_S);

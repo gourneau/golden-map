@@ -119,12 +119,16 @@
 }
 .gm-nav-row { display: flex; gap: 7px; pointer-events: auto; align-items: stretch; }
 
-/* prev/next act arrows — quiet ghosts hinting that the arrow keys work */
+/* prev/next act chevrons — quiet ghosts hinting that the arrow keys work.
+   align-items: stretch on the row makes them the same height as the act
+   buttons; the glyph is a plain ‹ › (no arrow tail), sized to match */
 .gm-nav-arrow {
   display: flex;
   align-items: center;
-  padding: 0.5em 0.55em;
-  font-size: 0.8rem;
+  padding: 0 0.5em;
+  font-family: var(--display);
+  font-size: 1.15rem;
+  line-height: 1;
   color: var(--gold-dim);
   border: 1px solid transparent;
   transition: color 0.3s var(--ease), border-color 0.3s var(--ease), opacity 0.3s var(--ease);
@@ -211,6 +215,14 @@
   font-size: clamp(2.3rem, 5.4vw, 3.2rem);
   margin: 0.18em 0 0.16em;
   text-shadow: 0 0 44px color-mix(in srgb, var(--gold) 34%, transparent);
+}
+.gm-tagline {
+  margin: 0 0 0.9em;
+  font-family: var(--body);
+  font-style: italic;
+  font-size: clamp(1rem, 1.6vw, 1.2rem);
+  letter-spacing: 0.03em;
+  color: var(--gold);
 }
 .gm-hook {
   max-width: 30em;
@@ -757,6 +769,13 @@
 .gm-refs { border-top: none; padding-top: 0; margin-top: 0.3em; }
 .gm-refs a { color: var(--gold-dim); text-decoration-color: color-mix(in srgb, var(--gold-dim) 50%, transparent); }
 .gm-refs a:hover { color: var(--gold-bright); }
+
+/* ?still=1 screenshot mode: only the masthead and the scene */
+body.gm-still .gm-nav,
+body.gm-still .gm-corner,
+body.gm-still .gm-artifact,
+body.gm-still .gm-earth-chip,
+body.gm-still .gm-tip { display: none !important; }
 
 /* colophon — repo + author credit */
 .gm-colophon {

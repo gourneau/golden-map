@@ -225,6 +225,14 @@ export function createVoyager(ctx) {
         }
       }
 
+      if (ctx.still) {
+        // screenshot mode: the probe holds the hero pose beside the record
+        group.position.set(0.72, -0.55, 0.28);
+        group.rotation.set(0.1, 0.75, 0.02);
+        caption.visible = false;
+        return;
+      }
+
       const rate = prefersReducedMotion ? 14 : 2.2;
       fade += (target - fade) * Math.min(1, dt * rate);
       if (Math.abs(target - fade) < 0.003) fade = target;
