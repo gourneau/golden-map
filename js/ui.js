@@ -507,14 +507,12 @@ export function initUI(ctx) {
           <button class="gm-mode is-active" data-set="sounds">Sounds of Earth</button>
           <button class="gm-mode" data-set="greetings">Greetings · 55 languages</button>
         </div>
+        <div class="gm-ptitle mono">press play · via NASA on SoundCloud</div>
+        <div class="gm-pbar" aria-label="Seek"><i></i></div>
         <div class="gm-player-row">
-          <button class="gm-play-btn gm-pprev" aria-label="Previous track">‹</button>
-          <button class="gm-play-btn gm-pplay" aria-label="Play">▶</button>
-          <button class="gm-play-btn gm-pnext" aria-label="Next track">›</button>
-          <div class="gm-player-info">
-            <div class="gm-ptitle mono">press play · via NASA on SoundCloud</div>
-            <div class="gm-pbar" aria-label="Seek"><i></i></div>
-          </div>
+          <button class="gm-play-btn gm-pprev" aria-label="Previous track"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 2h2v12H3z M14 2 6 8l8 6z"/></svg></button>
+          <button class="gm-play-btn gm-pplay" aria-label="Play"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2l10 6-10 6z"/></svg></button>
+          <button class="gm-play-btn gm-pnext" aria-label="Next track"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M11 2h2v12h-2z M2 2l8 6-8 6z"/></svg></button>
         </div>
         <p class="gm-fine gm-player-credit">Audio: <a href="https://soundcloud.com/nasa" target="_blank" rel="noopener">NASA on SoundCloud</a> · <a href="https://science.nasa.gov/mission/voyager/golden-record-contents/sounds/" target="_blank" rel="noopener">full contents at NASA</a></p>
         <div class="gm-sc-host" aria-hidden="true"></div>
@@ -622,8 +620,10 @@ export function initUI(ctx) {
   let scSet = 'sounds';
   let scApiPromise = null;
 
+  const SVG_PLAY = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2l10 6-10 6z"/></svg>';
+  const SVG_PAUSE = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h3v12H4z M9 2h3v12H9z"/></svg>';
   const paintPlayBtn = () => {
-    pPlay.textContent = scPlaying ? '❚❚' : '▶';
+    pPlay.innerHTML = scPlaying ? SVG_PAUSE : SVG_PLAY;
     pPlay.setAttribute('aria-label', scPlaying ? 'Pause' : 'Play');
   };
   const refreshTitle = () => {

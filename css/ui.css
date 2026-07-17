@@ -790,37 +790,34 @@
 /* the record player — gold transport over a hidden SoundCloud widget */
 .gm-player { margin-top: 0.8em; }
 .gm-player-sets { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 0.8em; }
-.gm-player-row { display: flex; align-items: center; gap: 9px; }
+.gm-player-row { display: flex; align-items: center; gap: 10px; margin-top: 0.8em; }
 .gm-play-btn {
   flex: none;
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--mono);
-  font-size: 0.8rem;
-  line-height: 1;
   color: var(--gold);
   border: 1px solid var(--gold-faint);
   border-radius: 999px;
   background: color-mix(in srgb, var(--void-lift) 88%, transparent);
   transition: color 0.25s var(--ease), border-color 0.25s var(--ease);
 }
+.gm-play-btn svg { width: 13px; height: 13px; fill: currentColor; }
 .gm-play-btn:hover { color: var(--gold-bright); border-color: var(--gold-dim); }
-.gm-pplay { width: 46px; height: 46px; font-size: 0.7rem; }
-.gm-pprev, .gm-pnext { font-family: var(--display); font-size: 1.1rem; }
-.gm-player-info { flex: 1; min-width: 0; }
+.gm-pplay { width: 48px; height: 48px; }
+.gm-pplay svg { width: 16px; height: 16px; }
 .gm-ptitle {
-  font-size: 0.62rem;
+  font-size: 0.78rem;
   font-weight: 500;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.11em;
   text-transform: uppercase;
-  color: var(--paper-dim);
+  color: var(--paper);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-bottom: 0.55em;
+  margin-bottom: 0.6em;
 }
 .gm-pbar {
   position: relative;
