@@ -405,7 +405,7 @@
 .gm-rail {
   left: 22px;
   top: 96px;
-  width: var(--rail-w);
+  width: min(var(--panel-w), calc(100vw - 44px)); /* same width as the other panels */
   max-height: calc(100vh - 210px);
   display: flex;
   flex-direction: column;

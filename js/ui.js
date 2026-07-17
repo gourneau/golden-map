@@ -704,6 +704,17 @@ export function initUI(ctx) {
     if (!miniFly.hidden) populateTrackList();
   });
 
+  // iOS primes the widget's media element on the FIRST play command and only
+  // actually starts on the second (why the dock took two taps while the
+  // plain-<audio> hello took one) — so every play intent pumps the command
+  // again if playback hasn't started. No-ops everywhere else.
+  const pumpPlay = () => {
+    if (!scWidget || !scReady) return;
+    scWidget.play();
+    setTimeout(() => { if (scWidget && scReady && !scPlaying) scWidget.play(); }, 700);
+    setTimeout(() => { if (scWidget && scReady && !scPlaying) scWidget.play(); }, 1800);
+  };
+
   const SVG_PLAY = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2l10 6-10 6z"/></svg>';
   const SVG_PAUSE = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h3v12H4z M9 2h3v12H9z"/></svg>';
   const paintPlayBtn = () => {
@@ -801,15 +812,15 @@ export function initUI(ctx) {
       setMusicTitle(i);
       const ms = MUSIC_CUES[i][0] * 1000;
       // a widget that isn't playing yet drops seekTo — queue it for PLAY
-      if (!scWidget) { pendingSeekMs = ms; buildWidget('music').then((w) => { if (w) w.play(); }); }
+      if (!scWidget) { pendingSeekMs = ms; buildWidget('music').then(() => pumpPlay()); }
       else if (scReady) {
         if (scPlaying) scWidget.seekTo(ms);
-        else { pendingSeekMs = ms; scWidget.play(); }
+        else { pendingSeekMs = ms; pumpPlay(); }
       }
       return;
     }
-    if (scWidget && scReady) { scWidget.skip(i); scWidget.play(); markCurrentRow(i); }
-    else if (!scWidget) buildWidget(scSet).then((w) => { if (w) { w.skip(i); w.play(); } });
+    if (scWidget && scReady) { scWidget.skip(i); pumpPlay(); markCurrentRow(i); }
+    else if (!scWidget) buildWidget(scSet).then((w) => { if (w) { w.skip(i); pumpPlay(); } });
   }
 
   const loadScApi = () => {
@@ -854,7 +865,7 @@ export function initUI(ctx) {
             pTitle.classList.add('is-idle');
             pTitle.textContent = 'Hear the record';
           }
-          if (scWantPlay) { scWantPlay = false; scWidget.play(); }
+          if (scWantPlay) { scWantPlay = false; pumpPlay(); }
           if (!miniFly.hidden) populateTrackList();
           resolve(scWidget);
         });
@@ -892,7 +903,7 @@ export function initUI(ctx) {
   let scWantPlay = false;
   pPlay.addEventListener('click', () => {
     if (!scWidget) { scWantPlay = true; buildWidget(scSet); }
-    else if (scReady) scWidget.toggle();
+    else if (scReady) { if (scPlaying) scWidget.pause(); else pumpPlay(); }
     else scWantPlay = true;
   });
   // in the music sequence, prev/next hop between cue points inside the one
@@ -931,7 +942,7 @@ export function initUI(ctx) {
       const wasPlaying = scPlaying;
       pTitle.textContent = 'loading…';
       if (!miniFly.hidden) populateTrackList(); // music renders instantly; NASA sets fill on READY
-      buildWidget(scSet).then((w) => { if (w && wasPlaying) w.play(); });
+      buildWidget(scSet).then((w) => { if (w && wasPlaying) pumpPlay(); });
     });
   }
   // Pre-warm: build the default widget shortly after load (once the scene's

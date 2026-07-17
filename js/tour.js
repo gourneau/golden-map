@@ -36,7 +36,7 @@ const HOMES = {
 const PHONE_HOMES = {
   record:  { pos: [0, -5.6, 1.0],    target: [0, 0, -0.68] },
   map:     { pos: [1.2, -13, 5.5],   target: [1.2, 0, -1.6] },
-  pulsars: { pos: [1.4, -17, 8],     target: [1.4, 0, -2.2] },
+  pulsars: { pos: [3.4, -25, 11.5],  target: [3.4, 0, -2.8] }, // whole map, Sun to GC
   verdict: { pos: [1.2, -5, 13],     target: [1.2, -1.2, 0] },
   finders: { pos: [1.4, -15, 6],     target: [1.4, 0, -2.1] },
 };
