@@ -496,28 +496,6 @@ export function initUI(ctx) {
       <span class="gm-chip mono">40,272 AD — Voyager 1 passes 1.7 ly from Gliese 445</span>
       <span class="gm-chip mono">+296,000 yr — Voyager 2 passes 4.3 ly from Sirius</span>
     </div>
-    <details class="gm-listen" open>
-      <summary class="mono">♫ Hear the record — streamed free by NASA</summary>
-      <p class="gm-body">The real thing: the greetings in 55 languages and the
-        “Sounds of Earth,” streamed from NASA’s official SoundCloud. (The
-        music tracks are still under copyright, so NASA links those
-        separately.)</p>
-      <div class="gm-player">
-        <div class="gm-player-sets" role="group" aria-label="Playlist">
-          <button class="gm-mode is-active" data-set="greetings">Greetings · 55 languages</button>
-          <button class="gm-mode" data-set="sounds">Sounds of Earth</button>
-        </div>
-        <div class="gm-ptitle mono">press play · via NASA on SoundCloud</div>
-        <div class="gm-pbar" aria-label="Seek"><i></i></div>
-        <div class="gm-player-row">
-          <button class="gm-play-btn gm-pprev" aria-label="Previous track"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 2h2v12H3z M14 2 6 8l8 6z"/></svg></button>
-          <button class="gm-play-btn gm-pplay" aria-label="Play"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2l10 6-10 6z"/></svg></button>
-          <button class="gm-play-btn gm-pnext" aria-label="Next track"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M11 2h2v12h-2z M2 2l8 6-8 6z"/></svg></button>
-        </div>
-        <p class="gm-fine gm-player-credit">Audio: <a href="https://soundcloud.com/nasa" target="_blank" rel="noopener">NASA on SoundCloud</a> · <a href="https://science.nasa.gov/mission/voyager/golden-record-contents/sounds/" target="_blank" rel="noopener">full contents at NASA</a></p>
-        <div class="gm-sc-host" aria-hidden="true"></div>
-      </div>
-    </details>
     <details class="gm-drake">
       <summary class="mono">The man who drew the map</summary>
       <p class="gm-body">One person drew both. In 1961, Frank Drake wrote a
@@ -599,26 +577,100 @@ export function initUI(ctx) {
       &ensp;·&ensp;prompted by <a href="https://x.com/gourneau" target="_blank" rel="noopener">@gourneau</a>
     </p>`;
 
-  // ---- the record player -------------------------------------------------
+  // ---- the record player: a persistent mini dock --------------------------
   // NASA's official playlists stream through a visually-hidden SoundCloud
   // widget; these controls drive it over the Widget API so the player wears
-  // the site's gold instead of SoundCloud's chrome. Loaded lazily on the
-  // first visit to Act V.
+  // the site's gold instead of SoundCloud's chrome. The dock rides the bottom
+  // of EVERY act — the record keeps playing while you explore. Nothing loads
+  // (and nothing plays) until the first press of play.
+  const mini = el('aside', 'gm-panel gm-mini is-on');
+  mini.setAttribute('aria-label', 'Hear the record');
+  mini.innerHTML = `
+    <div class="gm-mini-fly" hidden>
+      <p class="gm-k">hear the record</p>
+      <div class="gm-player-sets" role="group" aria-label="Playlist">
+        <button class="gm-mode is-active" data-set="sounds">Sounds of Earth</button>
+        <button class="gm-mode" data-set="greetings">Greetings · 55 languages</button>
+        <button class="gm-mode" data-set="music">Music from Earth · 27</button>
+      </div>
+      <p class="gm-fine">Greetings &amp; sounds stream from
+        <a href="https://soundcloud.com/nasa" target="_blank" rel="noopener">NASA’s official SoundCloud</a>.
+        The music itself is still under copyright — the first recordings
+        unlock in 2028–29 — so it streams from a
+        <a href="https://soundcloud.com/the-film-effect/voyager-golden-record-music-from-earth" target="_blank" rel="noopener">community upload</a>
+        and may not last.
+        <a href="https://science.nasa.gov/mission/voyager/golden-record-contents/sounds/" target="_blank" rel="noopener">Full track list at NASA</a>.</p>
+    </div>
+    <div class="gm-mini-bar">
+      <button class="gm-play-btn gm-pprev" aria-label="Previous track"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 2h2v12H3z M14 2 6 8l8 6z"/></svg></button>
+      <button class="gm-play-btn gm-pplay is-invite" aria-label="Play"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2l10 6-10 6z"/></svg></button>
+      <button class="gm-play-btn gm-pnext" aria-label="Next track"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M11 2h2v12h-2z M2 2l8 6-8 6z"/></svg></button>
+      <div class="gm-mini-info">
+        <div class="gm-ptitle mono">♫ hear the record</div>
+        <div class="gm-pbar" aria-label="Seek"><i></i></div>
+      </div>
+      <button class="gm-play-btn gm-msets" aria-label="Choose playlist and credits" aria-expanded="false">♫</button>
+    </div>
+    <div class="gm-sc-host" aria-hidden="true"></div>`;
   const SC_SETS = {
     sounds: 'https://soundcloud.com/nasa/sets/golden-record-sounds-of',
     greetings: 'https://soundcloud.com/nasa/sets/golden-record-greetings-to-the',
+    // the 90-minute Music from Earth sequence, one continuous file from a
+    // community upload (NASA's official release omits the music — it is
+    // still under copyright, so this one may someday vanish; the player
+    // degrades to its fallback message if it does)
+    music: 'https://soundcloud.com/the-film-effect/voyager-golden-record-music-from-earth',
   };
-  const scHost = finders.querySelector('.gm-sc-host');
-  const pTitle = finders.querySelector('.gm-ptitle');
-  const pBar = finders.querySelector('.gm-pbar');
+  // Music from Earth cue sheet: NASA's published track order and lengths,
+  // accumulated into start offsets (seconds) within the single upload.
+  // prev/next seek between cues so the one big file plays like a playlist.
+  const MUSIC_CUES = [
+    [0,    'Bach — Brandenburg Concerto No. 2, first movement'],
+    [280,  'Java — court gamelan, “Kinds of Flowers”'],
+    [563,  'Senegal — percussion'],
+    [691,  'Zaire — Mbuti girls’ initiation song'],
+    [747,  'Australia — “Morning Star” and “Devil Bird”'],
+    [833,  'Mexico — “El Cascabel,” Lorenzo Barcelata'],
+    [1027, 'Chuck Berry — “Johnny B. Goode”'],
+    [1185, 'New Guinea — men’s house song'],
+    [1265, 'Japan — shakuhachi, “Tsuru no Sugomori”'],
+    [1556, 'Bach — Gavotte en rondeaux, Arthur Grumiaux'],
+    [1731, 'Mozart — Queen of the Night aria, Edda Moser'],
+    [1906, 'Georgia — “Tchakrulo”'],
+    [2044, 'Peru — panpipes and drum'],
+    [2096, 'Louis Armstrong — “Melancholy Blues”'],
+    [2281, 'Azerbaijan — bagpipes'],
+    [2431, 'Stravinsky — Rite of Spring, Sacrificial Dance'],
+    [2706, 'Bach — Well-Tempered Clavier, Glenn Gould'],
+    [2994, 'Beethoven — Fifth Symphony, first movement'],
+    [3434, 'Bulgaria — “Izlel je Delyo Hagdutin,” Valya Balkanska'],
+    [3733, 'Navajo — Night Chant'],
+    [3790, 'Holborne — “The Fairie Round”'],
+    [3867, 'Solomon Islands — panpipes'],
+    [3939, 'Peru — wedding song'],
+    [3977, 'China — guqin, “Flowing Streams,” Guan Pinghu'],
+    [4434, 'India — raga “Jaat Kahan Ho,” Kesarbai Kerkar'],
+    [4644, 'Blind Willie Johnson — “Dark Was the Night”'],
+    [4839, 'Beethoven — Cavatina, Budapest String Quartet'],
+  ];
+  const scHost = mini.querySelector('.gm-sc-host');
+  const pTitle = mini.querySelector('.gm-ptitle');
+  const pBar = mini.querySelector('.gm-pbar');
   const pBarFill = pBar.querySelector('i');
-  const pPlay = finders.querySelector('.gm-pplay');
-  const setBtns = [...finders.querySelectorAll('.gm-player-sets .gm-mode')];
+  const pPlay = mini.querySelector('.gm-pplay');
+  const setBtns = [...mini.querySelectorAll('.gm-player-sets .gm-mode')];
+  const miniFly = mini.querySelector('.gm-mini-fly');
+  const miniSets = mini.querySelector('.gm-msets');
   let scWidget = null;
   let scReady = false;
   let scPlaying = false;
-  let scSet = 'greetings';
+  let scSet = 'sounds';
   let scApiPromise = null;
+
+  miniSets.addEventListener('click', () => {
+    miniFly.hidden = !miniFly.hidden;
+    miniSets.setAttribute('aria-expanded', String(!miniFly.hidden));
+  });
 
   const SVG_PLAY = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2l10 6-10 6z"/></svg>';
   const SVG_PAUSE = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h3v12H4z M9 2h3v12H9z"/></svg>';
@@ -626,10 +678,24 @@ export function initUI(ctx) {
     pPlay.innerHTML = scPlaying ? SVG_PAUSE : SVG_PLAY;
     pPlay.setAttribute('aria-label', scPlaying ? 'Pause' : 'Play');
   };
+  let musicIdx = -1; // current cue in the music sequence (-1 = unknown)
+  const setMusicTitle = (i) => {
+    musicIdx = i;
+    pTitle.textContent = `${i + 1}/${MUSIC_CUES.length} · ${MUSIC_CUES[i][1]}`;
+  };
+  const musicIdxAt = (ms) => {
+    let i = 0;
+    for (let k = 0; k < MUSIC_CUES.length; k++) {
+      if (ms >= MUSIC_CUES[k][0] * 1000 - 500) i = k;
+    }
+    return i;
+  };
   const refreshTitle = () => {
+    if (!scWidget) return;
+    if (scSet === 'music') { if (musicIdx < 0) setMusicTitle(0); return; }
     // every NASA track is prefixed "Golden Record: " — drop it so the actual
     // track name fits the line
-    if (scWidget) scWidget.getCurrentSound((s) => {
+    scWidget.getCurrentSound((s) => {
       if (s) pTitle.textContent = s.title.replace(/^golden record:\s*/i, '');
     });
   };
@@ -651,6 +717,7 @@ export function initUI(ctx) {
     return loadScApi().then((SC) => {
       scReady = false;
       scPlaying = false;
+      musicIdx = -1;
       paintPlayBtn();
       pBarFill.style.width = '0%';
       scHost.innerHTML = '';
@@ -668,11 +735,20 @@ export function initUI(ctx) {
           refreshTitle();
           resolve(scWidget);
         });
-        scWidget.bind(E.PLAY, () => { scPlaying = true; paintPlayBtn(); refreshTitle(); });
+        scWidget.bind(E.PLAY, () => {
+          scPlaying = true;
+          pPlay.classList.remove('is-invite'); // the invitation was accepted
+          paintPlayBtn();
+          refreshTitle();
+        });
         scWidget.bind(E.PAUSE, () => { scPlaying = false; paintPlayBtn(); });
         scWidget.bind(E.FINISH, () => { scPlaying = false; paintPlayBtn(); });
         scWidget.bind(E.PLAY_PROGRESS, (e) => {
           pBarFill.style.width = `${((e.relativePosition || 0) * 100).toFixed(1)}%`;
+          if (scSet === 'music') {
+            const i = musicIdxAt(e.currentPosition || 0);
+            if (i !== musicIdx) setMusicTitle(i);
+          }
         });
         scWidget.bind(E.ERROR, () => { pTitle.textContent = 'stream unavailable — links below still work'; });
       });
@@ -683,8 +759,28 @@ export function initUI(ctx) {
     if (!scWidget) buildWidget(scSet).then((w) => w && w.play());
     else if (scReady) scWidget.toggle();
   });
-  finders.querySelector('.gm-pprev').addEventListener('click', () => { if (scReady) { scWidget.prev(); refreshTitle(); } });
-  finders.querySelector('.gm-pnext').addEventListener('click', () => { if (scReady) { scWidget.next(); refreshTitle(); } });
+  // in the music sequence, prev/next hop between cue points inside the one
+  // long file; a "prev" more than 3 s into a piece restarts that piece first
+  const skipCue = (dir) => {
+    scWidget.getPosition((ms) => {
+      const i = musicIdxAt(ms || 0);
+      const j = dir < 0
+        ? ((ms || 0) - MUSIC_CUES[i][0] * 1000 > 3000 ? i : Math.max(0, i - 1))
+        : Math.min(MUSIC_CUES.length - 1, i + 1);
+      setMusicTitle(j);
+      scWidget.seekTo(MUSIC_CUES[j][0] * 1000);
+    });
+  };
+  mini.querySelector('.gm-pprev').addEventListener('click', () => {
+    if (!scReady) return;
+    if (scSet === 'music') skipCue(-1);
+    else { scWidget.prev(); refreshTitle(); }
+  });
+  mini.querySelector('.gm-pnext').addEventListener('click', () => {
+    if (!scReady) return;
+    if (scSet === 'music') skipCue(1);
+    else { scWidget.next(); refreshTitle(); }
+  });
   pBar.addEventListener('click', (e) => {
     if (!scReady) return;
     const r = pBar.getBoundingClientRect();
@@ -701,11 +797,6 @@ export function initUI(ctx) {
       buildWidget(scSet).then((w) => { if (w && wasPlaying) w.play(); });
     });
   }
-  // pre-warm the widget on the first visit to Act V so the play press is instant
-  bus.addEventListener('act', (e) => {
-    if (e.detail.act === 'finders' && !scWidget && !scApiPromise) buildWidget(scSet);
-  });
-
   const slider = finders.querySelector('.gm-slider');
   const tplusEl = finders.querySelector('.gm-tplus');
   const beaconsEl = finders.querySelector('.gm-beacons');
@@ -732,7 +823,7 @@ export function initUI(ctx) {
   // ======================================================================
   const artifactChip = el('button', 'gm-panel gm-artifact mono',
     '<span aria-hidden="true">◈</span>&ensp;the engraving');
-  artifactChip.dataset.acts = 'map pulsars verdict';
+  artifactChip.dataset.acts = 'map pulsars verdict finders';
   artifactChip.title = 'Overlay the cover engraving at true scale';
   artifactChip.setAttribute('aria-pressed', 'false');
   artifactChip.addEventListener('click', () => ctx.setArtifact(!state.artifact));
@@ -781,7 +872,9 @@ export function initUI(ctx) {
   });
 
   // ---- assemble ---------------------------------------------------------
-  root.append(nav, title, explainer, rail, railToggle, detail, verdict, finders, corner, artifactChip, earthChip, tip);
+  // `mini` is deliberately NOT in actPanels: the record keeps playing, and
+  // its dock keeps showing, across every act change
+  root.append(nav, title, explainer, rail, railToggle, detail, verdict, finders, corner, artifactChip, earthChip, mini, tip);
 
   // ---- act / selection plumbing ------------------------------------------
   const actPanels = [title, explainer, rail, railToggle, verdict, finders, artifactChip, earthChip];

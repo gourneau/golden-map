@@ -304,7 +304,7 @@ export function createRecord(ctx) {
   let restoreFrom = null;
   let artifact = !!ctx.state.artifact;   // persistent-overlay toggle
   let overlayFade = 0;                   // overlay opacity ease, 0..1
-  const OVERLAY_ACTS = ['map', 'pulsars', 'verdict'];
+  const OVERLAY_ACTS = ['map', 'pulsars', 'verdict', 'finders'];
   const overlayWanted = () => artifact && OVERLAY_ACTS.includes(act);
 
   const _q = new THREE.Quaternion();

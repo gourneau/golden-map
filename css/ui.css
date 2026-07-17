@@ -223,7 +223,7 @@
      already lifts the disc above it), with a legibility wash. */
   .gm-title {
     left: 0; right: 0;
-    bottom: 4vh;
+    bottom: 62px; /* clears the docked mini player */
     width: auto;
     text-align: center;
     padding: 1.6rem 20px 0.4rem;
@@ -579,11 +579,20 @@
   gap: 0.55em;
 }
 .gm-list li {
-  font-size: 0.92rem;
-  color: var(--paper-dim);
+  font-size: 1rem;
+  line-height: 1.55;
+  color: var(--paper);
   padding-left: 0.95em;
   border-left: 1px solid var(--gold-faint);
   max-width: 60ch;
+}
+/* the technical asides in the verdict panel read at body-adjacent size —
+   0.72rem fine print was genuinely hard to read there */
+.gm-list li .gm-fine,
+.gm-verdict .gm-fine {
+  font-size: 0.83rem;
+  line-height: 1.6;
+  color: color-mix(in srgb, var(--paper) 82%, var(--paper-dim));
 }
 .gm-modes-label { display: block; margin: 1.4em 0 0.45em; }
 .gm-modes { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -787,14 +796,47 @@
 .gm-listen summary::-webkit-details-marker { display: none; }
 .gm-sources summary::after, .gm-listen summary::after { content: ' +'; color: var(--gold-dim); }
 .gm-sources[open] summary::after, .gm-listen[open] summary::after { content: ' −'; }
-/* the record player — gold transport over a hidden SoundCloud widget */
-.gm-player { margin-top: 0.8em; }
-.gm-player-sets { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 0.8em; }
-.gm-player-row { display: flex; align-items: center; gap: 10px; margin-top: 0.8em; }
+/* ======================================================================
+   THE RECORD PLAYER — a persistent mini dock, bottom-center on every act.
+   Gold transport over a hidden SoundCloud widget.
+   ====================================================================== */
+.gm-mini {
+  left: 0; right: 0;
+  margin-inline: auto;
+  width: min(480px, calc(100vw - 24px));
+  bottom: 40px;
+  z-index: 48;
+  --gm-in: translateY(10px);
+}
+.gm-mini-bar {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 12px;
+  border: 1px solid var(--gold-faint);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--void-lift) 88%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.gm-mini-info { flex: 1; min-width: 0; }
+.gm-mini-fly {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 0; right: 0;
+  padding: 0.95rem 1.1rem;
+  border: 1px solid var(--gold-faint);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--void-lift) 92%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.gm-mini-fly .gm-fine { border-top: none; margin: 0.7em 0 0; padding-top: 0; }
+.gm-player-sets { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 0.55em; }
 .gm-play-btn {
   flex: none;
-  width: 40px;
-  height: 40px;
+  width: 34px;
+  height: 34px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -804,20 +846,31 @@
   background: color-mix(in srgb, var(--void-lift) 88%, transparent);
   transition: color 0.25s var(--ease), border-color 0.25s var(--ease);
 }
-.gm-play-btn svg { width: 13px; height: 13px; fill: currentColor; }
+.gm-play-btn svg { width: 11px; height: 11px; fill: currentColor; }
 .gm-play-btn:hover { color: var(--gold-bright); border-color: var(--gold-dim); }
-.gm-pplay { width: 48px; height: 48px; }
-.gm-pplay svg { width: 16px; height: 16px; }
+.gm-pplay { width: 42px; height: 42px; }
+.gm-pplay svg { width: 14px; height: 14px; }
+.gm-msets { font-size: 0.85rem; line-height: 1; }
+/* the standing invitation: a slow golden breath on the play button until
+   the first press (stilled under prefers-reduced-motion) */
+@keyframes gm-invite {
+  0%, 100% { border-color: var(--gold-faint); box-shadow: 0 0 0 0 transparent; }
+  50% { border-color: var(--gold); box-shadow: 0 0 14px 0 color-mix(in srgb, var(--gold) 30%, transparent); }
+}
+.gm-pplay.is-invite { animation: gm-invite 2.6s var(--ease) infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .gm-pplay.is-invite { animation: none; border-color: var(--gold); }
+}
 .gm-ptitle {
-  font-size: 0.78rem;
+  font-size: 0.66rem;
   font-weight: 500;
-  letter-spacing: 0.11em;
+  letter-spacing: 0.13em;
   text-transform: uppercase;
   color: var(--paper);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-bottom: 0.6em;
+  margin-bottom: 0.5em;
 }
 .gm-pbar {
   position: relative;
@@ -833,7 +886,6 @@
   background: var(--gold);
   transition: width 0.25s linear;
 }
-.gm-player-credit { border-top: none; margin-left: 0; }
 /* present for the Widget API, parked out of view */
 .gm-sc-host { position: absolute; left: -9999px; top: 0; width: 320px; height: 100px; overflow: hidden; }
 
@@ -865,6 +917,7 @@ body.gm-still .gm-artifact,
 body.gm-still .gm-earth-chip,
 body.gm-still .gm-tip { display: none !important; }
 body.gm-still .gm-title { bottom: 20vh; }
+body.gm-still .gm-mini { display: none !important; }
 
 /* colophon — repo + author credit */
 .gm-colophon {
@@ -960,19 +1013,25 @@ body.gm-still .gm-title { bottom: 20vh; }
   .gm-title { bottom: 5vh; }
   .gm-hook { font-size: var(--step--1); }
 
+  /* the mini player docks full-width at the very bottom; everything that
+     used to touch the screen edge rides 48px higher */
+  .gm-mini { width: auto; bottom: 0; left: 0; right: 0; }
+  .gm-mini-bar { border-radius: 0; border-left: none; border-right: none; border-bottom: none; }
+  .gm-mini-fly { left: 8px; right: 8px; bottom: calc(100% + 8px); }
+
   /* every bottom sheet caps at 46vh — the 3D scene always owns the top half */
   .gm-left,
   .gm-verdict,
   .gm-detail {
     left: 12px; right: 12px;
-    top: auto; bottom: 12px;
+    top: auto; bottom: 64px;
     width: auto;
     max-height: 46vh;
   }
 
   .gm-rail {
     left: 0; right: 0;
-    top: auto; bottom: 0;
+    top: auto; bottom: 48px;
     width: auto;
     max-height: 46vh;
     border-left: none;
@@ -988,11 +1047,11 @@ body.gm-still .gm-title { bottom: 20vh; }
   .gm-rail.is-on.sheet-open { opacity: 1; visibility: visible; transform: none; }
   /* the drawer toggle moves bottom-LEFT so the chips own the right corner
      (the corner mark is hidden here, so the spot is free) */
-  .gm-rail-toggle { display: block; right: auto; left: 14px; min-height: 40px; }
+  .gm-rail-toggle { display: block; right: auto; left: 14px; bottom: 62px; min-height: 40px; }
 
   .gm-finders {
     left: 12px; right: 12px;
-    top: auto; bottom: 60px; /* clears the rail-toggle row */
+    top: auto; bottom: 64px; /* clears the docked mini player */
     width: auto;
     max-height: 46vh;
     --gm-in: translateY(18px);
