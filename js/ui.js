@@ -87,12 +87,12 @@ export function initUI(ctx) {
     <p class="gm-hook">In 1977, NASA launched two spacecraft carrying a golden
       record. Engraved on it: a map that shows any finder where Earth is,
       using fourteen flashing stars as landmarks. This is that map — rebuilt
-      with today’s data.</p>
-    <button class="gm-begin mono">Begin — unfold the map&ensp;<span aria-hidden="true">→</span></button>
-    <button class="gm-hello mono" title="the record’s English greeting — from NASA’s official stream">
-      <span class="gm-hello-ic" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M4 2l10 6-10 6z"/></svg></span>
-      <span>“Hello from the children of planet Earth”</span>
-    </button>`;
+      with today’s data.<button class="gm-hello"
+        title="“Hello from the children of planet Earth” — the record’s English greeting, NASA"
+        aria-label="Play the record’s English greeting: hello from the children of planet Earth"
+        ><span class="gm-hello-ic" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M4 2l10 6-10 6z"/></svg></span
+        ><span class="gm-hello-t">hear them say hello</span></button></p>
+    <button class="gm-begin mono">Begin — unfold the map&ensp;<span aria-hidden="true">→</span></button>`;
   title.querySelector('.gm-begin').addEventListener('click', () => ctx.setAct('map'));
 
   // ======================================================================
@@ -292,7 +292,13 @@ export function initUI(ctx) {
         <p class="gm-detail-note">The big dish points back at Earth. Below it
           sits the record. Long after the transmitters fall silent, the map
           rides on.</p>
-        <p class="gm-k" style="margin-top:0.8em">drag to rotate the spacecraft · scroll to zoom · esc to leave</p>
+        <p class="gm-body gm-detail-story">Explore to find the golden record —
+          it is visible from here.</p>
+        <p class="gm-k" style="margin-top:0.8em">drag to orbit · scroll to zoom · right-drag or two fingers to pan · esc to leave</p>
+        <p class="gm-fine">Strictly, the gold disc you can see bolted to the
+          spacecraft is the record’s <em>cover</em> — the engraved aluminium lid
+          that carries the pulsar map, the hydrogen tick and the playing
+          instructions. The record itself lies underneath it.</p>
         <p class="gm-fine">Spacecraft model: NASA (public domain), from NASA’s
           3D resources — simplified for the web. Voyager 1 is ~170 AU out
           (JPL Horizons, 2026), the farthest spacecraft from Earth.</p>`;

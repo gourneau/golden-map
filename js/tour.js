@@ -81,7 +81,7 @@ export function initTour(ctx) {
   // ---- tween ------------------------------------------------------------
   let tween = null;                       // { el, dur, p0, p1, t0, t1 }
   const breath = new THREE.Vector3();     // last applied idle offset
-  let inspecting = false;                 // probe inspect: controls stay OFF (see setInspect)
+  let inspecting = false;                 // probe inspect: OrbitControls aimed at the probe
   let pointerDown = false;
   let sinceUser = ORBIT_IDLE_S;           // seconds since last user gesture
   // Act II explainer panel state (ui.js 'uilayout'). It starts expanded, so the
@@ -101,7 +101,7 @@ export function initTour(ctx) {
     if (!tween) return;
     tween = null;
     legs = [];
-    controls.enabled = !inspecting; // never re-arm OrbitControls mid-inspect
+    controls.enabled = true; // the probe visit keeps them on too, aimed at it
   }
 
   // Portrait compensation. HOMES and the framing math are tuned for landscape
@@ -312,19 +312,26 @@ export function initTour(ctx) {
     flyTo(p.clone().add(off), p, 2.0);
   }
 
-  // Probe inspect mode: while visiting Voyager, OrbitControls goes fully
-  // silent and voyager.js owns the gesture (arcball rotation of the MODEL,
-  // wheel dolly). No competing camera rotation. Restored on any deselect.
+  // Probe inspect mode: while visiting Voyager the camera becomes an ordinary
+  // 3D viewer around it — left-drag orbits, wheel zooms, right-drag (or two
+  // fingers) pans, exactly the conventions every model viewer uses. That is
+  // what lets someone wander round the back of the spacecraft, pull out, and
+  // spot the record on its flank. The distance clamps are the only special
+  // thing: close enough to read the dish, far enough to see the record too.
+  const INSPECT_MIN = 0.5;
+  const INSPECT_MAX = 12;
   let inspectSaved = null;
   function setInspect(on) {
     if (on && !inspectSaved) {
       inspectSaved = {
-        enabled: controls.enabled,
         minDistance: controls.minDistance,
         maxDistance: controls.maxDistance,
+        screenSpacePanning: controls.screenSpacePanning,
       };
       inspecting = true;
-      controls.enabled = false;
+      controls.minDistance = INSPECT_MIN;
+      controls.maxDistance = INSPECT_MAX;
+      controls.screenSpacePanning = true; // pan in the view plane, viewer-style
     } else if (!on && inspectSaved) {
       inspecting = false;
       Object.assign(controls, inspectSaved);
@@ -524,9 +531,9 @@ export function initTour(ctx) {
           flyTo(next.pos, next.target, next.dur); // clears legs —
           legs = rest;                            // — restore the queue
         } else {
-          // arriving AT the probe must not hand the camera to OrbitControls —
-          // voyager.js owns the inspect gesture until deselect restores this
-          controls.enabled = !inspecting;
+          // arriving AT the probe hands the camera to OrbitControls with the
+          // probe as its target — the fly-to tweened controls.target there
+          controls.enabled = true;
         }
       }
       return;

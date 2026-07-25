@@ -265,28 +265,48 @@
   line-height: 1.5;
   color: var(--paper);
 }
-/* the one-off greeting: a quiet second line under Begin */
+/* The greeting: not a second button under Begin — a small aside riding the
+   end of the paragraph, in the masthead's own italic serif. Cute, findable,
+   and it costs the card no vertical room at all. */
 .gm-hello {
   pointer-events: auto;
+  display: inline;              /* stays in the text flow, wraps with it */
+  margin-left: 0.5em;
+  padding: 0;
+  font-family: var(--body);
+  font-style: italic;
+  font-size: 0.94em;
+  color: var(--gold);
+  white-space: nowrap;
+  transition: color 0.25s var(--ease);
+}
+.gm-hello-t {
+  border-bottom: 1px solid var(--gold-faint);
+  padding-bottom: 1px;
+  transition: border-color 0.25s var(--ease);
+}
+.gm-hello:hover { color: var(--gold-bright); }
+.gm-hello:hover .gm-hello-t { border-bottom-color: var(--gold); }
+.gm-hello.is-playing { color: var(--gold-bright); }
+/* the little gold coin the play/pause glyph sits in */
+.gm-hello-ic {
   display: inline-flex;
   align-items: center;
-  gap: 0.65em;
-  margin-top: 0.85em;
-  padding: 0.55em 0.95em;
-  font-size: 0.62rem;
-  font-weight: 500;
-  letter-spacing: 0.1em;
-  color: var(--gold-dim);
+  justify-content: center;
+  width: 1.25em;
+  height: 1.25em;
+  margin-right: 0.42em;
+  vertical-align: -0.22em;
   border: 1px solid var(--gold-faint);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--void-lift) 70%, transparent);
-  transition: color 0.25s var(--ease), border-color 0.25s var(--ease);
+  border-radius: 50%;
+  transition: border-color 0.25s var(--ease), background 0.25s var(--ease);
 }
-.gm-hello:hover { color: var(--gold-bright); border-color: var(--gold-dim); }
-.gm-hello.is-playing { color: var(--gold); border-color: var(--gold-dim); }
-.gm-hello-ic { display: flex; }
-.gm-hello-ic svg { width: 9px; height: 9px; fill: currentColor; }
-@media (max-width: 900px) { .gm-hello { margin-top: 0.7em; } }
+.gm-hello:hover .gm-hello-ic { border-color: var(--gold); }
+.gm-hello.is-playing .gm-hello-ic {
+  border-color: var(--gold);
+  background: color-mix(in srgb, var(--gold) 18%, transparent);
+}
+.gm-hello-ic svg { width: 0.42em; height: 0.42em; fill: currentColor; }
 @media (max-width: 900px) { .gm-hook { max-width: 44em; margin: 0 auto 1em; } }
 .gm-begin {
   pointer-events: auto;
@@ -1099,7 +1119,6 @@ body.gm-still .gm-mini { display: none !important; }
   .gm-title h1 { font-size: clamp(1.9rem, 5.4vw, 3.2rem); }
   .gm-tagline { font-size: 0.95rem; margin-bottom: 0.7em; }
   .gm-hook { font-size: var(--step--1); }
-  .gm-hello { margin-top: 0.55em; padding: 0.5em 0.85em; font-size: 0.58rem; }
 
   /* ---- one geometry for every sheet ----------------------------------- */
   .gm-left,
@@ -1264,7 +1283,6 @@ body.gm-still .gm-mini { display: none !important; }
   .gm-tagline { font-size: 0.85rem; margin-bottom: 0.5em; }
   .gm-hook { font-size: 0.8rem; margin-bottom: 0.8em; }
   .gm-begin { padding: 0.7em 1.4em; }
-  .gm-hello { margin-top: 0.45em; }
 }
 
 /* ======================================================================
