@@ -1,2 +1,7 @@
 .DS_Store
 node_modules/
+
+# secrets — never commit (Porkbun API keys live here)
+.env
+.env.*
+*.swp

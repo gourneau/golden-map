@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://gourneau.github.io/golden-map/sitemap.xml
+Sitemap: https://goldenrecord.voyage/sitemap.xml

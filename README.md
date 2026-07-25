@@ -4,7 +4,7 @@ An interactive 3D reconstruction of the pulsar map engraved on the Voyager Golde
 Record — the real fourteen pulsars, with real coordinates, and an honest answer to
 the question: *if someone reconstructed this map, would it actually point home?*
 
-**Live site:** https://gourneau.github.io/golden-map/
+**Live site:** https://goldenrecord.voyage/
 
 ![The Golden Record and the Voyager probe](art/og.jpg)
 
