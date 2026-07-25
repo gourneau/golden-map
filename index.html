@@ -77,5 +77,9 @@
   <div id="ui"></div>
   <noscript><p class="noscript">This experience needs JavaScript — it is, after all, a machine for decoding a machine.</p></noscript>
   <script type="module" src="js/main.js"></script>
+  <!-- Cloudflare Web Analytics — cookieless, sets nothing, needs no consent
+       banner. Deferred by module semantics, so it never blocks the scene. The
+       token is public by design (it only identifies the site to report to). -->
+  <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "394f92b3946449b39f675169b42ac95c"}'></script>
 </body>
 </html>
