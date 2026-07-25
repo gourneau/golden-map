@@ -36,17 +36,20 @@ const HOMES = {
 const PHONE_HOMES = {
   // Act I: the disc reads whole between the nav and the masthead — pulled back
   // far enough that neither crowds it, and that the probe has a corner to fly in
-  record:  { pos: [0, -7.79, 0.90],  target: [0, 0, -1.44] },
+  record:  { pos: [0, -8.95, 0.81],  target: [0, 0, -1.88] },
   // short screens (SE-class): the masthead's type doesn't shrink with the
   // viewport, so stand back further and lift — disc AND probe still fit above it
-  recordShort: { pos: [0, -9.50, 0.78], target: [0, 0, -2.07] },
+  recordShort: { pos: [0, -10.55, 1.22], target: [0, 0, -1.95] },
   // II–V are composed for the band between the act nav and an open bottom
   // sheet — subject centered in it, whole, at every act. (Measured against a
   // 390 × 844 frame; they scale with the viewport.)
-  map:     { pos: [1.21, -13.03, 5.51],  target: [0.68, 0, -3.96] },
-  pulsars: { pos: [3.4, -24.93, 11.45],  target: [3.4, 0, -6.19] }, // whole map, Sun to GC
-  verdict: { pos: [0.49, -10.86, 19.73], target: [0.47, -5.13, 0] }, // plan view
-  finders: { pos: [1.4, -14.96, 5.97],   target: [0.70, 0, -2.67] },
+  map:     { pos: [1.13, -11.04, 4.86], target: [0.68, 0, -3.17] },
+  // Act III frames the BEACONS, not the ruler: including the galactic center
+  // meant standing 29 kpc back, which shrank the fourteen lines to a smudge.
+  // The GC now runs off frame — its own row in the list flies you to it.
+  pulsars: { pos: [1.05, -11.50, 6.96], target: [0.55, 0, -4.04] },
+  verdict: { pos: [0.59, -8.41, 15.78], target: [0.57, -3.83, 0] }, // plan view
+  finders: { pos: [1.49, -14.96, 6.43], target: [0.79, 0, -2.21] },
 };
 
 // Map rendering mode per act: warm gold engraved for I–III,

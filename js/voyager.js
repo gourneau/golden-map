@@ -6,10 +6,10 @@
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 
-// Where the probe hovers on portrait phones (world units): in front of the
-// disc's lower-left rim, ~1.6 units nearer the camera than the record itself,
-// so it reads large and unmistakably in front of the gold.
-const PHONE_DRIFT = [-0.39, -1.31, -0.22];
+// Where the probe hovers on portrait phones (world units): off to the LEFT of
+// the record, below its rim and nearer the camera. The record is the
+// centerpiece; the probe is the thing beside it.
+const PHONE_DRIFT = [-1.03, -1.08, -0.61];
 
 export function createVoyager(ctx) {
   const { THREE, bus, prefersReducedMotion, camera, canvas, controls } = ctx;
@@ -121,11 +121,11 @@ export function createVoyager(ctx) {
     capReady = true;
     capPortrait = portrait;
     // clear of the model on phones (its tail hangs well below the pivot)
-    caption.position.set(0, 0, portrait ? -0.95 : -1.1)
+    caption.position.set(0, 0, portrait ? -0.62 : -1.1)
       .applyQuaternion(group.quaternion.clone().invert());
     // and set bigger there: at phone distances the 1-unit sprite renders its
     // line about seven pixels tall, which is not a legible invitation
-    caption.scale.set(portrait ? 1.4 : 1.0, portrait ? 0.175 : 0.125, 1);
+    caption.scale.set(portrait ? 1.25 : 1.0, portrait ? 0.156 : 0.125, 1);
     drawCaption();
   };
   setCaptionOffset(false);
@@ -207,7 +207,7 @@ export function createVoyager(ctx) {
       // unmistakably there, but small enough that the RECORD is still the
       // centerpiece and the probe is the thing off to the side.
       const portrait = ctx.camera.aspect < 0.9;
-      inner.scale.setScalar(portrait ? 0.78 : 1);
+      inner.scale.setScalar(portrait ? 0.70 : 1);
       setCaptionOffset(portrait);
 
       if (prefersReducedMotion) {

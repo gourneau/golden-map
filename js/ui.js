@@ -1237,11 +1237,14 @@ export function initUI(ctx) {
     const set = (k, px) => document.documentElement.style.setProperty(k, `${Math.round(px)}px`);
     set('--dock-h', miniBar.getBoundingClientRect().height);
     set('--nav-h', nav.getBoundingClientRect().height);
+    // how far left the second scene chip must sit to ride beside the first
+    set('--chip-w', artifactChip.getBoundingClientRect().width + 6);
   };
   if (window.ResizeObserver) {
     const ro = new ResizeObserver(measureChrome); // fires once on observe
     ro.observe(miniBar);
     ro.observe(nav);
+    ro.observe(artifactChip);
   } else {
     measureChrome();
     window.addEventListener('resize', measureChrome);

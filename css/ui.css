@@ -1108,7 +1108,7 @@ body.gm-still .gm-mini { display: none !important; }
   :root {
     --sheet-x: 10px;    /* side inset — shared by every sheet and the flyout */
     --sheet-gap: 8px;   /* air between a sheet and the docked player */
-    --sheet-h: 46vh;    /* the 3D scene always owns the top half */
+    --sheet-h: 40vh;    /* the scene keeps the larger share of the screen */
   }
 
   .gm-act-t { display: none; }
@@ -1208,19 +1208,28 @@ body.gm-still .gm-mini { display: none !important; }
     overflow-y: auto;
   }
 
-  /* ---- the two scene chips: a top-right stack under the nav ------------ */
+  /* ---- the two scene chips ---------------------------------------------
+     Side by side in one slim strip directly under the nav, not a stacked
+     block: they cost the map a band 32px tall instead of a 130 × 90 corner,
+     which is what was cropping the view of the map itself. */
   .gm-corner { display: none; }
   .gm-artifact {
     right: var(--sheet-x);
-    top: calc(var(--nav-h) + 10px);
+    top: calc(var(--nav-h) + 8px);
     bottom: auto;
     z-index: 39; /* under the nav (40), over the canvas */
-    font-size: 0.52rem;
-    min-height: 40px;
+    font-size: 0.46rem;
+    letter-spacing: 0.13em;
+    padding: 0.5em 0.75em;
+    min-height: 32px;
     display: inline-flex;
     align-items: center;
   }
-  .gm-earth-chip { top: calc(var(--nav-h) + 58px); }
+  .gm-artifact span[aria-hidden] { margin-right: -0.25em; } /* tighter glyph gap */
+  .gm-earth-chip {
+    top: calc(var(--nav-h) + 8px);
+    right: calc(var(--sheet-x) + var(--chip-w, 104px));
+  }
 
   /* the detail sheet's header tab carries the ✕ here */
   .gm-close { display: none; }
@@ -1245,7 +1254,7 @@ body.gm-still .gm-mini { display: none !important; }
   .gm-verdict,
   .gm-finders {
     right: auto;
-    width: min(var(--panel-w), 48vw);
+    width: min(360px, 42vw);   /* the map keeps the larger half of the frame */
     top: calc(var(--nav-h) + 6px);
     max-height: none;
     --gm-in: translateX(-14px);
