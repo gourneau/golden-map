@@ -41,7 +41,10 @@ export const GC = new THREE.Vector3(R0_KPC, 0, -SUN_Z_KPC); // galactic center, 
 
 // ---- three.js bootstrap ----------------------------------------------
 const canvas = document.getElementById('stage');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+// powerPreference matters on dual-GPU laptops: without it Firefox will happily
+// run this on the integrated chip while Chrome picks the discrete one — the
+// same page, half the framerate, for no visible reason.
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;

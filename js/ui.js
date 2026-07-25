@@ -692,7 +692,7 @@ export function initUI(ctx) {
     if (!scWidget || !scReady || !scPlaying) return;
     scWidget.getPosition((ms) => {
       if (scSet === 'music') {
-        if (scDuration > 0) pBarFill.style.width = `${((ms || 0) / scDuration * 100).toFixed(1)}%`;
+        if (scDuration > 0) pBarFill.style.transform = `scaleX(${((ms || 0) / scDuration).toFixed(4)})`;
         const i = musicIdxAt(ms || 0);
         if (i !== musicIdx) setMusicTitle(i);
       }
@@ -856,7 +856,7 @@ export function initUI(ctx) {
       scLastIdx = -1;
       scDuration = 0;
       paintPlayBtn();
-      pBarFill.style.width = '0%';
+      pBarFill.style.transform = 'scaleX(0)';
       scHost.innerHTML = '';
       const f = document.createElement('iframe');
       f.allow = 'autoplay';
@@ -912,7 +912,7 @@ export function initUI(ctx) {
           // the silent warm-up (and its straggler events) must not touch the
           // UI — only real playback drives the bar and titles
           if (scPriming || !scPlaying) return;
-          pBarFill.style.width = `${((e.relativePosition || 0) * 100).toFixed(1)}%`;
+          pBarFill.style.transform = `scaleX(${(e.relativePosition || 0).toFixed(4)})`;
           if (scSet === 'music') {
             const i = musicIdxAt(e.currentPosition || 0);
             if (i !== musicIdx) setMusicTitle(i);
@@ -1245,6 +1245,19 @@ export function initUI(ctx) {
   const actPanels = [title, explainer, rail, verdict, finders, artifactChip, earthChip];
   const DETAIL_ACTS = new Set(['pulsars', 'verdict', 'finders']);
 
+  // Panels fade and slide for 0.6s on every act and selection change. For that
+  // window, css/style.css drops the backdrop blur and promotes the moving
+  // panels to their own layers — blurring a live WebGL backdrop WHILE animating
+  // over it is what makes the transitions stutter (Firefox especially, which
+  // re-blurs every backdrop every frame). Nothing about the settled look
+  // changes; the class is gone before anyone can see the difference.
+  let animTimer = 0;
+  const markAnimating = () => {
+    document.body.classList.add('gm-anim');
+    clearTimeout(animTimer);
+    animTimer = setTimeout(() => document.body.classList.remove('gm-anim'), 750);
+  };
+
   function paintDetailVisibility() {
     // the Voyager easter egg lives in Act I — its card may show there too
     const on = !!state.selected &&
@@ -1261,6 +1274,7 @@ export function initUI(ctx) {
     finders.classList.toggle('is-on', !state.selected);
   }
   function applyAct(act) {
+    markAnimating();
     for (const p of actPanels) p.classList.toggle('is-on', p.dataset.acts.includes(act));
     for (const [id, b] of actBtns) {
       b.classList.toggle('is-current', id === act);
@@ -1268,7 +1282,8 @@ export function initUI(ctx) {
       else b.removeAttribute('aria-current');
     }
     const i = ACTS.findIndex((a) => a.id === act);
-    progress.firstElementChild.style.width = `${(((i < 0 ? 0 : i) + 1) / ACTS.length) * 100}%`;
+    progress.firstElementChild.style.transform =
+      `scaleX(${((i < 0 ? 0 : i) + 1) / ACTS.length})`;
     navTitle.textContent = i < 0 ? '' : ACTS[i].title;
     prevArrow.disabled = i <= 0;
     nextArrow.disabled = i >= ACTS.length - 1;
@@ -1282,6 +1297,7 @@ export function initUI(ctx) {
   bus.addEventListener('act', (e) => applyAct(e.detail.act));
   bus.addEventListener('select', (e) => {
     const target = e.detail.target;
+    markAnimating();
     for (const r of rows) r.el.classList.toggle('is-selected', r.target === target);
     // (on phones the rail simply steps aside under the detail card — CSS —
     // and comes back exactly as the reader left it)

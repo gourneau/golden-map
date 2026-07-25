@@ -33,8 +33,8 @@
   --tab-bleed: var(--pad-x);
   background: color-mix(in srgb, var(--void-lift) 88%, transparent);
   border: 1px solid var(--gold-faint);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: var(--blur-panel);
+  -webkit-backdrop-filter: var(--blur-panel);
   padding: var(--pad-y) var(--pad-x);
 }
 .gm-sheet h2 {
@@ -171,8 +171,8 @@
   padding: 0.5em 0.95em;
   border: 1px solid var(--gold-faint);
   background: color-mix(in srgb, var(--void) 72%, transparent);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: var(--blur-chip);
+  -webkit-backdrop-filter: var(--blur-chip);
   font-family: var(--display);
   font-size: 0.8rem;
   letter-spacing: 0.09em;
@@ -190,12 +190,16 @@
   margin-top: 13px;
   background: var(--gold-faint);
 }
+/* scaleX, not width: animating width relayouts the bar every frame, and this
+   one runs on every act change — a transform is composited instead */
 .gm-nav-progress i {
   display: block;
   height: 1px;
-  width: 20%;
+  width: 100%;
+  transform: scaleX(0.2);
+  transform-origin: left center;
   background: var(--gold);
-  transition: width 0.9s var(--ease);
+  transition: transform 0.9s var(--ease);
 }
 /* current-act title for compact nav — shown only ≤560px, below the hairline
    so the progress bar never shifts */
@@ -828,8 +832,8 @@
   border: 1px solid var(--gold-faint);
   border-radius: 14px;
   background: color-mix(in srgb, var(--void-lift) 88%, transparent);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: var(--blur-panel);
+  -webkit-backdrop-filter: var(--blur-panel);
 }
 .gm-mini-info { flex: 1; min-width: 0; }
 .gm-mini-fly {
@@ -840,8 +844,8 @@
   border: 1px solid var(--gold-faint);
   border-radius: 14px;
   background: color-mix(in srgb, var(--void-lift) 92%, transparent);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: var(--blur-panel);
+  -webkit-backdrop-filter: var(--blur-panel);
 }
 .gm-mini-fly .gm-fine { border-top: none; margin: 0.7em 0 0; padding-top: 0; }
 /* no shouting in the player: mixed case for its heading and playlist chips */
@@ -944,13 +948,17 @@
   background: color-mix(in srgb, var(--gold-faint) 65%, transparent);
   cursor: pointer;
 }
+/* same story as the nav hairline: scaleX composites, width relayouts — and
+   this one animates once a second for as long as the record is playing */
 .gm-pbar i {
   display: block;
   position: absolute;
   top: 0; bottom: 0; left: 0;
-  width: 0%;
+  width: 100%;
+  transform: scaleX(0);
+  transform-origin: left center;
   background: var(--gold);
-  transition: width 0.25s linear;
+  transition: transform 0.25s linear;
 }
 /* present for the Widget API, parked out of view */
 .gm-sc-host { position: absolute; left: -9999px; top: 0; width: 320px; height: 100px; overflow: hidden; }
@@ -1032,8 +1040,8 @@ body.gm-still .gm-mini { display: none !important; }
   border: 1px solid var(--gold-faint);
   border-radius: 999px;
   background: color-mix(in srgb, var(--void-lift) 88%, transparent);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: var(--blur-chip);
+  -webkit-backdrop-filter: var(--blur-chip);
   --gm-in: translateY(10px);
 }
 .gm-artifact.is-on {

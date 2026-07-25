@@ -75,6 +75,11 @@
      hand-tuned constant. These are only the pre-measurement fallbacks. */
   --dock-h: 61px;
   --nav-h: 100px;
+
+  /* Backdrop blur, as tokens so it can step aside during transitions —
+     see body.gm-anim below. */
+  --blur-panel: blur(10px);
+  --blur-chip: blur(6px);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -92,6 +97,17 @@ html, body {
 /* app-like touch behavior: no double-tap-to-zoom anywhere (pinch still
    works); the canvas overrides this itself with touch-action: none */
 body, #ui, #ui * { touch-action: manipulation; }
+
+/* While an act or a selection is changing, panels fade and slide over a live
+   WebGL canvas that is repainting every frame. Asking the compositor to blur
+   that canvas at the same time is the most expensive thing on this page —
+   Firefox re-reads and re-blurs every backdrop, every frame, and the movement
+   is what turns that cost into visible jank. So for the ~0.6s a transition
+   lasts the blur steps aside and the moving panels get their own layers.
+   The panel backgrounds are 88% opaque, so there is nothing to see in the
+   swap; ui.js adds and removes the class. */
+body.gm-anim { --blur-panel: none; --blur-chip: none; }
+body.gm-anim .gm-panel { will-change: opacity, transform; }
 
 #stage {
   position: fixed;
