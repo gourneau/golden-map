@@ -6,6 +6,11 @@
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 
+// Where the probe hovers on portrait phones (world units): in front of the
+// disc's lower-left rim, ~1.6 units nearer the camera than the record itself,
+// so it reads large and unmistakably in front of the gold.
+const PHONE_DRIFT = [-0.39, -1.31, -0.22];
+
 export function createVoyager(ctx) {
   const { THREE, bus, prefersReducedMotion, camera, canvas, controls } = ctx;
 
@@ -69,13 +74,29 @@ export function createVoyager(ctx) {
   const capC = capCanvas.getContext('2d');
   const capTex = new THREE.CanvasTexture(capCanvas);
   capTex.colorSpace = THREE.SRGBColorSpace;
+  let capPortrait = false; // phones draw the caption on a plate (see below)
   const drawCaption = () => {
     capC.clearRect(0, 0, CAP_W, CAP_H);
+    // On phones the probe flies in front of the gold, so the invitation would
+    // be gold-on-gold. Back it with the same dark plate the UI chips wear —
+    // on desktop it stays plain text against the void, as before.
+    if (capPortrait) {
+      const x = 22, y = 6, w = CAP_W - 44, h = CAP_H - 12;
+      capC.beginPath();
+      if (capC.roundRect) capC.roundRect(x, y, w, h, h / 2);
+      else capC.rect(x, y, w, h);
+      capC.fillStyle = 'rgba(5, 4, 3, 0.88)';
+      capC.fill();
+      capC.strokeStyle = 'rgba(110, 90, 30, 0.95)';
+      capC.lineWidth = 2;
+      capC.stroke();
+    }
     capC.font = '500 24px "IBM Plex Mono", ui-monospace, monospace';
     capC.textAlign = 'center';
     capC.textBaseline = 'middle';
     capC.fillStyle = '#c9a227';
-    capC.fillText('voyager · click to inspect', CAP_W / 2, CAP_H / 2 + 2);
+    capC.fillText(capPortrait ? 'voyager · tap to inspect' : 'voyager · click to inspect',
+      CAP_W / 2, CAP_H / 2 + 2);
     capTex.needsUpdate = true;
   };
   drawCaption();
@@ -91,7 +112,23 @@ export function createVoyager(ctx) {
   // "below the probe" in SCREEN terms is roughly world -Z (camera.up is +Z, and
   // the Act I camera looks nearly level). The group carries a fixed decorative
   // rotation, so express that world offset in the group's local space once.
-  caption.position.set(0, 0, -1.1).applyQuaternion(group.quaternion.clone().invert());
+  // (group.rotation is fixed set dressing, so this local vector is stable.)
+  // On phones the probe sits lower in frame, so the invitation tucks closer
+  // under it — far enough down to read, never far enough to reach the masthead.
+  let capReady = false;
+  const setCaptionOffset = (portrait) => {
+    if (capReady && portrait === capPortrait) return;
+    capReady = true;
+    capPortrait = portrait;
+    // clear of the model on phones (its tail hangs well below the pivot)
+    caption.position.set(0, 0, portrait ? -0.95 : -1.1)
+      .applyQuaternion(group.quaternion.clone().invert());
+    // and set bigger there: at phone distances the 1-unit sprite renders its
+    // line about seven pixels tall, which is not a legible invitation
+    caption.scale.set(portrait ? 1.4 : 1.0, portrait ? 0.175 : 0.125, 1);
+    drawCaption();
+  };
+  setCaptionOffset(false);
   group.add(caption);
   let capFade = 0; // eased caption visibility (drops to 0 while inspecting)
 
@@ -258,14 +295,18 @@ export function createVoyager(ctx) {
         if (Math.hypot(velYaw, velPitch) < 0.002) { velYaw = 0; velPitch = 0; }
       }
 
-      // portrait screens lose the horizontal field the probe floats in —
-      // compress the orbit toward the upper zone (higher z, tighter x) so
-      // phones still get their spacecraft, clear of the disc and the sheets
+      // Phones: the probe used to drift in the far upper-right, where the act
+      // nav covered it — three-quarters off screen and easy to miss entirely.
+      // Here it flies in FRONT of the disc's lower-left rim instead: nearer to
+      // the camera (so it reads big), overlapping the gold the way it does on
+      // the social card, and clear of both the nav and the title card.
       const portrait = ctx.camera.aspect < 0.9;
+      inner.scale.setScalar(portrait ? 1.15 : 1);
+      setCaptionOffset(portrait);
 
       if (prefersReducedMotion) {
         // static portrait of the probe — no orbit, no tumble, no bob
-        if (portrait) group.position.set(0.55, 3.4, 2.1);
+        if (portrait) group.position.set(...PHONE_DRIFT);
         else group.position.set(2.6, 2.2, 1.15);
         return;
       }
@@ -277,12 +318,12 @@ export function createVoyager(ctx) {
       if (held) return; // frozen mid-orbit while the camera pays its visit
 
       phase += dt * OMEGA;
-      const cx = portrait ? 0.55 : 0.25;  // ellipse center, x/y (wide screens truck the camera left)
-      const cy = portrait ? 3.2 : 2.6;    // y stays ≥ 1.4 in both orientations
-      const rx = portrait ? 0.9 : 2.2;    // radii
-      const ry = portrait ? 0.9 : 1.1;
-      const zc = portrait ? 2.15 : 1.5;   // gentle z drift: 0.9–2.1 (landscape)
-      const za = portrait ? 0.45 : 0.6;
+      const cx = portrait ? PHONE_DRIFT[0] : 0.25;  // ellipse center, x/y
+      const cy = portrait ? PHONE_DRIFT[1] : 2.6;   // (wide screens truck the camera left)
+      const rx = portrait ? 0.18 : 2.2;   // radii — a slow hover on phones, not a
+      const ry = portrait ? 0.18 : 1.1;   // lap: the whole probe must stay in frame
+      const zc = portrait ? PHONE_DRIFT[2] : 1.5;   // gentle z drift
+      const za = portrait ? 0.12 : 0.6;
       group.position.set(
         cx + rx * Math.cos(phase),
         cy + ry * Math.sin(phase),

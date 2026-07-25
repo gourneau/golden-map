@@ -34,11 +34,19 @@ const HOMES = {
 // desktop side panels, which don't exist on phones; portraitize()-ing them
 // left the map hugging a screen edge.
 const PHONE_HOMES = {
-  record:  { pos: [0, -5.6, 1.0],    target: [0, 0, -0.68] },
-  map:     { pos: [1.2, -13, 5.5],   target: [1.2, 0, -1.6] },
-  pulsars: { pos: [3.4, -25, 11.5],  target: [3.4, 0, -2.8] }, // whole map, Sun to GC
-  verdict: { pos: [1.2, -5, 13],     target: [1.2, -1.2, 0] },
-  finders: { pos: [1.4, -15, 6],     target: [1.4, 0, -2.1] },
+  // Act I: the disc reads whole between the nav and the masthead — pulled back
+  // far enough that neither crowds it, and that the probe has a corner to fly in
+  record:  { pos: [0, -7.79, 0.90],  target: [0, 0, -1.44] },
+  // short screens (SE-class): the masthead's type doesn't shrink with the
+  // viewport, so stand back further and lift — disc AND probe still fit above it
+  recordShort: { pos: [0, -9.50, 0.78], target: [0, 0, -2.07] },
+  // II–V are composed for the band between the act nav and an open bottom
+  // sheet — subject centered in it, whole, at every act. (Measured against a
+  // 390 × 844 frame; they scale with the viewport.)
+  map:     { pos: [1.21, -13.03, 5.51],  target: [0.68, 0, -3.96] },
+  pulsars: { pos: [3.4, -24.93, 11.45],  target: [3.4, 0, -6.19] }, // whole map, Sun to GC
+  verdict: { pos: [0.49, -10.86, 19.73], target: [0.47, -5.13, 0] }, // plan view
+  finders: { pos: [1.4, -14.96, 5.97],   target: [0.70, 0, -2.67] },
 };
 
 // Map rendering mode per act: warm gold engraved for I–III,
@@ -53,9 +61,12 @@ const ACT_MODE = {
 
 const PORTRAIT_ASPECT = 0.9;    // below this aspect the viewport counts as portrait
 const PORTRAIT_PUSH_MAX = 2.2;  // cap on the portrait pull-back factor
-const PORTRAIT_DROP = 0.10;     // look-point drop × offset length: raises the subject
-                                // above the bottom sheets on phones
+const PORTRAIT_DROP = 0.22;     // look-point drop × offset length: raises the subject
+                                // out from under the bottom sheets on phones —
+                                // a constant ~180px lift, whatever the distance
 const RESIZE_DEBOUNCE_MS = 250; // settle time before the resize re-frame check
+const SHORT_SCREEN_PX = 700;    // below this viewport height Act I stands back
+                                // (matches the ≤700px masthead rule in ui.css)
 
 const CLICK_SLOP_PX = 6;      // pointer travel beyond this is a drag, not a click
 const HOVER_INTERVAL_MS = 80; // throttle for hover raycasts
@@ -76,6 +87,8 @@ export function initTour(ctx) {
   // Act II explainer panel state (ui.js 'uilayout'). It starts expanded, so the
   // default matches even if the init dispatch fires before this module loads.
   let explainerOpen = true;
+  // phone bottom-sheet state (ui.js 'sheet'); every act opens with its sheet up
+  let sheetOpen = true;
 
   function stripBreath() {
     camera.position.sub(breath);
@@ -97,11 +110,13 @@ export function initTour(ctx) {
   // the look-point (lowering it raises the subject on screen, clear of the
   // bottom sheets). Returns new vectors — never mutates the inputs — and
   // passes landscape framings through untouched.
+  const portraitPush = () =>
+    Math.min((PORTRAIT_ASPECT / camera.aspect) ** 0.8, PORTRAIT_PUSH_MAX);
+
   function portraitize(pos, target) {
     const aspect = camera.aspect;
     if (!(aspect < PORTRAIT_ASPECT)) return { pos, target };
-    const off = pos.clone().sub(target)
-      .multiplyScalar(Math.min((PORTRAIT_ASPECT / aspect) ** 0.8, PORTRAIT_PUSH_MAX));
+    const off = pos.clone().sub(target).multiplyScalar(portraitPush());
     const t = target.clone();
     t.z -= off.length() * PORTRAIT_DROP;
     return { pos: target.clone().add(off), target: t };
@@ -142,23 +157,80 @@ export function initTour(ctx) {
   }
 
   // ---- framing ----------------------------------------------------------
+  // PHONE_HOMES are composed for the band above an OPEN bottom sheet. Collapse
+  // that sheet to its header bar and the scene inherits the rest of the screen,
+  // so the whole rig slides up by half the height the sheet gave back — which
+  // drops the subject into the middle of what the reader can now see.
+  function sheetRecenter(pos, target) {
+    if (sheetOpen || ctx.state.act === 'record') return; // Act I has no sheet
+    const d = pos.distanceTo(target);
+    const px = 0.23 * window.innerHeight - 24; // half of (46vh sheet − its bar)
+    const dz = (px / window.innerHeight) * 2 * d * Math.tan((camera.fov * Math.PI) / 360);
+    // "up on screen" — works for the oblique acts and the plan view alike
+    const fwd = target.clone().sub(pos).normalize();
+    const screenUp = Z_UP.clone().addScaledVector(fwd, -Z_UP.dot(fwd)).normalize();
+    pos.addScaledVector(screenUp, dz);
+    target.addScaledVector(screenUp, dz);
+  }
+
+  // Slide a framing past a side panel, so the subject centers in the VISIBLE
+  // area rather than half under the panel. `frac` is the panel's share of the
+  // viewport width, signed: positive for a panel on the RIGHT (the desktop
+  // detail card), negative for one on the LEFT (a landscape phone's sheet).
+  function truckPastPanel(pos, target, frac) {
+    const dist = pos.distanceTo(target);
+    const halfW = dist * Math.tan((camera.fov * Math.PI) / 360) * camera.aspect;
+    const lookDir = target.clone().sub(pos).normalize();
+    const scrRight = new THREE.Vector3().crossVectors(lookDir, Z_UP).normalize();
+    pos.addScaledVector(scrRight, halfW * frac);
+    target.addScaledVector(scrRight, halfW * frac);
+  }
+
+  // A phone on its side: the act sheet is a left column that can take half the
+  // frame, and HOMES are composed for a desktop's proportions. Stand back for
+  // the height a 390px-tall frame doesn't have, then truck clear of the column.
+  const narrowLandscape = () =>
+    camera.aspect >= PORTRAIT_ASPECT && window.innerWidth <= 900 && window.innerHeight <= 520;
+  const LANDSCAPE_PULL = 1.3;
+
   function goHome(dur = 2.2) {
     if (camera.aspect < PORTRAIT_ASPECT) {
-      const h = PHONE_HOMES[ctx.state.act] || PHONE_HOMES.record;
-      flyTo(new THREE.Vector3(...h.pos), new THREE.Vector3(...h.target), dur, true);
+      let h = PHONE_HOMES[ctx.state.act] || PHONE_HOMES.record;
+      if (ctx.state.act === 'record' && window.innerHeight < SHORT_SCREEN_PX) h = PHONE_HOMES.recordShort;
+      const pos = new THREE.Vector3(...h.pos);
+      const target = new THREE.Vector3(...h.target);
+      sheetRecenter(pos, target);
+      flyTo(pos, target, dur, true);
       return;
     }
     let h = HOMES[ctx.state.act] || HOMES.record;
     if (ctx.state.act === 'map' && explainerOpen) h = HOMES.mapOpen;
     if (ctx.state.act === 'record') h = HOMES.recordWide;
-    flyTo(new THREE.Vector3(...h.pos), new THREE.Vector3(...h.target), dur, true);
+    const pos = new THREE.Vector3(...h.pos);
+    const target = new THREE.Vector3(...h.target);
+    if (narrowLandscape() && ctx.state.act !== 'record') {
+      pos.copy(target).addScaledVector(new THREE.Vector3(...h.pos).sub(target), LANDSCAPE_PULL);
+      truckPastPanel(pos, target, -0.42); // the sheet is the LEFT column here
+    }
+    flyTo(pos, target, dur, true);
   }
 
   // Frame the Sun→end line: target at `lookAt`, camera offset perpendicular-ish
   // to the line, `spread` × line length away (min 0.8 kpc), lifted above the plane.
   function frameLine(end, lookAt, spread) {
     const len = end.length();
-    const d = Math.max(spread * len, 0.8);
+    const portrait = camera.aspect < PORTRAIT_ASPECT;
+    let d = Math.max(spread * len, 0.8);
+    let look = lookAt;
+    if (portrait) {
+      // A phone frame is narrow, and `lookAt`'s bias is composed for a wide
+      // one — on portrait it pushed the beacon to the screen edge and its
+      // label off it. Look at the line itself, and stand back far enough that
+      // BOTH ends fit. (flyTo's portraitize pushes again, so divide it out.)
+      look = end.clone().multiplyScalar(0.62);
+      const halfW = Math.tan((camera.fov * Math.PI) / 360) * camera.aspect;
+      d = Math.max(d, (0.62 * len * 1.32) / halfW / portraitPush());
+    }
     const dir = len > 1e-6 ? end.clone().divideScalar(len) : new THREE.Vector3(1, 0, 0);
     const side = new THREE.Vector3().crossVectors(dir, Z_UP);
     if (side.lengthSq() < 1e-4) side.set(0, -1, 0);
@@ -168,20 +240,14 @@ export function initTour(ctx) {
       .addScaledVector(side, d * 0.8)
       .addScaledVector(Z_UP, d * 0.42)
       .addScaledVector(dir, -d * 0.25); // nudge back toward the Sun so both ends read
-    const target = lookAt.clone();
+    const target = look.clone();
     // On wide screens the detail panel covers the right edge of the viewport —
     // truck the whole framing screen-right by half the panel's width (in world
     // units at the subject's distance) so the subject centers in the VISIBLE
     // area instead of hiding under the panel (the Galactic Center, rightmost
     // thing on the map, was fully covered without this).
     if (camera.aspect >= PORTRAIT_ASPECT) {
-      const panelFrac = Math.min(0.42, 422 / window.innerWidth); // panel ≈ 400px + margin
-      const dist = pos.distanceTo(target);
-      const halfW = dist * Math.tan((camera.fov * Math.PI) / 360) * camera.aspect;
-      const lookDir = target.clone().sub(pos).normalize();
-      const scrRight = new THREE.Vector3().crossVectors(lookDir, Z_UP).normalize();
-      pos.addScaledVector(scrRight, halfW * panelFrac);
-      target.addScaledVector(scrRight, halfW * panelFrac);
+      truckPastPanel(pos, target, Math.min(0.42, 422 / window.innerWidth));
     }
     flyTo(pos, target, 1.6);
   }
@@ -210,12 +276,14 @@ export function initTour(ctx) {
   bus.addEventListener('act', () => {
     const from = prevAct;
     prevAct = ctx.state.act;
+    sheetOpen = true; // ui.js reopens every sheet on an act change
     const mode = ACT_MODE[ctx.state.act];
     if (mode && ctx.state.mapMode !== mode) ctx.setMapMode(mode);
     // leaving Act V must un-wreck the map — earlier acts have no time slider
     if (ctx.state.act !== 'finders' && ctx.state.timeMyr !== 0) ctx.setTimeMyr(0);
     if (ctx.state.selected != null) { ctx.select(null); return; } // its handler flies home
-    if (ctx.state.act === 'pulsars' && from === 'map' && camera.aspect >= PORTRAIT_ASPECT) {
+    if (ctx.state.act === 'pulsars' && from === 'map'
+        && camera.aspect >= PORTRAIT_ASPECT && !narrowLandscape()) {
       // the dimensional sweep: swoop to plane level — the stars visibly rise
       // out of the galactic disc — then climb to the hero overview
       // (landscape only: the legs are composed for wide frames)
@@ -272,6 +340,17 @@ export function initTour(ctx) {
     else if (target === 'earth') frameEarth();
     else if (target === 'voyager') frameVoyager();
     else framePulsar(target);
+  });
+
+  // A phone reader collapsing an act's sheet is asking for the map: re-frame
+  // into the screen it just freed (never mid-gesture, never over a selection).
+  bus.addEventListener('sheet', (e) => {
+    const open = !!e.detail.open;
+    if (open === sheetOpen) return;
+    sheetOpen = open;
+    if (camera.aspect < PORTRAIT_ASPECT && ctx.state.selected == null && !pointerDown) {
+      goHome(1.0);
+    }
   });
 
   bus.addEventListener('uilayout', (e) => {

@@ -243,24 +243,6 @@ export function initUI(ctx) {
     railList.appendChild(gcRow);
   }
 
-  // mobile bottom-sheet toggle for the rail
-  const railToggle = el('button', 'gm-panel gm-rail-toggle mono', '☰&ensp;the fourteen');
-  railToggle.dataset.acts = 'pulsars';
-  railToggle.setAttribute('aria-expanded', 'false');
-  // while the sheet is open the toggle rides above it as the closer — it
-  // must never float over the list rows
-  const paintRailToggle = (open) => {
-    railToggle.setAttribute('aria-expanded', String(open));
-    railToggle.innerHTML = open ? '✕&ensp;close' : '☰&ensp;the fourteen';
-  };
-  railToggle.addEventListener('click', () => {
-    paintRailToggle(rail.classList.toggle('sheet-open'));
-  });
-  const closeSheet = () => {
-    rail.classList.remove('sheet-open');
-    paintRailToggle(false);
-  };
-
   // ======================================================================
   // 5. DETAIL PANEL (right, on selection)
   // ======================================================================
@@ -285,8 +267,16 @@ export function initUI(ctx) {
       1.3° apart on the sky — positionally swapped relative to reality.`,
   };
 
+  // what the mobile sheet's header bar calls the thing you just picked
+  const detailLabel = (t) =>
+    t === 'gc' ? 'Galactic Center'
+      : t === 'earth' ? 'Earth'
+        : t === 'voyager' ? 'Voyager'
+          : `${t.alias || t.bname}`;
+
   function renderDetail(target) {
     if (!target) return;
+    tabs.detail.setLabel(detailLabel(target));
     if (target === 'voyager') {
       detailBody.innerHTML = `
         <p class="eyebrow">The messenger</p>
@@ -1169,41 +1159,100 @@ export function initUI(ctx) {
     tip.style.top = `${top}px`;
   });
 
-  // ---- mobile sheet collapse tabs -----------------------------------------
-  // On phones every act sheet gets a slim header tab (like "the fourteen"):
-  // tapping it drops the sheet down to just the tab so the 3D scene owns the
-  // screen; tapping again brings it back. Desktop hides the tabs entirely.
-  const sheetTab = (panel, label) => {
+  // ---- mobile sheet headers -------------------------------------------------
+  // On phones every panel is the same bottom sheet, and every sheet wears the
+  // same header bar: label on the left, state glyph on the right, the whole row
+  // one tap target. An act's own sheet collapses to just that bar (so the scene
+  // takes the screen and the bar still says what is hiding there); the
+  // transient detail card closes instead — its glyph is a ✕, not a chevron.
+  // Desktop hides the bars entirely: there the panels are columns, not sheets.
+  const sheetTab = (panel, label, onClose) => {
     const b = el('button', 'gm-sheet-tab mono');
-    const paint = (collapsed) => {
-      b.innerHTML = `<span aria-hidden="true">${collapsed ? '▴' : '▾'}</span>&ensp;${label}`;
+    const l = el('span', 'gm-sheet-tab-l');
+    const ic = el('span', 'gm-sheet-tab-ic');
+    ic.setAttribute('aria-hidden', 'true');
+    l.textContent = label;
+    b.append(l, ic);
+    panel.prepend(b);
+
+    if (onClose) {
+      ic.textContent = '✕';
+      const say = (t) => b.setAttribute('aria-label', `Close ${t}`);
+      say(label);
+      b.addEventListener('click', onClose);
+      return { setLabel: (t) => { l.textContent = t; say(t); }, setCollapsed: () => {} };
+    }
+    const paint = () => {
+      const collapsed = panel.classList.contains('sheet-collapsed');
+      ic.textContent = collapsed ? '▴' : '▾';
       b.setAttribute('aria-expanded', String(!collapsed));
     };
-    paint(false);
+    const setCollapsed = (on) => {
+      panel.classList.toggle('sheet-collapsed', on);
+      if (on) panel.scrollTop = 0;
+      paint();
+    };
     b.addEventListener('click', () => {
-      const collapsed = panel.classList.toggle('sheet-collapsed');
-      if (collapsed) panel.scrollTop = 0;
-      paint(collapsed);
+      const open = panel.classList.contains('sheet-collapsed');
+      setCollapsed(!open);
+      // tell the tour: with the sheet down to a bar, the scene owns the whole
+      // screen and the portrait framing re-centers into it (act changes reset
+      // every sheet to open, and tour.js resets its own flag to match)
+      bus.dispatchEvent(new CustomEvent('sheet', { detail: { open } }));
     });
-    panel.prepend(b);
+    paint();
+    return { setLabel: (t) => { l.textContent = t; }, setCollapsed };
   };
-  sheetTab(explainer, 'How to read it');
-  sheetTab(verdict, 'Is it wrong?');
-  sheetTab(finders, 'For the finders');
+  const tabs = {
+    explainer: sheetTab(explainer, 'How to read it'),
+    rail: sheetTab(rail, 'The fourteen beacons'),
+    verdict: sheetTab(verdict, 'Is it wrong?'),
+    finders: sheetTab(finders, 'For the finders'),
+    detail: sheetTab(detail, 'Details', () => ctx.select(null)),
+  };
+  // every act arrives with its own sheet open — one rule, no exceptions — and
+  // the portrait camera framings are all composed for exactly that state
+  const resetSheets = () => {
+    for (const k of ['explainer', 'rail', 'verdict', 'finders']) tabs[k].setCollapsed(false);
+  }; // applyAct runs it on every act change, including the first
 
   // ---- assemble ---------------------------------------------------------
   // `mini` is deliberately NOT in actPanels: the record keeps playing, and
   // its dock keeps showing, across every act change
-  root.append(nav, title, explainer, rail, railToggle, detail, verdict, finders, corner, artifactChip, earthChip, mini, tip);
+  root.append(nav, title, explainer, rail, detail, verdict, finders, corner, artifactChip, earthChip, mini, tip);
+
+  // ---- live chrome metrics -------------------------------------------------
+  // Every mobile offset in the stylesheet hangs off the REAL height of the
+  // docked player and of the act nav — safe-area insets, font swaps, wrapped
+  // rows and all — instead of a constant that drifts out of true. Measured
+  // here, published as --dock-h / --nav-h.
+  const miniBar = mini.querySelector('.gm-mini-bar');
+  const measureChrome = () => {
+    const set = (k, px) => document.documentElement.style.setProperty(k, `${Math.round(px)}px`);
+    set('--dock-h', miniBar.getBoundingClientRect().height);
+    set('--nav-h', nav.getBoundingClientRect().height);
+  };
+  if (window.ResizeObserver) {
+    const ro = new ResizeObserver(measureChrome); // fires once on observe
+    ro.observe(miniBar);
+    ro.observe(nav);
+  } else {
+    measureChrome();
+    window.addEventListener('resize', measureChrome);
+  }
 
   // ---- act / selection plumbing ------------------------------------------
-  const actPanels = [title, explainer, rail, railToggle, verdict, finders, artifactChip, earthChip];
+  const actPanels = [title, explainer, rail, verdict, finders, artifactChip, earthChip];
   const DETAIL_ACTS = new Set(['pulsars', 'verdict', 'finders']);
 
   function paintDetailVisibility() {
     // the Voyager easter egg lives in Act I — its card may show there too
-    detail.classList.toggle('is-on', !!state.selected &&
-      (DETAIL_ACTS.has(state.act) || state.selected === 'voyager'));
+    const on = !!state.selected &&
+      (DETAIL_ACTS.has(state.act) || state.selected === 'voyager');
+    detail.classList.toggle('is-on', on);
+    // on phones the sheet slot holds one card at a time: while a detail card
+    // is up the rail steps aside (CSS) rather than stacking two header bars
+    document.body.classList.toggle('gm-has-detail', on);
   }
   // Act V: the finders panel and the detail panel share the right column —
   // yield to the detail panel while something is selected, restore on deselect
@@ -1223,7 +1272,7 @@ export function initUI(ctx) {
     navTitle.textContent = i < 0 ? '' : ACTS[i].title;
     prevArrow.disabled = i <= 0;
     nextArrow.disabled = i >= ACTS.length - 1;
-    closeSheet();
+    resetSheets();
     if (act === 'map') demoStart();
     else demo.active = false;
     paintDetailVisibility();
@@ -1234,7 +1283,9 @@ export function initUI(ctx) {
   bus.addEventListener('select', (e) => {
     const target = e.detail.target;
     for (const r of rows) r.el.classList.toggle('is-selected', r.target === target);
-    if (target) { renderDetail(target); closeSheet(); }
+    // (on phones the rail simply steps aside under the detail card — CSS —
+    // and comes back exactly as the reader left it)
+    if (target) renderDetail(target);
     paintDetailVisibility();
     paintFindersVisibility();
   });

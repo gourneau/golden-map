@@ -24,12 +24,18 @@
 }
 
 /* ---- shared sheet chrome ---------------------------------------------- */
+/* --pad-* is the sheet's own padding; --tab-bleed is how far the mobile
+   header tab must reach sideways to meet the sheet's edges (the rail pads
+   its rows individually, so its own box has no side padding to cancel). */
 .gm-sheet {
+  --pad-y: 1.35rem;
+  --pad-x: 1.5rem;
+  --tab-bleed: var(--pad-x);
   background: color-mix(in srgb, var(--void-lift) 88%, transparent);
   border: 1px solid var(--gold-faint);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  padding: 1.35rem 1.5rem;
+  padding: var(--pad-y) var(--pad-x);
 }
 .gm-sheet h2 {
   font-size: var(--step-2);
@@ -61,7 +67,7 @@
 .gm-sources summary:hover,
 .gm-fine-more summary:hover { color: var(--gold-bright); border-color: var(--gold-dim); }
 
-/* mobile-only sheet collapse tabs (styled inside the ≤900px block) */
+/* mobile-only sheet header tabs (styled inside the ≤900px block) */
 .gm-sheet-tab { display: none; }
 
 /* thin engraved scrollbars */
@@ -412,7 +418,11 @@
   max-height: calc(100vh - 210px);
   display: flex;
   flex-direction: column;
-  padding: 1.1rem 0 0.4rem;
+  /* rows and header carry their own side padding, so the box has none */
+  --pad-y: 1.1rem;
+  --pad-x: 1.1rem;
+  --tab-bleed: 0px;
+  padding: var(--pad-y) 0 0.4rem;
   --gm-in: translateX(-18px);
 }
 .gm-rail-head { padding: 0 1.1rem 0.7rem; }
@@ -473,22 +483,8 @@
   9%, 100% { background: var(--gold-dim); box-shadow: none; }
 }
 
-/* mobile rail toggle (hidden on desktop) */
-.gm-rail-toggle {
-  display: none;
-  right: 14px;
-  bottom: 14px;
-  z-index: 45;
-  font-size: 0.6rem;
-  font-weight: 500;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--gold);
-  padding: 0.75em 1.1em;
-  border: 1px solid var(--gold-dim);
-  background: var(--void-lift);
-  --gm-in: translateY(10px);
-}
+/* On phones the rail is a bottom sheet like every other panel — its header
+   tab is the open/close control, so there is no floating drawer button. */
 
 /* ======================================================================
    5. DETAIL PANEL
@@ -1074,46 +1070,100 @@ body.gm-still .gm-mini { display: none !important; }
 .gm-tip.is-on { opacity: 1; }
 
 /* ======================================================================
-   RESPONSIVE — below 900px panels become sheets, rail becomes a drawer
+   RESPONSIVE — below 900px EVERY panel is the same bottom sheet: one side
+   inset, one width, one header tab, one bottom edge. No hand-tuned offsets
+   live here: ui.js measures the real docked player and the real act nav into
+   --dock-h / --nav-h, so sheets always sit exactly above the bar (safe area
+   included) and the chips exactly below the nav, at any font size.
    ====================================================================== */
 @media (max-width: 900px) {
+  :root {
+    --sheet-x: 10px;    /* side inset — shared by every sheet and the flyout */
+    --sheet-gap: 8px;   /* air between a sheet and the docked player */
+    --sheet-h: 46vh;    /* the 3D scene always owns the top half */
+  }
+
   .gm-act-t { display: none; }
   .gm-act { padding: 0.5em 0.75em; min-height: 40px; }
-  .gm-title { bottom: calc(72px + env(safe-area-inset-bottom, 0px)); } /* clears the docked mini player */
 
-  /* tighter masthead: a shorter card leaves the disc room above it */
+  /* ---- Act I masthead: a shorter card leaves the disc room above it ---- */
+  .gm-title { bottom: calc(var(--dock-h) + var(--sheet-gap)); }
   .gm-title h1 { font-size: clamp(1.9rem, 5.4vw, 3.2rem); }
   .gm-tagline { font-size: 0.95rem; margin-bottom: 0.7em; }
   .gm-hook { font-size: var(--step--1); }
   .gm-hello { margin-top: 0.55em; padding: 0.5em 0.85em; font-size: 0.58rem; }
 
+  /* ---- one geometry for every sheet ----------------------------------- */
+  .gm-left,
+  .gm-rail,
+  .gm-detail,
+  .gm-verdict,
+  .gm-finders {
+    left: var(--sheet-x);
+    right: var(--sheet-x);
+    top: auto;
+    bottom: calc(var(--dock-h) + var(--sheet-gap));
+    width: auto;
+    max-height: var(--sheet-h);
+    padding-top: 0;          /* the header tab owns the top edge */
+    border-radius: 14px;
+    z-index: 30;
+    --gm-in: translateY(18px); /* they all rise from the dock */
+  }
+  .gm-rail { overflow: hidden; }  /* the rounded corners clip the row list */
+  /* phones scroll by touch: no reserved scrollbar gutter beside the header */
+  .gm-left, .gm-verdict, .gm-finders, .gm-detail-body, .gm-rail-list,
+  .gm-tracklist { scrollbar-width: none; }
+  .gm-left::-webkit-scrollbar, .gm-verdict::-webkit-scrollbar,
+  .gm-finders::-webkit-scrollbar, .gm-detail-body::-webkit-scrollbar,
+  .gm-rail-list::-webkit-scrollbar, .gm-tracklist::-webkit-scrollbar { display: none; }
+  .gm-detail { z-index: 34; }     /* a selection covers the act's own sheet */
+  /* a selection owns the sheet slot — the rail steps aside under it */
+  body.gm-has-detail .gm-rail { opacity: 0; visibility: hidden; pointer-events: none; }
+
+  /* ---- the header tab: the one control every sheet shares -------------- */
+  .gm-sheet-tab {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1em;
+    position: sticky;   /* stays reachable however far the sheet is scrolled */
+    top: 0;
+    z-index: 2;
+    min-height: 46px;
+    /* a <button> sizes to its text, so claim the sheet's full width — content
+       box plus the side padding the negative margins reach across */
+    width: calc(100% + var(--tab-bleed) * 2);
+    margin: 0 calc(-1 * var(--tab-bleed)) 1rem;
+    padding: 0.5em var(--pad-x);
+    font-size: 0.68rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-align: left;
+    color: var(--gold);
+    background: color-mix(in srgb, var(--void-lift) 94%, transparent);
+    border-bottom: 1px solid var(--gold-faint);
+    border-radius: 13px 13px 0 0;
+  }
+  .gm-sheet-tab-ic { flex: none; font-size: 0.78rem; color: var(--gold-dim); }
+  .gm-sheet-tab:hover { color: var(--gold-bright); }
+  .gm-sheet-tab:hover .gm-sheet-tab-ic { color: var(--gold); }
+
+  /* collapsed: the sheet IS its tab — a slim bar riding over the scene */
+  .gm-sheet.sheet-collapsed { padding: 0; }
+  .sheet-collapsed > :not(.gm-sheet-tab) { display: none; }
+  .sheet-collapsed .gm-sheet-tab {
+    width: 100%;   /* no padding left to reach across */
+    margin: 0;
+    border-bottom: none;
+    border-radius: 13px;
+  }
+
   /* pulse-rate chips fit one row */
   .gm-pulse-ctl .gm-mode { font-size: 0.52rem; padding: 0.5em 0.7em; letter-spacing: 0.1em; }
-  .gm-hook { font-size: var(--step--1); }
 
-  /* collapsible act sheets: the tab is the sheet's first row; collapsing
-     hides everything else and drops the sheet to a slim bar */
-  .gm-sheet-tab {
-    display: block;
-    width: 100%;
-    text-align: left;
-    font-size: 0.6rem;
-    font-weight: 500;
-    letter-spacing: 0.18em;
-    color: var(--gold);
-    padding: 0 0 0.75em;
-  }
-  .gm-left.sheet-collapsed,
-  .gm-verdict.sheet-collapsed,
-  .gm-finders.sheet-collapsed {
-    max-height: 52px;
-    overflow: hidden;
-  }
-  .sheet-collapsed > :not(.gm-sheet-tab) { display: none; }
-  .sheet-collapsed .gm-sheet-tab { padding-bottom: 0; }
-
-  /* the mini player docks full-width at the very bottom; everything that
-     used to touch the screen edge rides 48px higher */
+  /* ---- the docked player: full-width, the one square-edged surface ----- */
   .gm-mini { width: auto; bottom: 0; left: 0; right: 0; }
   .gm-mini-bar {
     border-radius: 0;
@@ -1123,81 +1173,32 @@ body.gm-still .gm-mini { display: none !important; }
     /* clear the iPhone home indicator */
     padding-bottom: calc(9px + env(safe-area-inset-bottom, 0px));
   }
-  .gm-mini-fly { left: 8px; right: 8px; bottom: calc(100% + 8px); }
-
-  /* every bottom sheet caps at 46vh — the 3D scene always owns the top half */
-  .gm-left,
-  .gm-verdict,
-  .gm-detail {
-    left: 12px; right: 12px;
-    top: auto; bottom: calc(64px + env(safe-area-inset-bottom, 0px));
-    width: auto;
-    max-height: 46vh;
+  .gm-mini-fly {
+    left: var(--sheet-x); right: var(--sheet-x);
+    bottom: calc(100% + var(--sheet-gap));
+    /* never taller than the space between the nav and the bar (landscape) */
+    max-height: calc(100vh - var(--dock-h) - var(--nav-h) - 24px);
+    overflow-y: auto;
   }
 
-  .gm-rail {
-    left: 0; right: 0;
-    top: auto; bottom: calc(48px + env(safe-area-inset-bottom, 0px));
-    width: auto;
-    max-height: 46vh;
-    border-left: none;
-    border-right: none;
-    border-bottom: none;
-    z-index: 32;
-  }
-  .gm-rail.is-on:not(.sheet-open) {
-    opacity: 0;
-    visibility: hidden;
-    transform: translateY(8%);
-  }
-  .gm-rail.is-on.sheet-open { opacity: 1; visibility: visible; transform: none; }
-  /* the drawer toggle moves bottom-LEFT so the chips own the right corner
-     (the corner mark is hidden here, so the spot is free) */
-  .gm-rail-toggle {
-    display: block;
-    right: auto;
-    left: 14px;
-    bottom: calc(62px + env(safe-area-inset-bottom, 0px));
-    min-height: 40px;
-  }
-  /* open: the toggle becomes the closer, pinned just above the sheet —
-     never floating over the list rows */
-  .gm-rail-toggle[aria-expanded="true"] {
-    bottom: calc(46vh + 56px + env(safe-area-inset-bottom, 0px));
-    z-index: 46;
-  }
-
-  .gm-finders {
-    left: 12px; right: 12px;
-    top: auto; bottom: calc(64px + env(safe-area-inset-bottom, 0px)); /* clears the docked mini player */
-    width: auto;
-    max-height: 46vh;
-    --gm-in: translateY(18px);
-  }
+  /* ---- the two scene chips: a top-right stack under the nav ------------ */
   .gm-corner { display: none; }
-
-  /* the explainer is a bottom sheet here — collapse control is a no-op */
-
-  /* the two chips: top-right stack, under the nav — the old bottom-right
-     spot floated them over the bottom sheets' text */
   .gm-artifact {
-    right: 10px; top: 108px; bottom: auto;
+    right: var(--sheet-x);
+    top: calc(var(--nav-h) + 10px);
+    bottom: auto;
     z-index: 39; /* under the nav (40), over the canvas */
     font-size: 0.52rem;
     min-height: 40px;
     display: inline-flex;
     align-items: center;
   }
-  .gm-earth-chip { top: 152px; }
+  .gm-earth-chip { top: calc(var(--nav-h) + 58px); }
+
+  /* the detail sheet's header tab carries the ✕ here */
+  .gm-close { display: none; }
 
   /* tap targets ≥40px */
-  .gm-close {
-    min-width: 40px;
-    min-height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
   .gm-mode { min-height: 40px; }
   .gm-pulse-ctl { align-items: center; }
   .gm-row { min-height: 44px; }
@@ -1205,14 +1206,68 @@ body.gm-still .gm-mini { display: none !important; }
 }
 
 /* ======================================================================
+   LANDSCAPE PHONES — plenty of width, no height at all. A 46vh bottom sheet
+   would leave the scene about 70px to live in, so the sheet becomes a left
+   column (still with its header tab, still collapsing to a bar) and the map
+   keeps the right of the frame. Same components, different axis.
+   ====================================================================== */
+@media (max-width: 900px) and (max-height: 520px) and (orientation: landscape) {
+  .gm-left,
+  .gm-rail,
+  .gm-detail,
+  .gm-verdict,
+  .gm-finders {
+    right: auto;
+    width: min(var(--panel-w), 48vw);
+    top: calc(var(--nav-h) + 6px);
+    max-height: none;
+    --gm-in: translateX(-14px);
+  }
+  .gm-sheet.sheet-collapsed { top: auto; } /* collapsed: just the bar, at the foot */
+
+  /* the two chips share one row — stacked, the lower one reached the sheet */
+  .gm-earth-chip {
+    top: calc(var(--nav-h) + 10px);
+    right: calc(var(--sheet-x) + 137px);
+  }
+
+  /* Act I masthead becomes a left column too, like the desktop composition */
+  .gm-title {
+    left: var(--sheet-x); right: auto;
+    width: min(430px, 52vw);
+    text-align: left;
+    padding: 0;
+    background: none;
+  }
+  .gm-title h1 { font-size: 2rem; }
+  .gm-hook { margin: 0 0 0.8em; font-size: 0.8rem; }
+  .gm-title .eyebrow { display: none; } /* two lines the card cannot spare here */
+}
+
+/* ======================================================================
+   SHORT PORTRAIT PHONES (SE-class, ≤700px tall) — the scene scales with the
+   viewport but the masthead's type does not, so on a short screen the card
+   grew into the disc. Compress the card; the framing then clears it again.
+   ====================================================================== */
+@media (max-width: 900px) and (max-height: 700px) and (orientation: portrait) {
+  .gm-title { padding-top: 1rem; }
+  .gm-title .eyebrow { display: none; }
+  .gm-title h1 { font-size: 1.7rem; margin: 0 0 0.1em; }
+  .gm-tagline { font-size: 0.85rem; margin-bottom: 0.5em; }
+  .gm-hook { font-size: 0.8rem; margin-bottom: 0.8em; }
+  .gm-begin { padding: 0.7em 1.4em; }
+  .gm-hello { margin-top: 0.45em; }
+}
+
+/* ======================================================================
    COMPACT NAV — small portrait phones: numerals only, current-act title
    beneath the progress hairline (so the hairline itself never moves)
    ====================================================================== */
 @media (max-width: 560px) {
+  .gm-nav { padding-top: 12px; }
   .gm-nav-row { gap: 6px; }
   .gm-act { min-width: 44px; min-height: 44px; justify-content: center; }
   .gm-nav-title { display: block; }
-  .gm-corner { display: none; }
 
   /* Act I: smaller type so the disc has room */
   .gm-title h1 { font-size: clamp(2rem, 5.4vw, 3.2rem); }

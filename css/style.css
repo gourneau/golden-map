@@ -68,6 +68,13 @@
   --rail-w: 300px;
   --panel-w: 400px;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* live chrome metrics — ui.js measures the real docked player and the act
+     nav and writes them here, so every mobile offset is derived from what is
+     actually on screen (safe areas and font loading included) instead of a
+     hand-tuned constant. These are only the pre-measurement fallbacks. */
+  --dock-h: 61px;
+  --nav-h: 100px;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }

@@ -16,6 +16,7 @@ ctx = {
                           //   'mapmode'  {mode: 'engraved'|'modern'|'both'}
                           //   'artifact' {show: boolean}          (engraving overlay toggle)
                           //   'uilayout' {explainerOpen: boolean} (Act II panel state → tour framing)
+                          //   'sheet'    {open: boolean}          (phone bottom sheet → tour re-frames)
                           //   'hover'    {pulsar, x, y}           (tour raycast → ui tooltip)
   state: { act, selected, timeMyr, mapMode, timeScale, artifact },
   pulsars,                // 14 enriched records, see below
@@ -111,7 +112,14 @@ panel in sync — never publish an uncited value.
 
 ## Quality floor
 
-Responsive to ~900px width (below that: bottom sheets + docked player bar).
+Responsive to ~900px width. Below that every panel is the SAME bottom sheet:
+one side inset, one width, one header tab (label + ▾/▴, or ✕ on the transient
+detail card), one bottom edge derived from `--dock-h` / `--nav-h`, which ui.js
+measures off the real player bar and act nav — never hard-code an offset against
+them. Portrait camera framings live in `PHONE_HOMES` (tour.js), composed for the
+band between the nav and an OPEN sheet; collapsing a sheet fires bus 'sheet' and
+the tour re-centers into the freed screen. Landscape phones (≤520px tall) turn
+the same sheet into a left column and the homes truck clear of it.
 Visible keyboard focus. `prefersReducedMotion` honored. No console errors. All
 code and assets vendored as plain files — no CDNs, no build artifacts, no
 base64/data-URI embedding. The single external dependency is the SoundCloud
