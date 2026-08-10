@@ -1,5 +1,5 @@
 /* ============================================================
-   THE GOLDEN MAP — design system
+   THE GOLDEN RECORD — design system
    Palette grounded in the artifact: gold-plated copper record,
    black anodized aluminum cover, deep space. The one contrast
    color is cold starlight — reserved for MODERN/corrected data,
@@ -43,7 +43,9 @@
   --void-lift: #0d0a06;     /* raised panel */
   --gold: #c9a227;          /* engraved line */
   --gold-bright: #f2d478;   /* beacon flash, headings */
-  --gold-dim: #6e5a1e;      /* ghost lines, hairlines */
+  --gold-dim: #6e5a1e;      /* ghost lines, hairlines — NOT text: 2.96:1 */
+  --gold-text: #997b1e;     /* the dim gold that is safe as TEXT: 4.90:1 on
+                               the panel fill, still clearly below --gold */
   --gold-faint: #3a2f14;    /* borders, rules */
   --copper: #b87333;        /* record body accent */
   --paper: #e8dcc0;         /* body text on black */
@@ -130,6 +132,41 @@ body.gm-anim .gm-panel { will-change: opacity, transform; }
   text-align: center; color: var(--gold);
   font-family: var(--display);
 }
+
+/* the pre-boot line (index.html); main.js removes it on the first rendered
+   frame. Styled here so it needs no webfont and no second stylesheet. */
+#gm-boot {
+  position: fixed;
+  left: 0; right: 0;
+  bottom: 14vh;
+  z-index: 5;
+  text-align: center;
+  font-family: var(--body);
+  font-style: italic;
+  font-size: 1.05rem;
+  letter-spacing: 0.04em;
+  color: var(--gold-dim);
+  animation: gm-boot-in 1.2s var(--ease) both;
+}
+@keyframes gm-boot-in { from { opacity: 0; } to { opacity: 1; } }
+
+/* no-WebGL fallback: main.js swaps this in when the renderer can't be built */
+.gm-fallback {
+  max-width: 34em;
+  margin: 0 auto;
+  padding: 12vh 6vw;
+}
+.gm-fallback h1 { font-size: clamp(2rem, 6vw, 3.2rem); margin: 0.2em 0 0.1em; }
+.gm-fallback .gm-tagline {
+  font-family: var(--body);
+  font-style: italic;
+  font-size: 1.15rem;
+  color: var(--gold);
+  margin-bottom: 1.2em;
+}
+.gm-fallback .gm-hook { margin-bottom: 1em; line-height: 1.6; }
+.gm-fallback-links { margin-top: 1.6em; font-size: 0.9rem; color: var(--paper-dim); }
+body.gm-nogl { overflow: auto; }
 
 /* shared vocabulary for UI modules */
 .eyebrow {

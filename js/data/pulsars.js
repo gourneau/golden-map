@@ -152,7 +152,7 @@ export const PULSARS = [
       { t: 'Yao et al. 2017 (YMW16), ApJ 835, 29', u: 'https://ui.adsabs.harvard.edu/abs/2017ApJ...835...29Y/abstract' },
     ],
     confidence: 'secure',
-    note: 'The longest period on the map — 3.75 seconds, unmistakable to any decoder. It sits only 1.3° from the Crab on the sky, and of all fourteen it is the nearest to the pulsar "death line", where radio emission shuts off — with B2016+28 a close second.',
+    note: 'The longest period on the map — 3.75 seconds, unmistakable to any decoder. It sits only 1.3° from the Crab on the sky, and of all fourteen it is the nearest to the pulsar “death line”, where radio emission shuts off — with B2016+28 a close second.',
     flaw: 'swapped',
   },
   {
@@ -181,7 +181,7 @@ export const PULSARS = [
       { t: 'Yao et al. 2017 (YMW16), ApJ 835, 29', u: 'https://ui.adsabs.harvard.edu/abs/2017ApJ...835...29Y/abstract' },
     ],
     confidence: 'secure',
-    note: 'Its period sits within about 1.5% of line 6’s — the closest pair on the map — but the two stars lie about 100° apart on the sky, so there is no real ambiguity.',
+    note: 'Its period sits within about 1.5% of line 6’s — the second-closest period match on the map, after the line 3 / line 14 twins — but the two stars lie about 100° apart on the sky, so there is no real ambiguity.',
   },
   {
     line: 11, bname: 'B2016+28', jname: 'J2018+2839',

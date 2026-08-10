@@ -19,6 +19,10 @@ const HOMES = {
   // wide screens: the title masthead owns the left column, so truck the camera
   // left — the disc (and the probe's orbit) compose in the right two-thirds
   recordWide: { pos: [-0.62, -3.45, 1.05], target: [-0.62, 0, 0.16] },
+  // a phone on its side: the masthead is a left column ~46% of a very wide,
+  // very short frame — truck further right and stand back so the disc composes
+  // whole in what's left, clear of the nav above and the dock below
+  recordLandscape: { pos: [-1.30, -3.85, 1.02], target: [-1.30, 0, 0.10] },
   map:     { pos: [2, -9, 5],        target: [2, 0, 0] },      // pull back as lines unfold
   // Act II with the explainer panel expanded: shift the scene right, clear of it
   mapOpen: { pos: [0.6, -9, 5],      target: [0.6, 0, 0] },
@@ -167,7 +171,11 @@ export function initTour(ctx) {
   function sheetRecenter(pos, target) {
     if (sheetOpen || ctx.state.act === 'record') return; // Act I has no sheet
     const d = pos.distanceTo(target);
-    const px = 0.23 * window.innerHeight - 24; // half of (46vh sheet − its bar)
+    // half the screen the collapsed sheet just gave back. Read --sheet-h from
+    // the stylesheet rather than duplicating it: this drifted once already.
+    const cs = getComputedStyle(document.documentElement);
+    const sheetVh = parseFloat(cs.getPropertyValue('--sheet-h')) || 40;
+    const px = (sheetVh / 100 * window.innerHeight - 46) / 2;
     const dz = (px / window.innerHeight) * 2 * d * Math.tan((camera.fov * Math.PI) / 360);
     // "up on screen" — works for the oblique acts and the plan view alike
     const fwd = target.clone().sub(pos).normalize();
@@ -192,8 +200,7 @@ export function initTour(ctx) {
   // A phone on its side: the act sheet is a left column that can take half the
   // frame, and HOMES are composed for a desktop's proportions. Stand back for
   // the height a 390px-tall frame doesn't have, then truck clear of the column.
-  const narrowLandscape = () =>
-    camera.aspect >= PORTRAIT_ASPECT && window.innerWidth <= 900 && window.innerHeight <= 520;
+  const narrowLandscape = () => ctx.phoneLandscape();
   const LANDSCAPE_PULL = 1.3;
 
   function goHome(dur = 2.2) {
@@ -208,7 +215,7 @@ export function initTour(ctx) {
     }
     let h = HOMES[ctx.state.act] || HOMES.record;
     if (ctx.state.act === 'map' && explainerOpen) h = HOMES.mapOpen;
-    if (ctx.state.act === 'record') h = HOMES.recordWide;
+    if (ctx.state.act === 'record') h = narrowLandscape() ? HOMES.recordLandscape : HOMES.recordWide;
     const pos = new THREE.Vector3(...h.pos);
     const target = new THREE.Vector3(...h.target);
     if (narrowLandscape() && ctx.state.act !== 'record') {
@@ -377,8 +384,10 @@ export function initTour(ctx) {
   bus.addEventListener('mapmode', () => {
     // A selected pulsar's endpoint moves with the mode — keep it framed.
     // ('voyager' is not a pulsar and has no engraved/modern endpoints.)
+    // only real pulsar objects have endpoints to re-frame; 'gc', 'earth' and
+    // 'voyager' are string sentinels (Earth's position is mode-independent)
     const sel = ctx.state.selected;
-    if (sel && sel !== 'gc' && sel !== 'voyager') framePulsar(sel);
+    if (sel && typeof sel === 'object') framePulsar(sel);
   });
 
   // ---- picking ------------------------------------------------------------

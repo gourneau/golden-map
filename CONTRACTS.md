@@ -25,6 +25,8 @@ ctx = {
   ACTS,                   // [{id, numeral, title} x5]
   setAct(id), select(target), setTimeMyr(myr), setMapMode(mode), setArtifact(v),
   prefersReducedMotion,   // boolean — honor it: skip/shorten animations
+  phoneLayout(), phoneLandscape(),  // the ONE definition of "phone-shaped
+                          //   viewport", mirrored by css/ui.css media queries
   still,                  // boolean — ?still=1 screenshot mode: pinned hero frame,
                           //   no UI chrome, no idle motion (og.jpg capture)
   modules: { starfield, record, voyager, map3d },  // available AFTER scene modules built
@@ -50,8 +52,11 @@ SCALE: 1 scene unit = 1 kpc. The Sun is at the origin. GC at ~(8.28, 0, −0.02)
    persistent engraving overlay, the grab-to-spin turntable drag, and the scene
    lighting (everything else is mostly unlit).
 - `js/voyager.js`   → `export function createVoyager(ctx) -> { object3d, update(dt,t) }`
-   Act I set dressing: the NASA probe on a slow orbit; click-to-inspect arcball
-   (the tour disables OrbitControls while inspecting); registers its own pickable.
+   Act I set dressing: the NASA probe on a slow orbit; click-to-inspect hands the
+   camera to OrbitControls aimed at the probe (tour.js setInspect TUNES the
+   controls — min/max distance, screen-space panning — it does not disable them),
+   so orbit/zoom/pan are the standard 3D-viewer conventions; registers its own
+   pickable. Wandering round the probe reveals the record on its flank.
 - `js/map3d.js`     → `export function createMap(ctx) -> { object3d, update(dt,t) }`
    Must listen to bus 'mapmode', 'timeMyr', 'select'; make every pulsar pickable
    (mesh.userData.pulsar = p, and put all pickables in `object3d.userData.pickables`
@@ -60,7 +65,8 @@ SCALE: 1 scene unit = 1 kpc. The Sun is at the origin. GC at ~(8.28, 0, −0.02)
 - `js/ui.js`        → `export function initUI(ctx) -> { update(dt,t) }`
    Owns ALL DOM inside `#ui` (build it with JS) and `css/ui.css`. Never touches
    three.js. Includes the persistent audio mini-dock (SoundCloud Widget API over
-   hidden iframes — the one deliberate external network dependency).
+   hidden iframes — one of the two deliberate external network dependencies; the
+   other is the Cloudflare Web Analytics beacon in index.html).
 - `js/tour.js`      → `export function initTour(ctx) -> { update(dt,t) }`
    Owns camera movement (tweened fly-tos; write your own small tween, no libs),
    act-driven staging, raycast picking on canvas click → ctx.select(...), keyboard
@@ -119,9 +125,14 @@ measures off the real player bar and act nav — never hard-code an offset again
 them. Portrait camera framings live in `PHONE_HOMES` (tour.js), composed for the
 band between the nav and an OPEN sheet; collapsing a sheet fires bus 'sheet' and
 the tour re-centers into the freed screen. Landscape phones (≤520px tall) turn
-the same sheet into a left column and the homes truck clear of it.
+the same sheet into a left column and the homes truck clear of it. Do NOT test
+"is this a phone" with innerWidth — phones are now up to ~950px wide in
+landscape. Ask `ctx.phoneLayout()` / `ctx.phoneLandscape()`, which mirror the
+media queries in css/ui.css verbatim.
 Visible keyboard focus. `prefersReducedMotion` honored. No console errors. All
 code and assets vendored as plain files — no CDNs, no build artifacts, no
-base64/data-URI embedding. The single external dependency is the SoundCloud
-Widget API for the audio streams (loaded lazily, pre-warmed after page load,
-and the player degrades gracefully if it is unreachable).
+base64/data-URI embedding. Exactly two external dependencies are allowed: the
+SoundCloud Widget API for the audio streams (loaded lazily, pre-warmed after page
+load, and the player degrades gracefully if it is unreachable), and the
+cookieless Cloudflare Web Analytics beacon. A browser with no WebGL gets a plain
+HTML fallback from main.js — never a blank page.

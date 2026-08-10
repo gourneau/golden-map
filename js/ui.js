@@ -47,6 +47,7 @@ export function initUI(ctx) {
   for (const a of ACTS) {
     const b = el('button', 'gm-act',
       `<span class="gm-act-n mono">${a.numeral}</span><span class="gm-act-t">${a.title}</span>`);
+    b.setAttribute('aria-label', `Act ${a.numeral} — ${a.title}`); // the title is display:none on phones
     b.addEventListener('click', () => ctx.setAct(a.id));
     actBtns.set(a.id, b);
     navRow.appendChild(b);
@@ -72,7 +73,6 @@ export function initUI(ctx) {
   // compact-nav act title (≤560px, where the buttons show numerals only) —
   // sits under the progress hairline so the hairline never shifts
   const navTitle = el('div', 'gm-nav-title');
-  navTitle.setAttribute('aria-hidden', 'true'); // aria-current on the button already says it
   nav.append(navRow, progress, navTitle);
 
   // ======================================================================
@@ -155,7 +155,7 @@ export function initUI(ctx) {
   // The panel is always expanded on desktop (the old collapse-to-a-side-tab
   // toggle reframed the camera and felt jumpy — removed); at ≤900px it is a
   // bottom sheet. tour.js still needs to know which framing to use.
-  const isSheetMode = () => window.innerWidth <= 900;
+  const isSheetMode = () => ctx.phoneLayout();
   const explainerOpen = () => !isSheetMode();
   function emitLayout() {
     bus.dispatchEvent(new CustomEvent('uilayout', { detail: { explainerOpen: explainerOpen() } }));
@@ -206,7 +206,11 @@ export function initUI(ctx) {
   const pulseBtns = [...rail.querySelectorAll('.gm-pulse-ctl .gm-mode')];
   function setPulseScale(scale) {
     state.timeScale = scale;
-    for (const b of pulseBtns) b.classList.toggle('is-active', +b.dataset.scale === scale);
+    for (const b of pulseBtns) {
+      const on = +b.dataset.scale === scale;
+      b.classList.toggle('is-active', on);
+      b.setAttribute('aria-pressed', String(on));
+    }
     for (const d of railList.querySelectorAll('.gm-dot:not(.gm-dot-still)')) {
       d.style.animationDuration = `${Math.max(0.09, +d.dataset.base / scale).toFixed(3)}s`;
     }
@@ -294,7 +298,9 @@ export function initUI(ctx) {
           rides on.</p>
         <p class="gm-body gm-detail-story">Explore to find the golden record —
           it is visible from here.</p>
-        <p class="gm-k" style="margin-top:0.8em">drag to orbit · scroll to zoom · right-drag or two fingers to pan · esc to leave</p>
+        <p class="gm-detail-hint mono">${window.matchMedia('(pointer: coarse)').matches
+          ? 'drag to orbit · pinch to zoom · two fingers to pan'
+          : 'drag to orbit · scroll to zoom · right-drag to pan · esc to leave'}</p>
         <p class="gm-fine">Strictly, the gold disc you can see bolted to the
           spacecraft is the record’s <em>cover</em> — the engraved aluminium lid
           that carries the pulsar map, the hydrogen tick and the playing
@@ -316,7 +322,7 @@ export function initUI(ctx) {
         ${kv('distance from the Sun', '≈ 8 light-minutes')}
         ${kv('place on the map', 'the center — by construction')}
         <p class="gm-detail-note">Enormously not to scale: drawn at true scale,
-          Earth would be about a billion times smaller than this little globe —
+          Earth would be about forty billion times smaller than this little globe —
           far tinier than a single pixel.</p>
         <p class="gm-fine">On the engraved map the origin is really the Sun;
           at galactic scale the Sun and Earth are the same point. The blue
@@ -382,9 +388,9 @@ export function initUI(ctx) {
 
     <p class="gm-k gm-modes-label">show the map</p>
     <div class="gm-modes" role="group" aria-label="Map mode">
-      <button class="gm-mode" data-mode="engraved">As engraved · 1969</button>
-      <button class="gm-mode" data-mode="modern">As it really is</button>
-      <button class="gm-mode" data-mode="both">Overlay both</button>
+      <button class="gm-mode" data-mode="engraved" aria-pressed="false">As engraved · 1969</button>
+      <button class="gm-mode" data-mode="modern" aria-pressed="false">As it really is</button>
+      <button class="gm-mode" data-mode="both" aria-pressed="false">Overlay both</button>
     </div>
 
     <h3 class="gm-block-h mono">What’s genuinely off</h3>
@@ -460,7 +466,11 @@ export function initUI(ctx) {
   const modeBtns = [...verdict.querySelectorAll('.gm-mode')];
   for (const b of modeBtns) b.addEventListener('click', () => ctx.setMapMode(b.dataset.mode));
   function paintMode(mode) {
-    for (const b of modeBtns) b.classList.toggle('is-active', b.dataset.mode === mode);
+    for (const b of modeBtns) {
+      const on = b.dataset.mode === mode;
+      b.classList.toggle('is-active', on);
+      b.setAttribute('aria-pressed', String(on));
+    }
   }
   paintMode(state.mapMode);
 
@@ -565,7 +575,7 @@ export function initUI(ctx) {
       <p class="gm-src-h mono">The “hopelessly wrong” debate</p>
       <ul>
         <li><a href="https://www.forbes.com/sites/startswithabang/2017/08/17/voyagers-cosmic-map-of-earths-location-is-hopelessly-wrong/" target="_blank" rel="noopener">E. Siegel — “…Hopelessly Wrong,” Forbes (2017)</a> — the likely source of the meme; argues million-year decay, concedes the map was sound when made.</li>
-        <li><a href="https://www.nationalgeographic.com/magazine/article/nasa-sent-a-map-to-space-to-help-aliens-find-earth-now-it-needs-an-update" target="_blank" rel="noopener">Drake &amp; Ransom, National Geographic (2020)</a> — co-authored by pulsar astronomer Scott Ransom, on updating the map.</li>
+        <li><a href="https://www.nationalgeographic.com/magazine/article/nasa-sent-a-map-to-space-to-help-aliens-find-earth-now-it-needs-an-update" target="_blank" rel="noopener">Nadia Drake &amp; Scott Ransom, National Geographic (2020)</a> — on updating the map, by Frank Drake’s daughter and a pulsar astronomer.</li>
       </ul>
       <p class="gm-src-h mono">Artwork &amp; assets</p>
       <ul>
@@ -591,11 +601,11 @@ export function initUI(ctx) {
     <div class="gm-mini-fly" hidden>
       <p class="gm-k">Hear the record</p>
       <div class="gm-player-sets" role="group" aria-label="Playlist">
-        <button class="gm-mode is-active" data-set="music">Music from Earth · 27</button>
-        <button class="gm-mode" data-set="sounds">Sounds of Earth · 19</button>
-        <button class="gm-mode" data-set="greetings">Greetings · 55 languages</button>
+        <button class="gm-mode is-active" data-set="music" aria-pressed="true">Music from Earth · 27</button>
+        <button class="gm-mode" data-set="sounds" aria-pressed="false">Sounds of Earth · 19</button>
+        <button class="gm-mode" data-set="greetings" aria-pressed="false">Greetings · 55 languages</button>
       </div>
-      <div class="gm-tracklist mono" role="list" aria-label="Tracks"></div>
+      <div class="gm-tracklist mono" role="group" aria-label="Tracks"></div>
       <p class="gm-fine">Greetings &amp; sounds stream from
         <a href="https://science.nasa.gov/mission/voyager/golden-record-contents/sounds/" target="_blank" rel="noopener">NASA’s Golden Record</a>;
         the music from a
@@ -669,6 +679,7 @@ export function initUI(ctx) {
   let scDuration = 0;   // current sound's duration (ms), cached on READY
   let scLastIdx = -1;   // last seen playlist index (NASA sets)
   let scPriming = false; // silent buffer-warm in progress (volume 0)
+  let scWantTrack = null; // NASA-set index tapped before READY landed
 
   // iOS only honors play commands that land hard on the heels of a real tap —
   // if the stream still has to BUFFER first, the tap's activation window
@@ -725,12 +736,17 @@ export function initUI(ctx) {
   // actually starts on the second (why the dock took two taps while the
   // plain-<audio> hello took one) — so every play intent pumps the command
   // again if playback hasn't started. No-ops everywhere else.
+  let playGen = 0; // bumped by any pause, so stale retries below expire
   const pumpPlay = () => {
     if (!scWidget || !scReady) return;
     cancelPriming(); // a real play intent takes over from the silent warm-up
+    const gen = ++playGen;
     scWidget.play();
-    setTimeout(() => { if (scWidget && scReady && !scPlaying) scWidget.play(); }, 700);
-    setTimeout(() => { if (scWidget && scReady && !scPlaying) scWidget.play(); }, 1800);
+    const retry = (ms) => setTimeout(() => {
+      if (gen === playGen && scWidget && scReady && !scPlaying) scWidget.play();
+    }, ms);
+    retry(700);
+    retry(1800);
   };
 
   const SVG_PLAY = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2l10 6-10 6z"/></svg>';
@@ -810,7 +826,6 @@ export function initUI(ctx) {
       const b = el('button', 'gm-track' + (i === currentIdx ? ' is-current' : ''),
         `<span class="gm-track-n">${String(i + 1).padStart(2, '0')}</span><span class="gm-track-t"></span>`);
       b.querySelector('.gm-track-t').textContent = label;
-      b.setAttribute('role', 'listitem');
       b.addEventListener('click', () => playTrack(i));
       trackList.appendChild(b);
     });
@@ -834,11 +849,12 @@ export function initUI(ctx) {
       else if (scReady) {
         if (scPlaying) scWidget.seekTo(ms);
         else { pendingSeekMs = ms; pumpPlay(); }
-      }
+      } else { pendingSeekMs = ms; scWantPlay = true; } // mid-handshake
       return;
     }
     if (scWidget && scReady) { scWidget.skip(i); pumpPlay(); markCurrentRow(i); }
     else if (!scWidget) buildWidget(scSet).then((w) => { if (w) { w.skip(i); pumpPlay(); } });
+    else { scWantTrack = i; markCurrentRow(i); } // mid-handshake: apply on READY
   }
 
   const loadScApi = () => {
@@ -858,6 +874,7 @@ export function initUI(ctx) {
     return loadScApi().then((SC) => {
       scReady = false;
       scPlaying = false;
+      scPriming = false; // a set switch mid-prime must not leave this latched
       musicIdx = -1;
       scLastIdx = -1;
       scDuration = 0;
@@ -866,6 +883,7 @@ export function initUI(ctx) {
       scHost.innerHTML = '';
       const f = document.createElement('iframe');
       f.allow = 'autoplay';
+      f.tabIndex = -1; // parked off-screen inside aria-hidden: never a tab stop
       f.title = 'NASA Golden Record audio (SoundCloud)';
       f.src = 'https://w.soundcloud.com/player/?url=' + encodeURIComponent(SC_SETS[setKey]) +
         '&auto_play=false&visual=false&show_teaser=false&show_comments=false&color=%23c9a227';
@@ -883,7 +901,10 @@ export function initUI(ctx) {
             pTitle.classList.add('is-idle');
             pTitle.textContent = 'Hear the record';
           }
-          if (scWantPlay) { scWantPlay = false; pumpPlay(); }
+          if (scWantTrack != null) { // a track tapped mid-handshake
+            const i = scWantTrack; scWantTrack = null;
+            scWidget.skip(i); markCurrentRow(i); pumpPlay();
+          } else if (scWantPlay) { scWantPlay = false; pumpPlay(); }
           else primeStream(); // no pending intent: warm the buffer for the first tap
           if (!miniFly.hidden) populateTrackList();
           resolve(scWidget);
@@ -911,6 +932,7 @@ export function initUI(ctx) {
             return;
           }
           scPlaying = false;
+          playGen++; // a real pause outranks any in-flight play retry
           paintPlayBtn();
         });
         scWidget.bind(E.FINISH, () => { scPlaying = false; paintPlayBtn(); });
@@ -924,9 +946,9 @@ export function initUI(ctx) {
             if (i !== musicIdx) setMusicTitle(i);
           }
         });
-        scWidget.bind(E.ERROR, () => { pTitle.textContent = 'stream unavailable — links below still work'; });
+        scWidget.bind(E.ERROR, () => { pTitle.textContent = 'stream unavailable — tap ♫ for source links'; });
       });
-    }).catch(() => { pTitle.textContent = 'stream unavailable — links below still work'; });
+    }).catch(() => { pTitle.textContent = 'stream unavailable — tap ♫ for source links'; });
   }
 
   // A tap that lands while the widget is still handshaking must never be
@@ -935,7 +957,7 @@ export function initUI(ctx) {
   let scWantPlay = false;
   pPlay.addEventListener('click', () => {
     if (!scWidget) { scWantPlay = true; buildWidget(scSet); }
-    else if (scReady) { if (scPlaying) scWidget.pause(); else pumpPlay(); }
+    else if (scReady) { if (scPlaying) { playGen++; scWidget.pause(); } else pumpPlay(); }
     else scWantPlay = true;
   });
   // in the music sequence, prev/next hop between cue points inside the one
@@ -970,7 +992,10 @@ export function initUI(ctx) {
     b.addEventListener('click', () => {
       if (b.dataset.set === scSet) return;
       scSet = b.dataset.set;
-      for (const x of setBtns) x.classList.toggle('is-active', x === b);
+      for (const x of setBtns) {
+        x.classList.toggle('is-active', x === b);
+        x.setAttribute('aria-pressed', String(x === b));
+      }
       const wasPlaying = scPlaying;
       pTitle.textContent = 'loading…';
       if (!miniFly.hidden) populateTrackList(); // music renders instantly; NASA sets fill on READY
@@ -995,6 +1020,9 @@ export function initUI(ctx) {
     const paintHello = (playing) => {
       helloIc.innerHTML = playing ? SVG_PAUSE : SVG_PLAY;
       hello.classList.toggle('is-playing', playing);
+      hello.setAttribute('aria-label', playing
+        ? 'Stop the greeting'
+        : 'Play the record’s English greeting: hello from the children of planet Earth');
     };
     ha.addEventListener('play', () => paintHello(true));
     ha.addEventListener('pause', () => paintHello(false)); // also fires on ended
@@ -1059,18 +1087,20 @@ export function initUI(ctx) {
       const row = el('div', 'gm-drake-row');
       row.innerHTML = `
         <div class="gm-drake-rowhead"><label>${f.html}</label><output class="mono"></output></div>
-        <input class="gm-slider" type="range" min="0" max="1000" step="1" aria-label="${f.k}">`;
+        <input class="gm-slider" type="range" min="0" max="1000" step="1" id="gm-drake-${f.k}">`;
       const input = row.querySelector('input');
       const out = row.querySelector('output');
+      row.querySelector('label').setAttribute('for', input.id); // the sentence names the slider
+      const say = (v) => { out.textContent = f.fmt(v); input.setAttribute('aria-valuetext', f.fmt(v)); };
       input.value = String(toT(f, vals[f.k]));
-      out.textContent = f.fmt(vals[f.k]);
+      say(vals[f.k]);
       input.addEventListener('input', () => {
         vals[f.k] = toV(f, +input.value);
-        out.textContent = f.fmt(vals[f.k]);
+        say(vals[f.k]);
         for (const b of presetsEl.children) b.classList.remove('is-active');
         paintN();
       });
-      rows[f.k] = { f, input, out };
+      rows[f.k] = { f, input, out, say };
       xEl.appendChild(row);
     }
     PRESETS.forEach((p, i) => {
@@ -1079,9 +1109,12 @@ export function initUI(ctx) {
         Object.assign(vals, p.v);
         for (const f of F) {
           rows[f.k].input.value = String(toT(f, vals[f.k]));
-          rows[f.k].out.textContent = f.fmt(vals[f.k]);
+          rows[f.k].say(vals[f.k]);
         }
-        for (const x of presetsEl.children) x.classList.toggle('is-active', x === b);
+        for (const x of presetsEl.children) {
+          x.classList.toggle('is-active', x === b);
+          x.setAttribute('aria-pressed', String(x === b));
+        }
         paintN();
       });
       presetsEl.appendChild(b);
@@ -1095,6 +1128,7 @@ export function initUI(ctx) {
   const eraEl = finders.querySelector('.gm-era');
   function paintTime(myr) {
     tplusEl.textContent = `T + ${fmtMyr(myr)} Myr`;
+    slider.setAttribute('aria-valuetext', `${fmtMyr(myr)} million years after launch`);
     const n = pulsars.filter((p) => extinctionMyr(p) > myr).length;
     beaconsEl.textContent = `beacons still shining: ${n}/14`;
     eraEl.textContent = eraLine(myr);
@@ -1132,11 +1166,14 @@ export function initUI(ctx) {
     '<span aria-hidden="true">⌖</span>&ensp;you are here');
   earthChip.dataset.acts = 'map pulsars verdict finders';
   earthChip.title = 'Zoom in to Earth, at the center of the map';
+  earthChip.setAttribute('aria-pressed', 'false');
   // toggles: a second click returns you to where the act's view was
   earthChip.addEventListener('click', () =>
     ctx.select(state.selected === 'earth' ? null : 'earth'));
   bus.addEventListener('select', (e) => {
-    earthChip.classList.toggle('is-active', e.detail.target === 'earth');
+    const on = e.detail.target === 'earth';
+    earthChip.classList.toggle('is-active', on);
+    earthChip.setAttribute('aria-pressed', String(on));
   });
 
   // ======================================================================
@@ -1319,6 +1356,19 @@ export function initUI(ctx) {
     const myr = e.detail.myr;
     if (document.activeElement !== slider) slider.value = String(myrToV(myr));
     paintTime(myr);
+  });
+
+  // ...and again whenever the viewport crosses the phone/desktop boundary,
+  // because the Act II framing depends on whether the explainer is a column
+  // or a sheet (it fired only once at init, so it went stale on rotate)
+  let layoutWasSheet = isSheetMode();
+  let layoutTimer = 0;
+  window.addEventListener('resize', () => {
+    clearTimeout(layoutTimer);
+    layoutTimer = setTimeout(() => {
+      const now = isSheetMode();
+      if (now !== layoutWasSheet) { layoutWasSheet = now; emitLayout(); }
+    }, 250);
   });
 
   applyAct(state.act);

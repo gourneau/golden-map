@@ -44,11 +44,20 @@ const canvas = document.getElementById('stage');
 // powerPreference matters on dual-GPU laptops: without it Firefox will happily
 // run this on the integrated chip while Chrome picks the discrete one — the
 // same page, half the framerate, for no visible reason.
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.1;
+// The try/catch is the whole no-WebGL story: three throws at construction on a
+// browser with WebGL disabled or a blocklisted GPU (privacy-hardened Firefox,
+// Tor, locked-down corporate machines), and without this the module would abort
+// here — before the UI is ever built — leaving a black page with no words on it.
+let renderer = null;
+try {
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.1;
+} catch (err) {
+  renderer = null;
+}
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x050403);
@@ -82,6 +91,16 @@ export const ctx = {
   MAP_EPOCH,
   ACTS,
   prefersReducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+  // The ONE definition of "this viewport is a phone", mirrored verbatim by the
+  // media queries in css/ui.css — ui.js and tour.js must ask these rather than
+  // re-testing innerWidth, or the layout and the camera framing drift apart.
+  // Width alone stopped working when phones got wide: an iPhone Pro Max is
+  // ~932 CSS px in landscape. Height plus a coarse pointer catches those
+  // without dragging a short DESKTOP window (pointer: fine) into phone layout.
+  phoneLayout: () =>
+    window.matchMedia('(max-width: 900px), ((max-height: 560px) and (pointer: coarse))').matches,
+  phoneLandscape: () =>
+    window.matchMedia('(max-height: 520px) and (orientation: landscape) and (pointer: coarse)').matches,
   // ?still=1 — screenshot mode: the canonical Act I composition (record high,
   // probe close) with no UI chrome and no idle motion. Used to capture art/og.jpg.
   still: new URLSearchParams(location.search).has('still'),
@@ -113,50 +132,87 @@ export function setArtifact(v) {
 ctx.setAct = setAct; ctx.select = select; ctx.setTimeMyr = setTimeMyr; ctx.setMapMode = setMapMode;
 ctx.setArtifact = setArtifact;
 
-// ---- assemble ----------------------------------------------------------
-const modules = [];
-function register(m) { if (m) modules.push(m); return m; }
-
-const starfield = register(createStarfield(ctx));
-const record = register(createRecord(ctx));
-const voyager = register(createVoyager(ctx));
-const map3d = register(createMap(ctx));
-ctx.modules = { starfield, record, voyager, map3d };
-
-for (const m of [starfield, record, voyager, map3d]) {
-  if (m && m.object3d) scene.add(m.object3d);
+// ---- no WebGL: the story in plain HTML ----------------------------------
+// Everything on this page is drawn by a GPU or built by ui.js, so a browser
+// without WebGL would otherwise show an empty black rectangle — which reads as
+// "this site is broken", not "your browser can't do this". Give those visitors
+// the actual point of the page and the links to go further.
+function renderNoWebGL() {
+  document.body.classList.add('gm-nogl');
+  document.getElementById('gm-boot')?.remove(); // nothing is being assembled
+  document.getElementById('ui').innerHTML = `
+    <section class="gm-fallback">
+      <p class="eyebrow">Launched 1977 · Now in interstellar space</p>
+      <h1>The Golden Record</h1>
+      <p class="gm-tagline">Earth’s address, written in dying stars</p>
+      <p class="gm-hook">In 1977, NASA launched two spacecraft carrying a golden
+        record. Engraved on it: a map that shows any finder where Earth is, using
+        fourteen flashing stars as landmarks — pulsars, each one identified by its
+        own exact flash rate, measured against the ticking of a hydrogen atom.
+        This site rebuilds that map in 3D with today’s data.</p>
+      <p class="gm-hook">Your browser can’t run WebGL, so the interactive map
+        can’t be drawn here. Everything behind it is still open:</p>
+      <p class="gm-fallback-links">
+        <a href="https://science.nasa.gov/mission/voyager/golden-record-cover/">NASA — the record cover explained</a>
+        · <a href="https://www.johnstonsarchive.net/astro/pulsarmap.html">Johnston (2007) — reading the map back</a>
+        · <a href="https://github.com/gourneau/golden-map">code &amp; sources on GitHub</a>
+      </p>
+    </section>`;
 }
 
-register(initUI(ctx));
-register(initTour(ctx));
+if (!renderer) {
+  renderNoWebGL();
+} else {
+  // ---- assemble ----------------------------------------------------------
+  const modules = [];
+  const register = (m) => { if (m) modules.push(m); return m; };
 
-// ---- loop ---------------------------------------------------------------
-// debugging & verification hooks: __tick advances the scene deterministically
-// even when the tab is hidden and requestAnimationFrame is throttled.
-window.__ctx = ctx;
-let simT = 0;
-window.__tick = (n = 1, dt = 1 / 60) => {
-  for (let i = 0; i < n; i++) {
-    simT += dt;
-    controls.update();
-    for (const m of modules) if (m.update) m.update(dt, simT);
+  const starfield = register(createStarfield(ctx));
+  const record = register(createRecord(ctx));
+  const voyager = register(createVoyager(ctx));
+  const map3d = register(createMap(ctx));
+  ctx.modules = { starfield, record, voyager, map3d };
+
+  for (const m of [starfield, record, voyager, map3d]) {
+    if (m && m.object3d) scene.add(m.object3d);
   }
-  renderer.render(scene, camera);
-};
 
-const clock = new THREE.Clock();
-function frame() {
-  const dt = Math.min(clock.getDelta(), 0.05);
-  const t = clock.elapsedTime;
-  controls.update();
-  for (const m of modules) if (m.update) m.update(dt, t);
-  renderer.render(scene, camera);
-  requestAnimationFrame(frame);
+  register(initUI(ctx));
+  register(initTour(ctx));
+
+  // ---- loop -------------------------------------------------------------
+  // debugging & verification hooks: __tick advances the scene deterministically
+  // even when the tab is hidden and requestAnimationFrame is throttled.
+  window.__ctx = ctx;
+  let simT = 0;
+  window.__tick = (n = 1, dt = 1 / 60) => {
+    for (let i = 0; i < n; i++) {
+      simT += dt;
+      controls.update();
+      for (const m of modules) if (m.update) m.update(dt, simT);
+    }
+    renderer.render(scene, camera);
+  };
+
+  const clock = new THREE.Clock();
+  let booted = false;
+  function frame() {
+    const dt = Math.min(clock.getDelta(), 0.05);
+    const t = clock.elapsedTime;
+    controls.update();
+    for (const m of modules) if (m.update) m.update(dt, t);
+    renderer.render(scene, camera);
+    if (!booted) { // the first real frame is up — retire the boot placeholder
+      booted = true;
+      document.getElementById('gm-boot')?.remove();
+    }
+    requestAnimationFrame(frame);
+  }
+  frame();
+
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
 }
-frame();
-
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-});

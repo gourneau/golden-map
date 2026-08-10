@@ -1,0 +1,39 @@
+MIT License
+
+Copyright (c) 2026 Joshua Gourneau
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+The MIT licence above covers the code in this repository. Bundled third-party
+material keeps its own terms:
+
+- three.js (vendor/three.module.js and vendor/**) — MIT, © three.js authors.
+- Marcellus, EB Garamond, IBM Plex Mono (vendor/fonts/) — SIL Open Font
+  License 1.1; see vendor/fonts/OFL.txt.
+- HYG star database (js/data/, star positions) — CC BY-SA 4.0, © David Nash
+  (astronexus.com). Derived star data is redistributed under the same licence.
+- NASA imagery, the Voyager 3D model, the Golden Record cover artwork, the
+  Blue Marble Earth texture, and the English greeting audio — public domain
+  (works of the U.S. government). Cover vectorization by VectorVoyager,
+  Wikimedia Commons.
+- Audio streamed from SoundCloud is NOT redistributed by this repository; it
+  is linked and played from its source. The Golden Record music recordings
+  remain under their own copyrights.

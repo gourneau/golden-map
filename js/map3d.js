@@ -477,7 +477,7 @@ export function createMap(ctx) {
     }
 
     const myr = state.timeMyr;
-    const selP = selected && selected !== 'gc' ? selected : null;
+    const selP = selected && typeof selected === 'object' ? selected : null;
     const kSel = prefersReducedMotion ? 1 : Math.min(1, dt * 6);
 
     // deep-zoom cleanup: as the camera closes on the origin (the Earth visit),

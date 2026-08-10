@@ -1,5 +1,5 @@
 /* ============================================================
-   THE GOLDEN MAP — ui.css
+   THE GOLDEN RECORD — ui.css
    Owns everything inside #ui. Uses only tokens from style.css.
    Warm gold = as engraved (1969) · starlight = modern · alarm = flaws.
    ============================================================ */
@@ -125,10 +125,10 @@
   font-size: 0.56rem;
   letter-spacing: 0.26em;
   text-transform: uppercase;
-  color: var(--gold-dim);
+  color: var(--gold-text);
 }
 .gm-fine-more summary::-webkit-details-marker { display: none; }
-.gm-fine-more summary::after { content: ' +'; color: var(--gold-dim); }
+.gm-fine-more summary::after { content: ' +'; color: var(--gold-text); }
 .gm-fine-more[open] summary::after { content: ' −'; }
 .gm-fine-more summary:hover { color: var(--gold); }
 .gm-fine-more .gm-fine { border-top: none; margin-left: 0; padding-top: 0.35em; }
@@ -143,7 +143,9 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding-top: 16px;
+  /* the top inset matters in a standalone home-screen install, where the
+     status bar overlays the page; ui.js measures the result into --nav-h */
+  padding-top: calc(16px + env(safe-area-inset-top, 0px));
   --gm-in: translateY(-10px);
 }
 .gm-nav-row { display: flex; gap: 7px; pointer-events: auto; align-items: stretch; }
@@ -158,7 +160,7 @@
   font-family: var(--display);
   font-size: 1.15rem;
   line-height: 1;
-  color: var(--gold-dim);
+  color: var(--gold-text);
   border: 1px solid transparent;
   transition: color 0.3s var(--ease), border-color 0.3s var(--ease), opacity 0.3s var(--ease);
 }
@@ -179,7 +181,7 @@
   color: var(--paper-dim);
   transition: color 0.3s var(--ease), border-color 0.3s var(--ease);
 }
-.gm-act-n { font-size: 0.66rem; font-weight: 500; letter-spacing: 0.12em; color: var(--gold-dim); }
+.gm-act-n { font-size: 0.66rem; font-weight: 500; letter-spacing: 0.12em; color: var(--gold-text); }
 .gm-act:hover { color: var(--gold-bright); border-color: var(--gold-dim); }
 .gm-act.is-current { color: var(--gold-bright); border-color: var(--gold); }
 .gm-act.is-current .gm-act-n { color: var(--gold); }
@@ -229,7 +231,7 @@
   padding: 0;
   --gm-in: translateY(22px);
 }
-@media (max-width: 900px) {
+@media (max-width: 900px), ((max-height: 560px) and (pointer: coarse)) {
   /* Phones: back to a compact centered bottom card (the portrait camera
      already lifts the disc above it), with a legibility wash. */
   .gm-title {
@@ -307,7 +309,7 @@
   background: color-mix(in srgb, var(--gold) 18%, transparent);
 }
 .gm-hello-ic svg { width: 0.42em; height: 0.42em; fill: currentColor; }
-@media (max-width: 900px) { .gm-hook { max-width: 44em; margin: 0 auto 1em; } }
+@media (max-width: 900px), ((max-height: 560px) and (pointer: coarse)) { .gm-hook { max-width: 44em; margin: 0 auto 1em; } }
 .gm-begin {
   pointer-events: auto;
   font-size: 0.66rem;
@@ -374,7 +376,7 @@
 .gm-demo-bits {
   font-size: 0.62rem;
   letter-spacing: 0.22em;
-  color: var(--gold-dim);
+  color: var(--gold-text);
   min-height: 1.4em;
   white-space: nowrap;
   overflow: hidden;
@@ -412,7 +414,7 @@
   color: var(--gold);
 }
 .gm-cover-fig summary::-webkit-details-marker { display: none; }
-.gm-cover-fig summary::after { content: ' +'; color: var(--gold-dim); }
+.gm-cover-fig summary::after { content: ' +'; color: var(--gold-text); }
 .gm-cover-fig[open] summary::after { content: ' −'; }
 .gm-cover-fig-body {
   margin-top: 0.7em;
@@ -477,7 +479,7 @@
   background: color-mix(in srgb, var(--gold) 12%, transparent);
   box-shadow: inset 2px 0 0 var(--gold);
 }
-.gm-row-n { font-size: 0.6rem; color: var(--gold-dim); }
+.gm-row-n { font-size: 0.6rem; color: var(--gold-text); }
 .gm-row-name { font-size: 0.92rem; color: var(--paper); }
 .gm-row-alias { margin-left: 0.45em; font-style: italic; color: var(--gold-bright); }
 .gm-row-conf {
@@ -554,6 +556,13 @@
 .gm-detail-name { font-size: var(--step-2); margin: 0.3em 0 0.05em; }
 .gm-detail-sub { font-size: 0.62rem; letter-spacing: 0.12em; color: var(--paper-dim); margin-bottom: 1em; }
 .gm-bin-label { display: block; margin: 0.9em 0 0.3em; }
+.gm-detail-hint {
+  margin-top: 0.8em;
+  text-transform: none;
+  letter-spacing: 0.08em;
+  font-size: 0.68rem;
+  color: var(--gold-text);
+}
 .gm-bin {
   font-size: 0.76rem;
   line-height: 1.75;
@@ -776,7 +785,7 @@
   color: var(--gold);
 }
 .gm-drake summary::-webkit-details-marker { display: none; }
-.gm-drake summary::after { content: ' +'; color: var(--gold-dim); }
+.gm-drake summary::after { content: ' +'; color: var(--gold-text); }
 .gm-drake[open] summary::after { content: ' −'; }
 .gm-drake .gm-body { margin-top: 0.6em; font-size: 0.92rem; color: var(--paper-dim); }
 .gm-drake .gm-body em { color: var(--paper); }
@@ -828,7 +837,7 @@
   color: var(--gold);
 }
 .gm-sources summary::-webkit-details-marker { display: none; }
-.gm-sources summary::after { content: ' +'; color: var(--gold-dim); }
+.gm-sources summary::after { content: ' +'; color: var(--gold-text); }
 .gm-sources[open] summary::after { content: ' −'; }
 /* ======================================================================
    THE RECORD PLAYER — a persistent mini dock, bottom-center on every act.
@@ -960,7 +969,7 @@
   border-color: var(--gold-faint);
   background: color-mix(in srgb, var(--gold) 6%, transparent);
 }
-.gm-track-n { flex: none; color: var(--gold-dim); }
+.gm-track-n { flex: none; color: var(--gold-text); }
 .gm-track-t { min-width: 0; }
 .gm-pbar {
   position: relative;
@@ -994,13 +1003,13 @@
   font-weight: 500;
   letter-spacing: 0.24em;
   text-transform: uppercase;
-  color: var(--gold-dim);
+  color: var(--gold-text);
 }
 .gm-sources ul { margin-top: 0.35em; }
 
 /* per-pulsar reference links on the detail card */
 .gm-refs { border-top: none; padding-top: 0; margin-top: 0.3em; }
-.gm-refs a { color: var(--gold-dim); text-decoration-color: color-mix(in srgb, var(--gold-dim) 50%, transparent); }
+.gm-refs a { color: var(--gold-text); text-decoration-color: color-mix(in srgb, var(--gold-text) 50%, transparent); }
 .gm-refs a:hover { color: var(--gold-bright); }
 
 /* ?still=1 screenshot mode: only the masthead and the scene */
@@ -1021,7 +1030,7 @@ body.gm-still .gm-mini { display: none !important; }
   font-weight: 500;
   letter-spacing: 0.24em;
   text-transform: uppercase;
-  color: var(--gold-dim);
+  color: var(--gold-text);
 }
 .gm-colophon a { color: var(--gold); text-decoration: none; }
 .gm-colophon a:hover { color: var(--gold-bright); }
@@ -1037,7 +1046,7 @@ body.gm-still .gm-mini { display: none !important; }
   font-weight: 500;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--gold-dim);
+  color: var(--gold-text);
 }
 .gm-corner a { color: var(--gold); text-decoration: none; }
 .gm-corner a:hover { color: var(--gold-bright); }
@@ -1055,7 +1064,7 @@ body.gm-still .gm-mini { display: none !important; }
   font-weight: 500;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--gold-dim);
+  color: var(--gold-text);
   padding: 0.7em 1.1em;
   border: 1px solid var(--gold-faint);
   border-radius: 999px;
@@ -1104,9 +1113,11 @@ body.gm-still .gm-mini { display: none !important; }
    --dock-h / --nav-h, so sheets always sit exactly above the bar (safe area
    included) and the chips exactly below the nav, at any font size.
    ====================================================================== */
-@media (max-width: 900px) {
+@media (max-width: 900px), ((max-height: 560px) and (pointer: coarse)) {
   :root {
-    --sheet-x: 10px;    /* side inset — shared by every sheet and the flyout */
+    /* side inset — shared by every sheet and the flyout. max() keeps the
+       notch/rounded corner out of the sheets in landscape. */
+    --sheet-x: max(10px, env(safe-area-inset-left, 0px));
     --sheet-gap: 8px;   /* air between a sheet and the docked player */
     --sheet-h: 40vh;    /* the scene keeps the larger share of the screen */
   }
@@ -1173,7 +1184,7 @@ body.gm-still .gm-mini { display: none !important; }
     border-bottom: 1px solid var(--gold-faint);
     border-radius: 13px 13px 0 0;
   }
-  .gm-sheet-tab-ic { flex: none; font-size: 0.78rem; color: var(--gold-dim); }
+  .gm-sheet-tab-ic { flex: none; font-size: 0.78rem; color: var(--gold-text); }
   .gm-sheet-tab:hover { color: var(--gold-bright); }
   .gm-sheet-tab:hover .gm-sheet-tab-ic { color: var(--gold); }
 
@@ -1197,8 +1208,11 @@ body.gm-still .gm-mini { display: none !important; }
     border-left: none;
     border-right: none;
     border-bottom: none;
-    /* clear the iPhone home indicator */
+    /* clear the home indicator AND, in landscape, the notch side inset —
+       without the sides the ⏮ button lands under the notch */
     padding-bottom: calc(9px + env(safe-area-inset-bottom, 0px));
+    padding-left: calc(12px + env(safe-area-inset-left, 0px));
+    padding-right: calc(12px + env(safe-area-inset-right, 0px));
   }
   .gm-mini-fly {
     left: var(--sheet-x); right: var(--sheet-x);
@@ -1214,7 +1228,7 @@ body.gm-still .gm-mini { display: none !important; }
      which is what was cropping the view of the map itself. */
   .gm-corner { display: none; }
   .gm-artifact {
-    right: var(--sheet-x);
+    right: max(var(--sheet-x), env(safe-area-inset-right, 0px));
     top: calc(var(--nav-h) + 8px);
     bottom: auto;
     z-index: 39; /* under the nav (40), over the canvas */
@@ -1247,7 +1261,7 @@ body.gm-still .gm-mini { display: none !important; }
    column (still with its header tab, still collapsing to a bar) and the map
    keeps the right of the frame. Same components, different axis.
    ====================================================================== */
-@media (max-width: 900px) and (max-height: 520px) and (orientation: landscape) {
+@media (max-height: 520px) and (orientation: landscape) and (pointer: coarse) {
   .gm-left,
   .gm-rail,
   .gm-detail,
