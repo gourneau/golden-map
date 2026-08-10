@@ -1343,11 +1343,19 @@ export function initUI(ctx) {
     for (const b of [prevArrow, nextArrow]) {
       const to = ACTS[i + Number(b.dataset.dir)];
       const key = b.dataset.dir === '-1' ? 'Back' : 'Next';
-      b.querySelector('.gm-nav-dest').textContent = to ? `${key} · ${to.title}` : '';
+      const dest = b.querySelector('.gm-nav-dest');
+      dest.textContent = '';
+      if (to) {
+        dest.append(`${key} · ${to.title}`);
+        // the keyboard shortcut as a keycap, not a sentence — it reads at a
+        // glance and stays inside our own type and palette
+        const k = el('kbd', 'gm-key', b.dataset.dir === '-1' ? '←' : '→');
+        k.setAttribute('aria-hidden', 'true');
+        dest.append(' ', k);
+      }
       b.setAttribute('aria-label', to
         ? `${key === 'Back' ? 'Previous act' : 'Next act'}: ${to.numeral} — ${to.title}`
         : `${key === 'Back' ? 'Previous act' : 'Next act'} (none)`);
-      b.title = to ? `${key} · ${to.title}  (or the ${key === 'Back' ? '←' : '→'} key)` : '';
     }
     resetSheets();
     if (act === 'map') demoStart();
