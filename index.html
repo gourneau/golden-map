@@ -36,11 +36,6 @@
 <link rel="preload" as="font" type="font/woff2" href="vendor/fonts/ibm-plex-mono-latest-latin-400-normal.woff2" crossorigin>
 <link rel="preload" as="font" type="font/woff2" href="vendor/fonts/ibm-plex-mono-latest-latin-500-normal.woff2" crossorigin>
 
-<!-- the module graph's two heaviest leaves, fetched in parallel with main.js
-     instead of waiting a round-trip for it to be parsed first -->
-<link rel="modulepreload" href="vendor/three.module.js">
-<link rel="modulepreload" href="js/main.js">
-
 <link rel="stylesheet" href="css/style.css">
 <link rel="stylesheet" href="css/ui.css">
 
@@ -88,8 +83,9 @@
   <noscript><p class="noscript">This experience needs JavaScript — it is, after all, a machine for decoding a machine.</p></noscript>
   <script type="module" src="js/main.js"></script>
   <!-- Cloudflare Web Analytics — cookieless, sets nothing, needs no consent
-       banner. Deferred by module semantics, so it never blocks the scene. The
-       token is public by design (it only identifies the site to report to). -->
-  <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "394f92b3946449b39f675169b42ac95c"}'></script>
+       banner. `defer`, NOT type="module": a cross-origin module script is
+       fetched with CORS and this host sends no Access-Control-Allow-Origin,
+       so Firefox blocks the module form. The token is public by design. -->
+  <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "394f92b3946449b39f675169b42ac95c"}'></script>
 </body>
 </html>
