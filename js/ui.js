@@ -147,12 +147,19 @@ export function initUI(ctx) {
       <div class="gm-cover-fig-body"></div>
       <p class="gm-cover-fig-credit">Public domain, NASA/JPL — annotations outlined as vector paths.</p>
     </details>`;
-  // the annotated cover diagram, recolored gold-on-dark — a plain static file,
-  // fetched when needed and injected once
-  loadText('vendor/art/voyager_cover_explanation.svg').then((raw) => {
-    explainer.querySelector('.gm-cover-fig-body').innerHTML =
-      explanationSvg(raw).replace(/^[\s\S]*?(?=<svg)/, ''); // strip XML prolog for innerHTML
-  }).catch(() => {});
+  // The annotated cover diagram, recolored gold-on-dark — a plain static file.
+  // 293KB raw (47KB gzip) plus three regex passes over it on the main thread,
+  // for a figure that lives inside Act II's panel: fetched the first time that
+  // act is actually entered, not during boot.
+  let coverLoaded = false;
+  function loadCoverFigure() {
+    if (coverLoaded) return;
+    coverLoaded = true;
+    loadText('vendor/art/voyager_cover_explanation.svg').then((raw) => {
+      explainer.querySelector('.gm-cover-fig-body').innerHTML =
+        explanationSvg(raw).replace(/^[\s\S]*?(?=<svg)/, ''); // strip XML prolog for innerHTML
+    }).catch(() => { coverLoaded = false; }); // a failed fetch may retry next visit
+  }
   const demoBox = explainer.querySelector('.gm-demo');
   const demoTicks = explainer.querySelector('.gm-demo-ticks');
   const demoBits = explainer.querySelector('.gm-demo-bits');
@@ -1358,7 +1365,7 @@ export function initUI(ctx) {
         : `${key === 'Back' ? 'Previous act' : 'Next act'} (none)`);
     }
     resetSheets();
-    if (act === 'map') demoStart();
+    if (act === 'map') { demoStart(); loadCoverFigure(); }
     else demo.active = false;
     paintDetailVisibility();
     paintFindersVisibility();

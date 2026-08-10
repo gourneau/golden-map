@@ -87,7 +87,7 @@ export function createMap(ctx) {
   // (wildly not to scale — at true scale it would be a billionth of a pixel)
   // Texture: NASA Blue Marble, cloud-free (public domain), embedded.
   const EARTH_POS = new THREE.Vector3(0.018, 0, 0);
-  const earthTex = new THREE.TextureLoader().load('vendor/art/earth_1024.jpg');
+  const earthTex = new THREE.TextureLoader().load('vendor/art/earth_512.jpg');
   earthTex.colorSpace = THREE.SRGBColorSpace;
   earthTex.anisotropy = ctx.renderer.capabilities.getMaxAnisotropy();
   const earth = new THREE.Mesh(

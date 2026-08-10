@@ -293,11 +293,16 @@
      already lifts the disc above it), with a legibility wash. */
   .gm-title {
     left: 0; right: 0;
-    bottom: calc(72px + env(safe-area-inset-bottom, 0px)); /* clears the docked mini player */
     width: auto;
     text-align: center;
     padding: 1.6rem 20px 0.4rem;
-    /* stronger wash: the eyebrow can sit over the disc's bottom edge */
+    /* stronger wash: the eyebrow can sit over the disc's bottom edge.
+       The rgba() line first is not redundant — this wash is the only thing
+       keeping the masthead legible over the gold, and color-mix() is unknown
+       to Safari <= 16.2 (iPhone 6s/7/SE1 era), where the whole declaration
+       would be dropped and the title would sit on raw gold. */
+    background: radial-gradient(ellipse 52% 128% at 50% 62%,
+      rgba(5, 4, 3, 0.88) 0%, rgba(5, 4, 3, 0.62) 48%, transparent 74%);
     background: radial-gradient(ellipse 52% 128% at 50% 62%,
       color-mix(in srgb, var(--void) 88%, transparent) 0%,
       color-mix(in srgb, var(--void) 62%, transparent) 48%,
@@ -1155,6 +1160,7 @@ body.gm-still .gm-mini { display: none !important; }
   letter-spacing: 0.08em;
   white-space: nowrap;
   color: var(--gold-bright);
+  background: rgba(5, 4, 3, 0.92); /* fallback: no backdrop-filter here to save it */
   background: color-mix(in srgb, var(--void) 92%, transparent);
   border: 1px solid var(--gold-faint);
   padding: 0.42em 0.7em;
@@ -1369,6 +1375,12 @@ body.gm-still .gm-mini { display: none !important; }
    COMPACT NAV — small portrait phones: numerals only, current-act title
    beneath the progress hairline (so the hairline itself never moves)
    ====================================================================== */
+/* the current act's name, for every viewport where the act BUTTONS have lost
+   their titles — keep this gate in step with .gm-act-t { display: none } */
+@media (max-width: 560px), ((max-height: 560px) and (pointer: coarse)) {
+  .gm-nav-title { display: block; }
+}
+
 @media (max-width: 560px) {
   .gm-nav { padding-top: calc(12px + env(safe-area-inset-top, 0px)); }
   .gm-nav-row { gap: 6px; }
@@ -1377,7 +1389,6 @@ body.gm-still .gm-mini { display: none !important; }
      what a thumb still needs and no more */
   .gm-nav-arrow { padding: 0 0.34em; font-size: 1.3rem; }
   .gm-act { min-width: 44px; min-height: 44px; justify-content: center; }
-  .gm-nav-title { display: block; }
 
   /* Act I: smaller type so the disc has room */
   .gm-title h1 { font-size: clamp(2rem, 5.4vw, 3.2rem); }

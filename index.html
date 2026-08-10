@@ -82,11 +82,43 @@
   <div id="gm-boot" role="status" aria-label="Loading the Golden Record"></div>
   <div id="ui"></div>
   <noscript><p class="noscript">This experience needs JavaScript — it is, after all, a machine for decoding a machine.</p></noscript>
+  <script>
+  (function () {
+    var done = false;
+    function surrender() {
+      if (done || window.__ctx) return;
+      done = true;
+      var boot = document.getElementById('gm-boot');
+      if (boot) boot.remove();
+      var ui = document.getElementById('ui');
+      if (!ui || ui.firstChild) return;
+      document.body.className += ' gm-nogl';
+      ui.innerHTML = '<section class="gm-fallback">' +
+        '<h1>The Golden Record</h1>' +
+        '<p class="gm-tagline">Earth\u2019s address, written in dying stars</p>' +
+        '<p class="gm-hook">This page didn\u2019t finish loading \u2014 something ' +
+        'went wrong on the way here rather than at your end. Reloading usually ' +
+        'fixes it. If it doesn\u2019t, everything behind the site is still open:</p>' +
+        '<p class="gm-fallback-links">' +
+        '<a href="https://science.nasa.gov/mission/voyager/golden-record-cover/">NASA \u2014 the record cover explained</a> \u00b7 ' +
+        '<a href="https://www.johnstonsarchive.net/astro/pulsarmap.html">Johnston (2007) \u2014 reading the map back</a> \u00b7 ' +
+        '<a href="https://github.com/gourneau/golden-map">code &amp; sources on GitHub</a></p></section>';
+    }
+    // long enough for a slow 3G first load (~400KB gzip), short enough that
+    // nobody stares at a spinning ring wondering if it is broken
+    setTimeout(surrender, 15000);
+    document.addEventListener('error', function (e) {
+      if (e.target && e.target.tagName === 'SCRIPT') surrender();
+    }, true);
+  })();
+  </script>
   <script type="module" src="js/main.js"></script>
   <!-- Cloudflare Web Analytics — cookieless, sets nothing, needs no consent
-       banner. `defer`, NOT type="module": a cross-origin module script is
-       fetched with CORS and this host sends no Access-Control-Allow-Origin,
-       so Firefox blocks the module form. The token is public by design. -->
+       banner. `defer`, NOT type="module": beacon.min.js finds its own token by
+       reading document.currentScript, which is null inside a module, so the
+       module form silently loses data-cf-beacon. (An earlier comment here
+       blamed CORS — that was wrong; the host does send
+       access-control-allow-origin: *.) The token is public by design. -->
   <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "394f92b3946449b39f675169b42ac95c"}'></script>
 </body>
 </html>

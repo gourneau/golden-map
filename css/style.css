@@ -187,7 +187,10 @@ body.gm-anim .gm-panel { will-change: opacity, transform; }
 }
 .gm-fallback .gm-hook { margin-bottom: 1em; line-height: 1.6; }
 .gm-fallback-links { margin-top: 1.6em; font-size: 0.9rem; color: var(--paper-dim); }
-body.gm-nogl { overflow: auto; }
+/* #ui is position:fixed and html is overflow:hidden, so `overflow: auto` on
+   body scrolls nothing — the fallback has to be its own scroller or its links
+   are unreachable on any short viewport. */
+body.gm-nogl #ui { overflow-y: auto; -webkit-overflow-scrolling: touch; }
 
 /* shared vocabulary for UI modules */
 .eyebrow {
