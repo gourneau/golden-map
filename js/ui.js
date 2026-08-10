@@ -55,9 +55,14 @@ export function initUI(ctx) {
   // prev/next act arrows book-ending the nav — a visible hint that ←/→ work.
   // They clamp at the first/last act (no wrap-around), same as the keys.
   const navArrow = (dir) => {
-    const b = el('button', 'gm-nav-arrow', dir < 0 ? '&lsaquo;' : '&rsaquo;');
-    b.title = 'arrow keys work too';
-    b.setAttribute('aria-label', dir < 0 ? 'Previous act (left arrow key)' : 'Next act (right arrow key)');
+    const b = el('button', 'gm-nav-arrow');
+    const glyph = el('span', null, dir < 0 ? '&lsaquo;' : '&rsaquo;');
+    glyph.setAttribute('aria-hidden', 'true');
+    // the destination's own name, revealed on hover/focus — a chevron gives a
+    // direction, this gives somewhere to go
+    const dest = el('span', 'gm-nav-dest');
+    b.append(glyph, dest);
+    b.dataset.dir = String(dir);
     b.addEventListener('click', () => {
       const ids = ACTS.map((a) => a.id);
       const j = ids.indexOf(state.act) + dir;
@@ -1333,6 +1338,17 @@ export function initUI(ctx) {
     navTitle.textContent = i < 0 ? '' : ACTS[i].title;
     prevArrow.disabled = i <= 0;
     nextArrow.disabled = i >= ACTS.length - 1;
+    // name the act each chevron would take you to (and say it to a screen
+    // reader too, which previously only heard "next act")
+    for (const b of [prevArrow, nextArrow]) {
+      const to = ACTS[i + Number(b.dataset.dir)];
+      const key = b.dataset.dir === '-1' ? 'Back' : 'Next';
+      b.querySelector('.gm-nav-dest').textContent = to ? `${key} · ${to.title}` : '';
+      b.setAttribute('aria-label', to
+        ? `${key === 'Back' ? 'Previous act' : 'Next act'}: ${to.numeral} — ${to.title}`
+        : `${key === 'Back' ? 'Previous act' : 'Next act'} (none)`);
+      b.title = to ? `${key} · ${to.title}  (or the ${key === 'Back' ? '←' : '→'} key)` : '';
+    }
     resetSheets();
     if (act === 'map') demoStart();
     else demo.active = false;

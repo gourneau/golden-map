@@ -150,22 +150,64 @@
 }
 .gm-nav-row { display: flex; gap: 7px; pointer-events: auto; align-items: stretch; }
 
-/* prev/next act chevrons — quiet ghosts hinting that the arrow keys work.
-   align-items: stretch on the row makes them the same height as the act
-   buttons; the glyph is a plain ‹ › (no arrow tail), sized to match */
+/* prev/next act chevrons. These used to be near-invisible ghosts on a
+   transparent border, which made stepping through the acts hard to find at
+   all — so they now read as real buttons, the same height and chrome as the
+   act pills, with a glyph big enough to aim at. align-items: stretch on the
+   row keeps them exactly as tall as the pills. */
 .gm-nav-arrow {
+  position: relative;
   display: flex;
   align-items: center;
-  padding: 0 0.5em;
+  padding: 0 0.62em;
   font-family: var(--display);
-  font-size: 1.15rem;
+  font-size: 1.6rem;
   line-height: 1;
-  color: var(--gold-text);
-  border: 1px solid transparent;
-  transition: color 0.3s var(--ease), border-color 0.3s var(--ease), opacity 0.3s var(--ease);
+  color: var(--gold);
+  border: 1px solid var(--gold-faint);
+  background: color-mix(in srgb, var(--void) 72%, transparent);
+  backdrop-filter: var(--blur-chip);
+  -webkit-backdrop-filter: var(--blur-chip);
+  transition: color 0.3s var(--ease), border-color 0.3s var(--ease),
+    background 0.3s var(--ease), opacity 0.3s var(--ease);
 }
-.gm-nav-arrow:hover:not(:disabled) { color: var(--gold-bright); border-color: var(--gold-faint); }
-.gm-nav-arrow:disabled { opacity: 0.25; cursor: default; }
+.gm-nav-arrow:hover:not(:disabled) {
+  color: var(--gold-bright);
+  border-color: var(--gold);
+  background: color-mix(in srgb, var(--gold) 12%, transparent);
+}
+.gm-nav-arrow:disabled { opacity: 0.22; cursor: default; }
+
+/* ...and they say where they go. A chevron alone tells you a direction; this
+   tells you the destination, which is the part that was actually missing.
+   Absolutely positioned so revealing it never nudges the nav. */
+.gm-nav-dest {
+  position: absolute;
+  top: calc(100% + 7px);
+  left: 50%;
+  transform: translateX(-50%) translateY(-3px);
+  padding: 0.45em 0.75em;
+  white-space: nowrap;
+  font-family: var(--mono);
+  font-size: 0.56rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  color: var(--gold-bright);
+  background: color-mix(in srgb, var(--void) 94%, transparent);
+  border: 1px solid var(--gold-faint);
+  border-radius: 999px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s var(--ease), transform 0.25s var(--ease);
+}
+.gm-nav-arrow:hover:not(:disabled) .gm-nav-dest,
+.gm-nav-arrow:focus-visible .gm-nav-dest {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+/* touch has no hover: there the destination would never show, so don't
+   reserve the idea of it at all */
+@media (pointer: coarse) { .gm-nav-dest { display: none; } }
 .gm-act {
   display: flex;
   align-items: center;
@@ -183,7 +225,11 @@
 }
 .gm-act-n { font-size: 0.66rem; font-weight: 500; letter-spacing: 0.12em; color: var(--gold-text); }
 .gm-act:hover { color: var(--gold-bright); border-color: var(--gold-dim); }
-.gm-act.is-current { color: var(--gold-bright); border-color: var(--gold); }
+.gm-act.is-current {
+  color: var(--gold-bright);
+  border-color: var(--gold);
+  background: color-mix(in srgb, var(--gold) 14%, transparent);
+}
 .gm-act.is-current .gm-act-n { color: var(--gold); }
 .gm-nav-progress {
   pointer-events: auto;
@@ -1313,8 +1359,12 @@ body.gm-still .gm-mini { display: none !important; }
    beneath the progress hairline (so the hairline itself never moves)
    ====================================================================== */
 @media (max-width: 560px) {
-  .gm-nav { padding-top: 12px; }
+  .gm-nav { padding-top: calc(12px + env(safe-area-inset-top, 0px)); }
   .gm-nav-row { gap: 6px; }
+  /* the desktop chevrons are deliberately chunky; at 320px (SE-class) five
+     44px pills plus two of those overflow the screen, so trim them back to
+     what a thumb still needs and no more */
+  .gm-nav-arrow { padding: 0 0.34em; font-size: 1.3rem; }
   .gm-act { min-width: 44px; min-height: 44px; justify-content: center; }
   .gm-nav-title { display: block; }
 
