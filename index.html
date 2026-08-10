@@ -75,10 +75,11 @@
 </head>
 <body>
   <canvas id="stage" role="img" aria-label="Interactive 3D scene: the Voyager Golden Record and its pulsar map of the galaxy"></canvas>
-  <!-- Every word on this page is built by js/ui.js, so until the module graph
-       lands there is nothing to paint. This one static line is the whole first
-       contentful paint on a slow connection; main.js removes it on frame one. -->
-  <p id="gm-boot">Assembling the record<span aria-hidden="true">…</span></p>
+  <!-- Nothing on this page exists until the module graph lands, so this mark
+       is the whole first paint on a slow connection: the record's rim, and a
+       pulsar beating inside it. No words — the site's own vocabulary instead.
+       main.js fades it out on the first rendered frame. -->
+  <div id="gm-boot" role="status" aria-label="Loading the Golden Record"></div>
   <div id="ui"></div>
   <noscript><p class="noscript">This experience needs JavaScript — it is, after all, a machine for decoding a machine.</p></noscript>
   <script type="module" src="js/main.js"></script>

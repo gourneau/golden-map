@@ -132,6 +132,15 @@ export function setArtifact(v) {
 ctx.setAct = setAct; ctx.select = select; ctx.setTimeMyr = setTimeMyr; ctx.setMapMode = setMapMode;
 ctx.setArtifact = setArtifact;
 
+// Fade the pre-boot mark out rather than yanking it: an element vanishing on
+// the same frame the scene appears is the jarring part, not the mark itself.
+function retireBoot() {
+  const b = document.getElementById('gm-boot');
+  if (!b) return;
+  b.classList.add('is-gone');
+  setTimeout(() => b.remove(), 700);
+}
+
 // ---- no WebGL: the story in plain HTML ----------------------------------
 // Everything on this page is drawn by a GPU or built by ui.js, so a browser
 // without WebGL would otherwise show an empty black rectangle — which reads as
@@ -139,7 +148,7 @@ ctx.setArtifact = setArtifact;
 // the actual point of the page and the links to go further.
 function renderNoWebGL() {
   document.body.classList.add('gm-nogl');
-  document.getElementById('gm-boot')?.remove(); // nothing is being assembled
+  retireBoot(); // nothing is being assembled
   document.getElementById('ui').innerHTML = `
     <section class="gm-fallback">
       <p class="eyebrow">Launched 1977 · Now in interstellar space</p>
@@ -202,9 +211,9 @@ if (!renderer) {
     controls.update();
     for (const m of modules) if (m.update) m.update(dt, t);
     renderer.render(scene, camera);
-    if (!booted) { // the first real frame is up — retire the boot placeholder
+    if (!booted) { // the first real frame is up — dissolve the boot mark
       booted = true;
-      document.getElementById('gm-boot')?.remove();
+      retireBoot();
     }
     requestAnimationFrame(frame);
   }

@@ -133,22 +133,43 @@ body.gm-anim .gm-panel { will-change: opacity, transform; }
   font-family: var(--display);
 }
 
-/* the pre-boot line (index.html); main.js removes it on the first rendered
-   frame. Styled here so it needs no webfont and no second stylesheet. */
+/* The pre-boot mark (index.html).
+   It is deliberately INVISIBLE for the first 700ms: the critical path is ~460KB
+   gzipped and paints in roughly 500-700ms on broadband, so a fast visitor
+   should never learn this element exists. It only fades up if the wait is long
+   enough to need reassurance — and then it is the record itself, a thin gold
+   rim with a point of light sweeping it, not a generic spinner.
+   No webfont, no second stylesheet: it can paint the moment the CSS lands.
+   main.js fades it out on the first rendered frame. */
 #gm-boot {
   position: fixed;
-  left: 0; right: 0;
-  bottom: 14vh;
+  left: 50%; top: 50%;
+  width: 56px; height: 56px;
+  margin: -28px 0 0 -28px;
   z-index: 5;
-  text-align: center;
-  font-family: var(--body);
-  font-style: italic;
-  font-size: 1.05rem;
-  letter-spacing: 0.04em;
-  color: var(--gold-dim);
-  animation: gm-boot-in 1.2s var(--ease) both;
+  border: 1px solid var(--gold-faint);
+  border-radius: 50%;
+  opacity: 0;
+  animation: gm-boot-in 600ms var(--ease) 700ms forwards;
+  transition: opacity 0.5s var(--ease);
 }
-@keyframes gm-boot-in { from { opacity: 0; } to { opacity: 1; } }
+/* the sweep: one point of light going round the rim, like the record turning */
+#gm-boot::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 50%;
+  border: 1px solid transparent;
+  border-top-color: var(--gold);
+  animation: gm-boot-turn 1.5s linear infinite;
+}
+#gm-boot.is-gone { animation: none; opacity: 0; }
+@keyframes gm-boot-in { to { opacity: 1; } }
+@keyframes gm-boot-turn { to { transform: rotate(360deg); } }
+/* a still ring for anyone who asked us not to move things */
+@media (prefers-reduced-motion: reduce) {
+  #gm-boot::after { animation: none; border-top-color: var(--gold-dim); }
+}
 
 /* no-WebGL fallback: main.js swaps this in when the renderer can't be built */
 .gm-fallback {
