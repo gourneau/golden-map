@@ -1,0 +1,16 @@
+{
+  "name": "golden-map",
+  "private": true,
+  "description": "Dev tooling only. The SITE has no dependencies and no build step — every runtime asset is a plain vendored file. Nothing in here is served.",
+  "scripts": {
+    "check": "node tools/preflight.mjs",
+    "check:live": "node tools/preflight.mjs --live",
+    "smoke": "node tools/smoke.mjs --url https://goldenrecord.voyage/",
+    "smoke:local": "node tools/smoke.mjs --url http://localhost:8000/",
+    "smoke:all": "node tools/smoke.mjs --url https://goldenrecord.voyage/ --browser all",
+    "preflight": "npm run check && npm run smoke"
+  },
+  "devDependencies": {
+    "playwright": "^1.62.1"
+  }
+}

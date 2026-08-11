@@ -78,3 +78,11 @@ Wikimedia Commons).
 Prompted and art-directed by [@gourneau](https://x.com/gourneau) 🖖. Built with
 [Claude Fable 5](https://www.anthropic.com/claude) (thanks, Claude) — research,
 code, and fact-checking done in [Claude Code](https://claude.com/claude-code).
+
+## Checks
+
+    npm i && npx playwright install firefox   # once
+    npm run check      # static preflight (no browser)
+    npm run smoke      # boots the live site in real Firefox
+
+Dev-only. The site has no dependencies and no build step.

@@ -116,6 +116,28 @@ catalogue period" (NOT "today's"); the Crab clock computes P(t) = periodEncoded
 + pdot·Δt. When you change a number, keep its per-pulsar `refs` and the Sources
 panel in sync — never publish an uncited value.
 
+## Checks before you push
+
+Two commands, both dev-only — the site itself still has no dependencies and no
+build step, and nothing under node_modules is ever served.
+
+    npm run check        # static: fast, no browser
+    npm run smoke        # real Firefox, against the live site
+
+`tools/preflight.mjs` resolves the import map and every relative import on disk
+(case-exactly — APFS is insensitive, Pages is not), checks assets named only
+from js/ and css/, parses with the module goal, and balances CSS braces.
+`--live` requests every deployed URL and hashes index.html against the tree.
+
+`tools/smoke.mjs` loads the page in a real browser and asks the only question
+that matters: did a frame render. It defaults to FIREFOX because Firefox is
+what caught the import-map outage that Chrome shrugged off. `--browser all`
+adds Chromium and WebKit (Safari's engine).
+
+Rule of thumb: a check that reads text can only prove text. If a change touches
+module loading, the document head, or anything you cannot exercise in the
+browser you have open, run the smoke test before pushing.
+
 ## Quality floor
 
 Responsive to ~900px width. Below that every panel is the SAME bottom sheet:
