@@ -91,7 +91,12 @@
       var boot = document.getElementById('gm-boot');
       if (boot) boot.remove();
       var ui = document.getElementById('ui');
-      if (!ui || ui.firstChild) return;
+      if (!ui || ui.firstChild) return;      // the real UI is already built
+      if (document.getElementById('stage') &&
+          document.getElementById('stage').getContext) {
+        // a canvas that has a WebGL context means the scene is alive
+        try { if (window.__ctx) return; } catch (err) {}
+      }
       document.body.className += ' gm-nogl';
       ui.innerHTML = '<section class="gm-fallback">' +
         '<h1>The Golden Record</h1>' +
@@ -108,7 +113,13 @@
     // nobody stares at a spinning ring wondering if it is broken
     setTimeout(surrender, 15000);
     document.addEventListener('error', function (e) {
-      if (e.target && e.target.tagName === 'SCRIPT') surrender();
+      var t = e.target;
+      if (!t || t.tagName !== 'SCRIPT') return;
+      // ONLY the site's own entry module. Third-party scripts (the analytics
+      // beacon) fail all the time — blockers, offline, DNS — and none of that
+      // stops the page working.
+      if (!t.src || t.src.indexOf('js/main.js') === -1) return;
+      setTimeout(surrender, 2000); // last chance for the scene to appear anyway
     }, true);
   })();
   </script>
