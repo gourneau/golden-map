@@ -598,6 +598,12 @@ export function initUI(ctx) {
         <li><a href="https://www.forbes.com/sites/startswithabang/2017/08/17/voyagers-cosmic-map-of-earths-location-is-hopelessly-wrong/" target="_blank" rel="noopener">E. Siegel — “…Hopelessly Wrong,” Forbes (2017)</a> — the likely source of the meme; argues million-year decay, concedes the map was sound when made.</li>
         <li><a href="https://www.nationalgeographic.com/magazine/article/nasa-sent-a-map-to-space-to-help-aliens-find-earth-now-it-needs-an-update" target="_blank" rel="noopener">Nadia Drake &amp; Scott Ransom, National Geographic (2020)</a> — on updating the map, by Frank Drake’s daughter and a pulsar astronomer.</li>
       </ul>
+      <p class="gm-src-h mono">The record’s audio</p>
+      <ul>
+        <li><a href="https://science.nasa.gov/mission/voyager/golden-record-contents/greetings/" target="_blank" rel="noopener">NASA — Golden Record greetings and sounds</a> — the 55 spoken greetings and the Sounds of Earth, published individually as US-government works. Both collections are vendored in this repository and served from here.</li>
+        <li><a href="https://musicbrainz.org/release/2e011ec7-8728-44d6-a7d5-3f608d89c420" target="_blank" rel="noopener">MusicBrainz — <em>The Voyager Golden Record: 40th Anniversary Edition</em></a> — the cleanest track-level metadata anywhere for the 27 musical selections: exact titles, durations and performer credits, with the artists’ names in their own scripts (山口五郎, 管平湖, Игорь Стравинский).</li>
+        <li><a href="https://archive.org/details/voyager-golden-record-cd-ozma" target="_blank" rel="noopener">Internet Archive — the 40th-anniversary transfer</a> — where the music and the two United Nations sections are streamed from, as correctly separated tracks. Also a <a href="https://archive.org/details/voyager-golden-record-book-ozma" target="_blank" rel="noopener">scan of the accompanying book</a>.</li>
+      </ul>
       <p class="gm-src-h mono">Artwork &amp; assets</p>
       <ul>
         <li>Cover artwork: NASA/JPL (public domain); vectorization VectorVoyager, Wikimedia Commons.</li>
