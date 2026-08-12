@@ -939,13 +939,29 @@
   -webkit-backdrop-filter: var(--blur-panel);
 }
 .gm-mini-fly .gm-fine { border-top: none; margin: 0.7em 0 0; padding-top: 0; }
-/* no shouting in the player: mixed case for its heading and playlist chips */
+/* no shouting in the player: mixed case for its heading and collection chips */
 .gm-mini .gm-k,
 .gm-mini .gm-mode {
   text-transform: none;
   letter-spacing: 0.06em;
   font-size: 0.68rem;
 }
+/* the three collections read as places to go, not filter switches: the name in
+   the site's serif, the scale in mono (which is reserved for data everywhere
+   else, and separates them from the mono track rows below) */
+.gm-mini .gm-mode {
+  flex: 1 1 9em;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2em;
+  padding: 0.55em 0.7em;
+  text-align: left;
+}
+.gm-mode-t { font-family: var(--body); font-size: 0.92rem; letter-spacing: 0.01em; color: var(--paper); }
+.gm-mode-n { font-family: var(--mono); font-size: 0.55rem; letter-spacing: 0.1em; color: var(--gold-text); }
+.gm-mode.is-active .gm-mode-t { color: var(--gold-bright); }
+.gm-mode.is-active .gm-mode-n { color: var(--gold); }
 .gm-player-sets { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 0.55em; }
 .gm-play-btn {
   flex: none;
@@ -969,7 +985,56 @@
 }
 .gm-pplay { width: 42px; height: 42px; }
 .gm-pplay svg { width: 14px; height: 14px; }
-.gm-msets { font-size: 0.85rem; line-height: 1; }
+.gm-msets { position: relative; }
+.gm-msets svg { width: 14px; height: 14px; } /* the stack needs the extra 3px */
+.gm-msets-n {
+  position: absolute;
+  top: -3px; right: -3px;
+  min-width: 13px; height: 13px;
+  padding: 0 2px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono);
+  font-size: 0.5rem;
+  line-height: 1;
+  color: var(--void);
+  background: var(--gold);
+  border-radius: 999px;
+}
+/* the nav-chevron trick, reused: the control names what is behind it on
+   hover/focus, absolutely positioned so revealing it never nudges the bar */
+.gm-msets-dest {
+  position: absolute;
+  bottom: calc(100% + 7px);
+  right: 0;
+  padding: 0.45em 0.75em;
+  white-space: nowrap;
+  font-family: var(--mono);
+  font-size: 0.56rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  color: var(--gold-bright);
+  background: color-mix(in srgb, var(--void) 94%, transparent);
+  border: 1px solid var(--gold-faint);
+  border-radius: 999px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(3px);
+  transition: opacity 0.25s var(--ease), transform 0.25s var(--ease);
+}
+.gm-msets:hover .gm-msets-dest,
+.gm-msets:focus-visible .gm-msets-dest { opacity: 1; transform: translateY(0); }
+.gm-msets[aria-expanded='true'] .gm-msets-dest { display: none; }
+@media (pointer: coarse) { .gm-msets-dest { display: none; } }
+
+/* the flyout's opening line — says why there are three, which the chips can't */
+.gm-fly-lede {
+  margin: 0 0 0.15em;
+  font-family: var(--body);
+  font-style: italic;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: var(--gold);
+}
 /* the standing invitation: a slow golden breath on the play button until
    the first press (stilled under prefers-reduced-motion) */
 @keyframes gm-invite {
@@ -990,16 +1055,51 @@
   text-overflow: ellipsis;
   margin-bottom: 0.5em;
 }
-/* before anything has played, the bar carries an invitation, not a track —
-   set in the site's italic serif, gold, like the masthead tagline */
-.gm-ptitle.is-idle {
+/* IDLE — nothing has played yet, so the bar has no track to name. It spends
+   its widest space naming the three collections instead of repeating the
+   region's own label, and the transport stands down: prev/next on a stream
+   nobody has started seek a paused widget and (on the NASA sets) overwrite the
+   invitation with a track title while silent. */
+.gm-mini.is-idle .gm-ptitle,
+.gm-mini.is-idle .gm-pbar,
+.gm-mini.is-idle .gm-pprev,
+.gm-mini.is-idle .gm-pnext { display: none; }
+.gm-mini:not(.is-idle) .gm-picks { display: none; }
+
+.gm-picks {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  overflow-x: auto;      /* safety valve: never breaks the bar's layout */
+  scrollbar-width: none;
+}
+.gm-picks::-webkit-scrollbar { display: none; }
+.gm-picks-lede {
+  flex: none;
   font-family: var(--body);
   font-style: italic;
   font-size: 0.95rem;
-  font-weight: 400;
   letter-spacing: 0.03em;
   color: var(--gold);
+  margin-right: 0.15em;
 }
+.gm-pick {
+  flex: none;
+  min-height: 32px;
+  padding: 0.4em 0.7em;
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  color: var(--paper-dim);
+  border: 1px solid var(--gold-faint);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--void-lift) 88%, transparent);
+  transition: color 0.25s var(--ease), border-color 0.25s var(--ease),
+    background 0.25s var(--ease);
+}
+.gm-pick:hover { color: var(--gold-bright); border-color: var(--gold-dim); }
+.gm-pick.is-active { color: var(--gold-bright); border-color: var(--gold); }
 
 /* track list browser in the flyout */
 .gm-tracklist {
@@ -1277,6 +1377,12 @@ body.gm-still .gm-mini { display: none !important; }
     padding-left: calc(12px + env(safe-area-inset-left, 0px));
     padding-right: calc(12px + env(safe-area-inset-right, 0px));
   }
+  /* the phone bar has no room for the lede — the three names are the
+     invitation here (the region's aria-label still reads "Hear the record") */
+  .gm-picks-lede { display: none; }
+  .gm-pick { min-height: 40px; }
+  .gm-mini .gm-mode { flex-basis: 100%; }  /* stacked, unmistakable */
+
   .gm-mini-fly {
     left: var(--sheet-x); right: var(--sheet-x);
     bottom: calc(100% + var(--sheet-gap));
@@ -1355,6 +1461,8 @@ body.gm-still .gm-mini { display: none !important; }
   .gm-title h1 { font-size: 2rem; }
   .gm-hook { margin: 0 0 0.8em; font-size: 0.8rem; }
   .gm-title .eyebrow { display: none; } /* two lines the card cannot spare here */
+  .gm-fly-lede { display: none; }
+  .gm-mini .gm-mode { flex-basis: 0; }
 }
 
 /* ======================================================================

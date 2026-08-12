@@ -610,28 +610,48 @@ export function initUI(ctx) {
   const mini = el('aside', 'gm-panel gm-mini is-on');
   mini.setAttribute('aria-label', 'Hear the record');
   mini.innerHTML = `
-    <div class="gm-mini-fly" hidden>
-      <p class="gm-k">Hear the record</p>
-      <div class="gm-player-sets" role="group" aria-label="Playlist">
-        <button class="gm-mode is-active" data-set="music" aria-pressed="true">Music from Earth · 27</button>
-        <button class="gm-mode" data-set="sounds" aria-pressed="false">Sounds of Earth · 19</button>
-        <button class="gm-mode" data-set="greetings" aria-pressed="false">Greetings · 55 languages</button>
+    <div class="gm-mini-fly" id="gm-mini-fly" hidden>
+      <p class="gm-fly-lede">Three kinds of thing were pressed into this record:
+        what we play, what we sound like, and what we say.</p>
+      <div class="gm-player-sets" role="group" aria-label="Collections">
+        <button class="gm-mode is-active" data-set="music" aria-pressed="true"
+          ><span class="gm-mode-t">Music from Earth</span><span class="gm-mode-n">27 pieces · 90 minutes</span></button>
+        <button class="gm-mode" data-set="sounds" aria-pressed="false"
+          ><span class="gm-mode-t">Sounds of Earth</span><span class="gm-mode-n">19 recordings</span></button>
+        <button class="gm-mode" data-set="greetings" aria-pressed="false"
+          ><span class="gm-mode-t">Greetings</span><span class="gm-mode-n">55 languages</span></button>
       </div>
       <div class="gm-tracklist mono" role="group" aria-label="Tracks"></div>
-      <p class="gm-fine">Greetings &amp; sounds stream from
-        <a href="https://science.nasa.gov/mission/voyager/golden-record-contents/sounds/" target="_blank" rel="noopener">NASA’s Golden Record</a>;
+      <p class="gm-fine">Greetings and sounds stream from
+        <a href="https://science.nasa.gov/mission/voyager/golden-record-contents/greetings/" target="_blank" rel="noopener">NASA’s Golden Record</a>;
         the music from a
-        <a href="https://soundcloud.com/the-film-effect/voyager-golden-record-music-from-earth" target="_blank" rel="noopener">community upload</a>.</p>
+        <a href="https://soundcloud.com/the-film-effect/voyager-golden-record-music-from-earth" target="_blank" rel="noopener">community upload</a>.
+        Two spoken sections are in neither: the record opens with a greeting from
+        Kurt Waldheim, then Secretary-General of the United Nations, and later the
+        United Nations greetings play under the songs of humpback whales — Earth’s
+        other language. Jimmy Carter’s message travelled as printed words, not
+        sound, so there is nothing to hear.</p>
     </div>
     <div class="gm-mini-bar">
       <button class="gm-play-btn gm-pprev" aria-label="Previous track"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 2h2v12H3z M14 2 6 8l8 6z"/></svg></button>
       <button class="gm-play-btn gm-pplay is-invite" aria-label="Play"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2l10 6-10 6z"/></svg></button>
       <button class="gm-play-btn gm-pnext" aria-label="Next track"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M11 2h2v12h-2z M2 2l8 6-8 6z"/></svg></button>
       <div class="gm-mini-info">
-        <div class="gm-ptitle mono is-idle" aria-live="polite">Hear the record</div>
+        <div class="gm-picks" role="group" aria-label="Choose a collection">
+          <span class="gm-picks-lede" aria-hidden="true">Hear the record:</span>
+          <button class="gm-pick" data-set="music">Music</button>
+          <button class="gm-pick" data-set="sounds">Sounds</button>
+          <button class="gm-pick" data-set="greetings">Greetings</button>
+        </div>
+        <div class="gm-ptitle mono" aria-live="polite"></div>
         <div class="gm-pbar" aria-label="Seek"><i></i></div>
       </div>
-      <button class="gm-play-btn gm-msets" aria-label="Choose playlist and credits" aria-expanded="false">♫</button>
+      <button class="gm-play-btn gm-msets" id="gm-msets" aria-controls="gm-mini-fly"
+        aria-expanded="false" aria-label="Browse the record’s three collections">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3h9v1.6H2z M2 6.6h9v1.6H2z M2 10.2h5.5v1.6H2z"/><path d="M11 9.2a2 2 0 1 0 2 2V7.4l2-.6V5l-4 1.2z"/></svg>
+        <span class="gm-msets-n" aria-hidden="true">3</span>
+        <span class="gm-msets-dest" aria-hidden="true">Music · Sounds · Greetings</span>
+      </button>
     </div>
     <div class="gm-sc-host" aria-hidden="true"></div>`;
   const SC_SETS = {
@@ -683,6 +703,18 @@ export function initUI(ctx) {
   const setBtns = [...mini.querySelectorAll('.gm-player-sets .gm-mode')];
   const miniFly = mini.querySelector('.gm-mini-fly');
   const miniSets = mini.querySelector('.gm-msets');
+  const picks = [...mini.querySelectorAll('.gm-pick')];
+  // "Idle" means nothing has played yet: the bar has no track to name, so it
+  // spends its widest space naming the three collections instead — and the
+  // transport stands down, because prev/next on a never-played stream seek a
+  // paused widget and (on the NASA sets) overwrite the invitation with a track
+  // title while nothing is playing. ONE helper owns the flag: every site that
+  // writes a title must come through here, or the CSS will hide its message.
+  const setIdle = (on) => {
+    mini.classList.toggle('is-idle', on);
+    pTitle.classList.toggle('is-idle', on);
+  };
+  setIdle(true);
   let scWidget = null;
   let scReady = false;
   let scPlaying = false;
@@ -737,11 +769,31 @@ export function initUI(ctx) {
     }
   }, 1000);
 
-  miniSets.addEventListener('click', () => {
-    miniFly.hidden = !miniFly.hidden;
+  const paintFly = () => {
     miniSets.setAttribute('aria-expanded', String(!miniFly.hidden));
     miniSets.classList.toggle('is-active', !miniFly.hidden); // lit while open
-    if (!miniFly.hidden) populateTrackList();
+  };
+  const closeFly = () => { if (!miniFly.hidden) { miniFly.hidden = true; paintFly(); } };
+  const openFly = () => { miniFly.hidden = false; paintFly(); populateTrackList(); };
+  miniSets.addEventListener('click', () => (miniFly.hidden ? openFly() : closeFly()));
+
+  // Escape closes the flyout and nothing else. Capture phase, because tour.js
+  // also listens for Escape on window to deselect a pulsar — without this one
+  // keypress would close the flyout AND yank the camera home.
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || miniFly.hidden) return;
+    e.stopPropagation();
+    closeFly();
+    miniSets.focus(); // land back on the control that opened it
+  }, { capture: true });
+
+  // Click-outside. Bubble phase and no preventDefault, so tour.js's capture
+  // listener still sees canvas gestures; guarding miniSets stops the toggle
+  // double-firing (pointerdown closes, the following click would reopen).
+  document.addEventListener('pointerdown', (e) => {
+    if (miniFly.hidden) return;
+    if (miniFly.contains(e.target) || miniSets.contains(e.target)) return;
+    closeFly();
   });
 
   // iOS primes the widget's media element on the FIRST play command and only
@@ -771,7 +823,7 @@ export function initUI(ctx) {
   let pendingSeekMs = null; // seek applied on the next PLAY (a paused widget drops seeks)
   const setMusicTitle = (i) => {
     musicIdx = i;
-    pTitle.classList.remove('is-idle');
+    setIdle(false);
     pTitle.textContent = MUSIC_CUES[i][1]; // numbering lives in the track list
     markCurrentRow(i);
   };
@@ -796,7 +848,7 @@ export function initUI(ctx) {
     if (!scWidget) return;
     if (scSet === 'music') { if (musicIdx < 0) setMusicTitle(0); return; }
     scWidget.getCurrentSound((s) => {
-      if (s) { pTitle.classList.remove('is-idle'); pTitle.textContent = stripGR(s.title); }
+      if (s) { setIdle(false); pTitle.textContent = stripGR(s.title); }
     });
   };
 
@@ -909,10 +961,7 @@ export function initUI(ctx) {
           // never clobber the idle invitation just because the pre-warm
           // finished — the real title arrives with the first PLAY. A set
           // switch mid-session shows 'loading…'; restore the idle voice.
-          if (pTitle.textContent === 'loading…') {
-            pTitle.classList.add('is-idle');
-            pTitle.textContent = 'Hear the record';
-          }
+          if (pTitle.textContent === 'loading…') { setIdle(true); pTitle.textContent = ''; }
           if (scWantTrack != null) { // a track tapped mid-handshake
             const i = scWantTrack; scWantTrack = null;
             scWidget.skip(i); markCurrentRow(i); pumpPlay();
@@ -958,19 +1007,29 @@ export function initUI(ctx) {
             if (i !== musicIdx) setMusicTitle(i);
           }
         });
-        scWidget.bind(E.ERROR, () => { pTitle.textContent = 'stream unavailable — tap ♫ for source links'; });
+        scWidget.bind(E.ERROR, () => {
+          setIdle(false);
+          pTitle.textContent = 'stream unavailable — open the collections for source links';
+        });
       });
-    }).catch(() => { pTitle.textContent = 'stream unavailable — tap ♫ for source links'; });
+    }).catch(() => {
+      setIdle(false);
+      pTitle.textContent = 'stream unavailable — open the collections for source links';
+    });
   }
 
   // A tap that lands while the widget is still handshaking must never be
   // dropped (on phones the READY round-trip is slow — this was the
   // "press play twice" bug). The intent is remembered and fires on READY.
   let scWantPlay = false;
-  pPlay.addEventListener('click', () => {
+  function startPlay() {
     if (!scWidget) { scWantPlay = true; buildWidget(scSet); }
-    else if (scReady) { if (scPlaying) { playGen++; scWidget.pause(); } else pumpPlay(); }
+    else if (scReady) pumpPlay();
     else scWantPlay = true;
+  }
+  pPlay.addEventListener('click', () => {
+    if (scWidget && scReady && scPlaying) { playGen++; scWidget.pause(); return; }
+    startPlay();
   });
   // in the music sequence, prev/next hop between cue points inside the one
   // long file; a "prev" more than 3 s into a piece restarts that piece first
@@ -1000,20 +1059,29 @@ export function initUI(ctx) {
     const frac = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
     scWidget.getDuration((d) => scWidget.seekTo(frac * d));
   });
-  for (const b of setBtns) {
-    b.addEventListener('click', () => {
-      if (b.dataset.set === scSet) return;
-      scSet = b.dataset.set;
-      for (const x of setBtns) {
-        x.classList.toggle('is-active', x === b);
-        x.setAttribute('aria-pressed', String(x === b));
-      }
-      const wasPlaying = scPlaying;
-      pTitle.textContent = 'loading…';
-      if (!miniFly.hidden) populateTrackList(); // music renders instantly; NASA sets fill on READY
-      buildWidget(scSet).then((w) => { if (w && wasPlaying) pumpPlay(); });
-    });
+  // One path for every way of choosing a collection: the flyout chips, and the
+  // three chips the idle bar shows. `play` is true when the choice is itself a
+  // play intent (the bar chips), which is what makes them one tap from silence
+  // to sound — routed through scWantPlay so the iOS priming still applies.
+  function selectSet(key, { play = false } = {}) {
+    const changing = key !== scSet;
+    scSet = key;
+    for (const x of setBtns) {
+      const on = x.dataset.set === key;
+      x.classList.toggle('is-active', on);
+      x.setAttribute('aria-pressed', String(on));
+    }
+    for (const x of picks) x.classList.toggle('is-active', x.dataset.set === key);
+    if (!changing) { if (play) startPlay(); return; }
+    const wasPlaying = scPlaying;
+    setIdle(false); // or the message below is hidden along with the idle chips
+    pTitle.textContent = 'loading…';
+    if (!miniFly.hidden) populateTrackList(); // music renders instantly; NASA sets fill on READY
+    if (play) scWantPlay = true;
+    buildWidget(key).then((w) => { if (w && wasPlaying && !play) pumpPlay(); });
   }
+  for (const b of setBtns) b.addEventListener('click', () => selectSet(b.dataset.set));
+  for (const b of picks) b.addEventListener('click', () => selectSet(b.dataset.set, { play: true }));
   // Pre-warm: build the default widget right away so the READY handshake AND
   // the silent buffer-warm are both done long before a human reads the page
   // and presses play — that's what makes the first tap play on iOS.

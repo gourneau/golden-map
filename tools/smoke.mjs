@@ -41,11 +41,17 @@ for (const engine of ENGINES) {
   // Only OUR errors. The SoundCloud iframe emits Firefox cookie warnings we
   // neither cause nor can fix, and a check that cries wolf stops being read.
   const origin = new URL(URL_).origin;
+  // Hosts whose failures are not ours and not actionable: the SoundCloud iframe
+  // emits Firefox cookie warnings, and the analytics beacon refuses a localhost
+  // origin by design. A check that cries wolf is a check nobody reads.
+  const THIRD_PARTY = ['soundcloud.com', 'sndcdn.com', 'cloudflareinsights.com', 'archive.org'];
   page.on('console', (m) => {
     if (m.type() !== 'error') return;
     const from = m.location()?.url || '';
     if (from && !from.startsWith(origin)) return;
-    consoleErrors.push(m.text());
+    const text = m.text();
+    if (THIRD_PARTY.some((h) => text.includes(h))) return;
+    consoleErrors.push(text);
   });
   page.on('pageerror', (e) => pageErrors.push(String(e)));
   page.on('response', (r) => {
