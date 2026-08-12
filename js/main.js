@@ -164,7 +164,7 @@ function renderNoWebGL() {
       <p class="gm-fallback-links">
         <a href="https://science.nasa.gov/mission/voyager/golden-record-cover/">NASA — the record cover explained</a>
         · <a href="https://www.johnstonsarchive.net/astro/pulsarmap.html">Johnston (2007) — reading the map back</a>
-        · <a href="https://github.com/gourneau/golden-map">code &amp; sources on GitHub</a>
+        · <a href="https://github.com/gourneau/golden-record">code &amp; sources on GitHub</a>
       </p>
     </section>`;
 }

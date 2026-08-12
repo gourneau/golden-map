@@ -1,4 +1,4 @@
-# Module contracts — The Golden Record (repo: golden-map)
+# Module contracts — The Golden Record (repo: golden-record)
 
 Read this whole file before writing code. `js/main.js` is the single owner of the
 renderer, camera, act list, and shared context. Your module plugs into it and MUST

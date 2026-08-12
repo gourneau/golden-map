@@ -8,6 +8,7 @@
 // copy changes — never publish an uncited number.
 
 import { extinctionMyr, displayBlinkSeconds } from './astro.js';
+import { GREETINGS, shortName, pickGreeting } from './data/greetings.js';
 import { loadText, explanationSvg } from './assets.js';
 
 export function initUI(ctx) {
@@ -93,10 +94,8 @@ export function initUI(ctx) {
       record. Engraved on it: a map that shows any finder where Earth is,
       using fourteen flashing stars as landmarks. This is that map — rebuilt
       with today’s data.<button class="gm-hello"
-        title="“Hello from the children of planet Earth” — the record’s English greeting, NASA"
-        aria-label="Play the record’s English greeting: hello from the children of planet Earth"
-        ><span class="gm-hello-ic" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M4 2l10 6-10 6z"/></svg></span
-        ><span class="gm-hello-t">hear them say hello</span></button></p>
+        ><span class="gm-hello-lead"><span class="gm-hello-ic" aria-hidden="true"><svg viewBox="0 0 16 16"><path d="M4 2l10 6-10 6z"/></svg></span
+        ><span class="gm-hello-t">hear them</span></span> <span class="gm-hello-tail">say hello</span></button></p>
     <button class="gm-begin mono">Begin — unfold the map&ensp;<span aria-hidden="true">→</span></button>`;
   title.querySelector('.gm-begin').addEventListener('click', () => ctx.setAct('map'));
 
@@ -135,6 +134,15 @@ export function initUI(ctx) {
       <li><b>The clock</b>Pulsars slow down over time, at known rates. So the
         map also tells you <em>when</em> it was made.</li>
     </ul>
+    <p class="gm-body">The map is one of four drawings on the cover. Beside it:
+      how to build a turntable and play the disc, its rotation speed written in
+      the same hydrogen units — 3.6 seconds — and a diagram showing how to rebuild
+      the 116 photographs hidden in the audio, 512 lines to a picture. There is
+      also a smear of uranium-238 electroplated onto the cover: a second clock,
+      readable by how much of it has decayed.</p>
+    <p class="gm-fine">This same map flew first on Pioneer 10 and 11 in 1972 and
+      1973, which is why its data is from 1969–71 rather than the 1977 launch —
+      the point Act IV turns on.</p>
     <div class="gm-demo">
       <p class="eyebrow">Line 1 · decoding</p>
       <div class="gm-demo-ticks mono" aria-hidden="true"></div>
@@ -596,8 +604,51 @@ export function initUI(ctx) {
         <li>Background stars: all stars brighter than magnitude 4.5 (~925), placed at their true positions — from the <a href="https://github.com/astronexus/HYG-Database" target="_blank" rel="noopener">HYG star database</a> v3 by David Nash (astronexus.com), a merger of the Hipparcos, Yale Bright Star, and Gliese catalogs, licensed <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>.</li>
       </ul>
     </details>
+    <details class="gm-sources gm-makers">
+      <summary class="mono">The people who made it</summary>
+      <p class="gm-body">NASA gave them six weeks to decide what humanity should
+        say. A committee at Cornell, chaired by Carl Sagan, chose all of it —
+        the music, the sounds, the pictures, and the map on the cover.</p>
+      <ul class="gm-makers-list">
+        <li><b>Carl Sagan</b><span>chaired the committee</span></li>
+        <li><b>Frank Drake</b><span>technical director — drew the cover diagrams,
+          including the pulsar map this whole site is about</span></li>
+        <li><b>Ann Druyan</b><span>creative director. Her brainwaves are on the
+          record too: an hour of EEG, recorded days after she and Sagan agreed to
+          marry, compressed into a minute</span></li>
+        <li><b>Timothy Ferris</b><span>producer</span></li>
+        <li><b>Jon Lomberg</b><span>design director — the visual content</span></li>
+        <li><b>Linda Salzman Sagan</b><span>gathered the spoken greetings</span></li>
+        <li><b>Alan Lomax · Robert E. Brown</b><span>ethnomusicologists, who chose
+          most of the music</span></li>
+        <li><b>Jimmy Iovine</b><span>sound engineer — later of Interscope and
+          Beats</span></li>
+      </ul>
+      <p class="gm-fine">Plus every performer, collector and speaker on the
+        record: the Munich Bach Orchestra, Valya Balkanska, Kesarbai Kerkar,
+        Blind Willie Johnson, Chuck Berry, Guan Pinghu, the fifty-five voices,
+        and the field recordists — Colin Turnbull, Charles Duvelle, Sandra LeBrun
+        Holmes, Willard Rhodes, John Cohen and others — whose work left the solar
+        system. Committee roles per NASA/JPL and the
+        <a href="https://en.wikipedia.org/wiki/Voyager_Golden_Record" target="_blank" rel="noopener">record's documentation</a>;
+        track credits from
+        <a href="https://musicbrainz.org/release/2e011ec7-8728-44d6-a7d5-3f608d89c420" target="_blank" rel="noopener">the 40th-anniversary release</a>.
+        There is also a <a href="https://archive.org/details/voyager-golden-record-book-ozma" target="_blank" rel="noopener">scan of the accompanying book</a>.</p>
+    </details>
+    <div class="gm-carter">
+      <p class="eyebrow">Sent with it, in print</p>
+      <p class="gm-carter-q">“This is a present from a small, distant world, a
+        token of our sounds, our science, our images, our music, our thoughts and
+        our feelings. We are attempting to survive our time so we may live into
+        yours.”</p>
+      <p class="gm-carter-a mono">— Jimmy Carter, 16 June 1977</p>
+      <p class="gm-fine">Carter's statement travelled as printed words on the
+        cover, not as sound — which is why you cannot hear it in the player. The
+        record's first voice is instead Kurt Waldheim, then Secretary-General of
+        the United Nations.</p>
+    </div>
     <p class="gm-colophon mono">
-      <a href="https://github.com/gourneau/golden-map" target="_blank" rel="noopener">code &amp; sources on GitHub</a>
+      <a href="https://github.com/gourneau/golden-record" target="_blank" rel="noopener">code &amp; sources on GitHub</a>
       &ensp;·&ensp;prompted by <a href="https://x.com/gourneau" target="_blank" rel="noopener">@gourneau</a> 🖖
     </p>`;
 
@@ -865,18 +916,8 @@ export function initUI(ctx) {
       'Birds, Hyena, Elephant', 'Chimpanzee', 'Wild Dog',
       'Footsteps, Heartbeat, Laughter', 'Fire, Speech', 'The First Tools',
     ],
-    greetings: [
-      'Akkadian', 'Amoy (Min dialect)', 'Arabic', 'Aramaic', 'Armenian',
-      'Bengali', 'Burmese', 'Cantonese', 'Czech', 'Dutch', 'English',
-      'French', 'German', 'Greek', 'Gujarati', 'Hebrew', 'Hindi', 'Hittite',
-      'Hungarian (Magyar)', 'Ila (Zambia)', 'Indonesian', 'Italian',
-      'Japanese', 'Kannada (Kanarese)', 'Kechua (Quechua)', 'Korean',
-      'Latin', 'Luganda (Ganda)', 'Mandarin Chinese', 'Marathi', 'Nepali',
-      'Nguni (Zulu)', 'Nyanja', 'Oriya', 'Persian', 'Polish', 'Portuguese',
-      'Punjabi', 'Rajasthani', 'Romanian', 'Russian', 'Serbian', 'Sinhalese',
-      'Sotho (Sesotho)', 'Spanish', 'Sumerian', 'Swedish', 'Telugu', 'Thai',
-      'Turkish', 'Ukrainian', 'Urdu', 'Vietnamese', 'Welsh', 'Wu',
-    ],
+    // order is load-bearing: it maps 1:1 to widget.skip(i)
+    greetings: GREETINGS.map((g) => g.name),
   };
 
   // ---- track list browser (in the ♫ flyout) --------------------------------
@@ -884,12 +925,20 @@ export function initUI(ctx) {
   function markCurrentRow(i) {
     [...trackList.children].forEach((r, k) => r.classList.toggle('is-current', k === i));
   }
-  function renderTrackRows(labels, currentIdx) {
+  // `extra` (optional, same length) is rendered as a second column — used for
+  // each language's own name in its own script.
+  function renderTrackRows(labels, currentIdx, extra) {
     trackList.innerHTML = '';
     labels.forEach((label, i) => {
       const b = el('button', 'gm-track' + (i === currentIdx ? ' is-current' : ''),
         `<span class="gm-track-n">${String(i + 1).padStart(2, '0')}</span><span class="gm-track-t"></span>`);
       b.querySelector('.gm-track-t').textContent = label;
+      if (extra && extra[i]) {
+        const n = el('span', 'gm-track-native');
+        n.textContent = extra[i].native;
+        if (extra[i].lang) n.lang = extra[i].lang; // so a reader switches voice
+        b.appendChild(n);
+      }
       b.addEventListener('click', () => playTrack(i));
       trackList.appendChild(b);
     });
@@ -899,7 +948,8 @@ export function initUI(ctx) {
       renderTrackRows(MUSIC_CUES.map((c) => c[1]), Math.max(0, musicIdx));
       return;
     }
-    renderTrackRows(NASA_TRACKS[scSet], Math.max(0, scLastIdx));
+    renderTrackRows(NASA_TRACKS[scSet], Math.max(0, scLastIdx),
+      scSet === 'greetings' ? GREETINGS : null);
     if (scWidget && scReady) {
       scWidget.getCurrentSoundIndex((ci) => { if (ci != null) markCurrentRow(ci); });
     }
@@ -1088,22 +1138,56 @@ export function initUI(ctx) {
   setTimeout(() => { if (!scWidget && !scApiPromise) buildWidget(scSet); }, 400);
 
   // ---- the title-card greeting: a one-off "hello" ---------------------------
-  // NASA's own recording (a US-government work, public domain), vendored as a
-  // plain file and played with a bare <audio> element — deliberately NOT a
+  // NASA's own recordings (US-government works, public domain), vendored as
+  // plain files and played with a bare <audio> element — deliberately NOT a
   // SoundCloud widget, because SoundCloud widgets pause one another. The
-  // four-second greeting overlays the music without interrupting it.
+  // greeting overlays the music without interrupting it.
+  //
+  // The record carries 55 of these, so we greet a visitor in their own language
+  // when we have it. English is the fallback, and ?still=1 forces English so the
+  // social-card capture never depends on the capture machine's locale.
   {
+    const GREET_DIR = 'vendor/audio/greetings/'; // built by concatenation: a
+    // single literal ending in .m4a would trip preflight's asset scanner
     const hello = title.querySelector('.gm-hello');
     const helloIc = hello.querySelector('.gm-hello-ic');
-    const ha = new Audio('vendor/audio/english-greeting.wav');
+    const helloTail = hello.querySelector('.gm-hello-tail');
+    const canAac = !!document.createElement('audio').canPlayType('audio/mp4');
+    let greeting = (ctx.still || !canAac)
+      ? null
+      : pickGreeting(navigator.languages || [navigator.language || 'en']);
+    if (greeting && greeting.file === 'english') greeting = null; // use the shipped WAV
+
+    const paintLabel = () => {
+      helloTail.textContent = greeting ? `say hello in ${shortName(greeting)}` : 'say hello';
+      // the English text is "Hello from the children of planet Earth" — quoting
+      // that beside another language's recording would simply be false
+      hello.title = greeting
+        ? `The record’s ${shortName(greeting)} greeting, recorded 1977 — NASA`
+        : '“Hello from the children of planet Earth” — the record’s English greeting, NASA';
+    };
+    const ha = new Audio(greeting ? GREET_DIR + greeting.file + '.m4a' : 'vendor/audio/english-greeting.wav');
     ha.preload = 'auto';
+    // A missing or undecodable file surfaces during THIS preload, seconds before
+    // anyone clicks — recovering inside the click handler instead would land
+    // outside iOS's user-activation window and be dropped.
+    ha.addEventListener('error', () => {
+      if (!greeting) return; // already the fallback; let the click no-op
+      greeting = null;
+      ha.src = 'vendor/audio/english-greeting.wav';
+      paintLabel();
+      paintHello(false);
+    });
     const paintHello = (playing) => {
       helloIc.innerHTML = playing ? SVG_PAUSE : SVG_PLAY;
       hello.classList.toggle('is-playing', playing);
       hello.setAttribute('aria-label', playing
         ? 'Stop the greeting'
-        : 'Play the record’s English greeting: hello from the children of planet Earth');
+        : greeting
+          ? `Play the record’s ${shortName(greeting)} greeting`
+          : 'Play the record’s English greeting: hello from the children of planet Earth');
     };
+    paintLabel();
     ha.addEventListener('play', () => paintHello(true));
     ha.addEventListener('pause', () => paintHello(false)); // also fires on ended
     ha.addEventListener('ended', () => { ha.currentTime = 0; });
@@ -1111,6 +1195,7 @@ export function initUI(ctx) {
       if (ha.paused) ha.play().catch(() => {});
       else { ha.pause(); ha.currentTime = 0; }
     });
+    paintHello(false); // sets the aria-label once, from the same helper
   }
 
   // ---- the Drake equation, playable ------------------------------------------
@@ -1222,7 +1307,7 @@ export function initUI(ctx) {
   // light-years and kpc there; the old "1 grid unit ≈ …" line confused more
   // than it explained)
   const corner = el('p', 'gm-panel gm-corner mono is-on',
-    '<a href="https://github.com/gourneau/golden-map" target="_blank" rel="noopener">code &amp; sources on GitHub</a>' +
+    '<a href="https://github.com/gourneau/golden-record" target="_blank" rel="noopener">code &amp; sources on GitHub</a>' +
     ' · prompted by <a href="https://x.com/gourneau" target="_blank" rel="noopener">@gourneau</a> 🖖');
 
   // ======================================================================

@@ -341,9 +341,11 @@
   font-style: italic;
   font-size: 0.94em;
   color: var(--gold);
-  white-space: nowrap;
   transition: color 0.25s var(--ease);
 }
+/* the glyph must never orphan from the first words, but the whole control has
+   to be able to wrap — "say hello in Portuguese" is too long to be one run */
+.gm-hello-lead, .gm-hello-tail { white-space: nowrap; }
 .gm-hello-t {
   border-bottom: 1px solid var(--gold-faint);
   padding-bottom: 1px;
@@ -888,6 +890,39 @@
 }
 .gm-drake-tie em { color: var(--gold-bright); font-style: normal; }
 
+/* the people behind the record — a name-and-role list, not prose */
+.gm-makers-list { list-style: none; display: grid; gap: 0.6em; margin: 0.9em 0 0; }
+.gm-makers-list li {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  padding-left: 0.95em;
+  border-left: 1px solid var(--gold-faint);
+  max-width: 60ch;
+}
+.gm-makers-list b {
+  display: block;
+  font-family: var(--body);
+  font-weight: 600;
+  color: var(--gold-bright);
+}
+.gm-makers-list span { color: var(--paper-dim); }
+
+/* Carter's message: the one thing on the record addressed to the finder */
+.gm-carter {
+  margin-top: 1.3em;
+  padding: 1em 1.1em;
+  border: 1px solid var(--gold-faint);
+  background: color-mix(in srgb, var(--gold) 4%, transparent);
+}
+.gm-carter-q {
+  margin: 0.5em 0 0.4em;
+  font-size: 1.02rem;
+  font-style: italic;
+  line-height: 1.6;
+  color: var(--paper);
+}
+.gm-carter-a { font-size: 0.62rem; letter-spacing: 0.14em; color: var(--gold); }
+
 .gm-sources { margin-top: 1em; border-top: 1px solid var(--gold-faint); padding-top: 0.7em; }
 .gm-sources summary {
   cursor: pointer;
@@ -1133,6 +1168,18 @@
 }
 .gm-track-n { flex: none; color: var(--gold-text); }
 .gm-track-t { min-width: 0; }
+/* each language in its own script. Falls out of IBM Plex Mono to a system font
+   for CJK/Indic/Thai — which is correct: those are the fonts that can draw it. */
+.gm-track-native {
+  margin-left: auto;
+  padding-left: 0.8em;
+  flex: none;
+  font-family: var(--body);
+  font-size: 0.86rem;
+  color: var(--gold-text);
+}
+.gm-track:hover .gm-track-native,
+.gm-track.is-current .gm-track-native { color: var(--gold); }
 .gm-pbar {
   position: relative;
   height: 3px;

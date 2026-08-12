@@ -1,5 +1,5 @@
 {
-  "name": "golden-map",
+  "name": "golden-record",
   "private": true,
   "description": "Dev tooling only. The SITE has no dependencies and no build step — every runtime asset is a plain vendored file. Nothing in here is served.",
   "scripts": {

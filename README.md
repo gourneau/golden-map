@@ -45,10 +45,22 @@ Five acts:
    seven dials, four famous seeds (Drake 1961, Sagan, the pessimist, the
    telescope era), and N recomputed live.
 
-A persistent mini player streams the record itself — NASA's official
-*Greetings to the Universe* (55 languages) and *Sounds of Earth* playlists,
-plus the 90-minute *Music from Earth* sequence navigated by a cue sheet built
-from NASA's published track lengths.
+A persistent mini player carries the record itself, in three collections named
+on the bar rather than hidden behind an icon: *Music from Earth* (27 pieces),
+*Sounds of Earth*, and *Greetings* — 55 languages, each listed in its own
+script. The greetings and the Earth sounds are **self-hosted**: NASA published
+them individually as public-domain files, so they are vendored here as AAC
+rather than streamed from anyone.
+
+Two spoken sections of the record are in neither of NASA's published sets, and
+the player says so: the greeting from UN Secretary-General Kurt Waldheim that
+opens the record, and the United Nations greetings that play under humpback
+whale song. Jimmy Carter's message travelled as printed words, not sound — it is
+quoted in Act V instead.
+
+The Act I greeting button plays in **your** language where the record has one:
+the visitor's browser locale is matched against the 55, falling back to the
+English *"Hello from the children of planet Earth."*
 
 ## Science
 
@@ -75,14 +87,32 @@ Wikimedia Commons).
 
 ## Credits
 
-Prompted and art-directed by [@gourneau](https://x.com/gourneau) 🖖. Built with
+The record itself was made in 1977 by a committee at Cornell chaired by **Carl
+Sagan**, with **Frank Drake** (technical director — he drew the pulsar map),
+**Ann Druyan** (creative director), **Timothy Ferris** (producer), **Jon
+Lomberg** (design), **Linda Salzman Sagan** (the spoken greetings), and
+ethnomusicologists **Alan Lomax** and **Robert E. Brown**. Act V credits them in
+full, along with the performers and field recordists whose work left the solar
+system.
+
+This site: prompted and art-directed by [@gourneau](https://x.com/gourneau) 🖖. Built with
 [Claude Fable 5](https://www.anthropic.com/claude) (thanks, Claude) — research,
 code, and fact-checking done in [Claude Code](https://claude.com/claude-code).
 
 ## Checks
 
     npm i && npx playwright install firefox   # once
-    npm run check      # static preflight (no browser)
-    npm run smoke      # boots the live site in real Firefox
+    npm run check          # static preflight, no browser
+    npm run smoke          # boots the live site in real Firefox
+    npm run smoke:all      # ...and in Chromium and WebKit
 
-Dev-only. The site has no dependencies and no build step.
+Dev-only — the site itself has no dependencies and no build step. `npm run
+check` resolves the import map, every relative import and every referenced
+asset on disk (case-exactly), parses each module with the module goal, and
+balances the CSS. `npm run smoke` asks the only question that matters: did a
+frame actually render. Firefox by default, because Firefox is what once caught
+an import-map ordering bug that Chrome shrugged off.
+
+`node tools/fetch-audio.mjs` re-vendors the greetings and Earth sounds from
+NASA's archived originals (macOS only — it uses `afconvert`); the converted
+files are committed, so you only need it to regenerate them.
