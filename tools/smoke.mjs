@@ -38,13 +38,16 @@ for (const engine of ENGINES) {
   const consoleErrors = [];
   const pageErrors = [];
   const badResponses = [];
+  // Hosts whose failures are not ours and not actionable: the analytics beacon
+  // refuses a localhost origin by design, and archive.org streams are optional.
+  // A check that cries wolf is a check nobody reads.
+  const THIRD_PARTY = ['cloudflareinsights.com', 'archive.org', 'soundcloud.com', 'sndcdn.com'];
   // Only OUR errors. The SoundCloud iframe emits Firefox cookie warnings we
   // neither cause nor can fix, and a check that cries wolf stops being read.
   const origin = new URL(URL_).origin;
   // Hosts whose failures are not ours and not actionable: the SoundCloud iframe
   // emits Firefox cookie warnings, and the analytics beacon refuses a localhost
   // origin by design. A check that cries wolf is a check nobody reads.
-  const THIRD_PARTY = ['soundcloud.com', 'sndcdn.com', 'cloudflareinsights.com', 'archive.org'];
   page.on('console', (m) => {
     if (m.type() !== 'error') return;
     const from = m.location()?.url || '';
@@ -53,10 +56,20 @@ for (const engine of ENGINES) {
     if (THIRD_PARTY.some((h) => text.includes(h))) return;
     consoleErrors.push(text);
   });
-  page.on('pageerror', (e) => pageErrors.push(String(e)));
+  page.on('pageerror', (e) => {
+    const t = String(e);
+    if (THIRD_PARTY.some((h) => t.includes(h))) return; // not ours, not actionable
+    pageErrors.push(t);
+  });
   page.on('response', (r) => {
     if (r.status() >= 400 && r.url().startsWith(new URL(URL_).origin)) badResponses.push(`${r.status()} ${r.url()}`);
   });
+
+  // The analytics beacon is not part of the site working, and it refuses a
+  // localhost origin by design — which WebKit reports as a CORS console error
+  // with no host in the message, so it cannot be filtered after the fact.
+  // Block it outright: this test is about OUR page.
+  await page.route('**/*cloudflareinsights.com/**', (r) => r.abort());
 
   try {
     await page.goto(URL_, { waitUntil: 'load', timeout: 45000 });

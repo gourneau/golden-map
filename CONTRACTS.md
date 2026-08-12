@@ -64,9 +64,12 @@ SCALE: 1 scene unit = 1 kpc. The Sun is at the origin. GC at ~(8.28, 0, −0.02)
    Earth ('earth')).
 - `js/ui.js`        → `export function initUI(ctx) -> { update(dt,t) }`
    Owns ALL DOM inside `#ui` (build it with JS) and `css/ui.css`. Never touches
-   three.js. Includes the persistent audio mini-dock (SoundCloud Widget API over
-   hidden iframes — one of the two deliberate external network dependencies; the
-   other is the Cloudflare Web Analytics beacon in index.html).
+   three.js. Includes the persistent audio mini-dock: ONE <audio> element and
+   four collections (js/data/record-audio.js, js/data/greetings.js). Greetings
+   and Earth sounds are vendored public-domain NASA files; music and the two UN
+   sections stream from the Internet Archive. There is no SoundCloud widget any
+   more — and with it went the Widget API, the iOS play-priming hack, and the
+   cue sheet that guessed track boundaries from published durations.
 - `js/tour.js`      → `export function initTour(ctx) -> { update(dt,t) }`
    Owns camera movement (tweened fly-tos; write your own small tween, no libs),
    act-driven staging, raycast picking on canvas click → ctx.select(...), keyboard
@@ -153,8 +156,10 @@ landscape. Ask `ctx.phoneLayout()` / `ctx.phoneLandscape()`, which mirror the
 media queries in css/ui.css verbatim.
 Visible keyboard focus. `prefersReducedMotion` honored. No console errors. All
 code and assets vendored as plain files — no CDNs, no build artifacts, no
-base64/data-URI embedding. Exactly two external dependencies are allowed: the
-SoundCloud Widget API for the audio streams (loaded lazily, pre-warmed after page
-load, and the player degrades gracefully if it is unreachable), and the
-cookieless Cloudflare Web Analytics beacon. A browser with no WebGL gets a plain
-HTML fallback from main.js — never a blank page.
+base64/data-URI embedding. Two external runtime dependencies are allowed, both
+loaded lazily and both non-fatal: audio streamed from the Internet Archive for
+the music and UN sections (everything else is vendored here), and the cookieless
+Cloudflare Web Analytics beacon. NOTHING may be required for the page to work —
+a blocked beacon, a dead archive.org and a browser with no WebGL must each
+degrade, and main.js has a plain-HTML fallback so a visitor never gets a blank
+page. Anything permissively licensed should be vendored rather than streamed.

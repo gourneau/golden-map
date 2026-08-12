@@ -164,6 +164,31 @@ let missing = 0;
 for (const ref of localRefs) if (!exactPathExists(ref)) { fail(`referenced but missing: ${ref}`); missing++; }
 if (!missing) pass(`${localRefs.size} referenced files exist (html + js + css)`);
 
+// ------------------------------------------------------- vendored audio slugs
+// The audio paths are built by concatenation (see js/ui.js), so the literal
+// scan above cannot see them. Resolve them from the data instead — both
+// directions, so a renamed slug and an orphaned file both fail.
+section('vendored audio');
+{
+  const g = readFileSync(join(ROOT, 'js/data/greetings.js'), 'utf8');
+  const a = readFileSync(join(ROOT, 'js/data/record-audio.js'), 'utf8');
+  const want = {
+    greetings: [...g.matchAll(/file:\s*'([^']+)'/g)].map((m) => m[1]),
+    sounds: [...a.matchAll(/f:\s*'([^']+)'/g)].map((m) => m[1]),
+  };
+  let bad = 0;
+  for (const [dir, slugs] of Object.entries(want)) {
+    for (const slug of slugs) {
+      if (!exactPathExists(`vendor/audio/${dir}/${slug}.m4a`)) { fail(`vendor/audio/${dir}/${slug}.m4a referenced but missing`); bad++; }
+    }
+    const onDisk = readdirSync(join(ROOT, 'vendor/audio', dir)).filter((f) => f.endsWith('.m4a'));
+    for (const f of onDisk) {
+      if (!slugs.includes(f.replace(/\.m4a$/, ''))) { fail(`vendor/audio/${dir}/${f} is on disk but nothing references it`); bad++; }
+    }
+    if (!bad) pass(`${dir}: ${slugs.length} slugs resolve, no orphans`);
+  }
+}
+
 // ------------------------------------------------------------------- js parse
 section('javascript parses (module goal)');
 // `node --check foo.js` is a lenient dual-goal parse: `export { a, missing }`

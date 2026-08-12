@@ -9,6 +9,7 @@
 
 import { extinctionMyr, displayBlinkSeconds } from './astro.js';
 import { GREETINGS, shortName, pickGreeting } from './data/greetings.js';
+import { MUSIC, UN, SOUNDS_OF_EARTH } from './data/record-audio.js';
 import { loadText, explanationSvg } from './assets.js';
 
 export function initUI(ctx) {
@@ -671,17 +672,22 @@ export function initUI(ctx) {
           ><span class="gm-mode-t">Sounds of Earth</span><span class="gm-mode-n">19 recordings</span></button>
         <button class="gm-mode" data-set="greetings" aria-pressed="false"
           ><span class="gm-mode-t">Greetings</span><span class="gm-mode-n">55 languages</span></button>
+        <button class="gm-mode" data-set="un" aria-pressed="false"
+          ><span class="gm-mode-t">United Nations</span><span class="gm-mode-n">2 spoken sections</span></button>
       </div>
       <div class="gm-tracklist mono" role="group" aria-label="Tracks"></div>
-      <p class="gm-fine">Greetings and sounds stream from
-        <a href="https://science.nasa.gov/mission/voyager/golden-record-contents/greetings/" target="_blank" rel="noopener">NASA’s Golden Record</a>;
-        the music from a
-        <a href="https://soundcloud.com/the-film-effect/voyager-golden-record-music-from-earth" target="_blank" rel="noopener">community upload</a>.
-        Two spoken sections are in neither: the record opens with a greeting from
-        Kurt Waldheim, then Secretary-General of the United Nations, and later the
-        United Nations greetings play under the songs of humpback whales — Earth’s
-        other language. Jimmy Carter’s message travelled as printed words, not
-        sound, so there is nothing to hear.</p>
+      <details class="gm-fly-src">
+        <summary class="mono">Where this comes from</summary>
+        <p class="gm-fine gm-fly-note"></p>
+        <p class="gm-fine">The greetings and Earth sounds are
+          <a href="https://science.nasa.gov/mission/voyager/golden-record-contents/greetings/" target="_blank" rel="noopener">NASA’s own recordings</a>,
+          public domain, served from this site. The music and the two United
+          Nations sections come from the
+          <a href="https://archive.org/details/voyager-golden-record-cd-ozma" target="_blank" rel="noopener">40th-anniversary transfer</a>;
+          there is also a <a href="https://archive.org/details/voyager-golden-record-book-ozma" target="_blank" rel="noopener">scan of the book</a>.
+          Jimmy Carter’s message travelled as printed words, not sound — it is
+          quoted in Act V instead.</p>
+      </details>
     </div>
     <div class="gm-mini-bar">
       <button class="gm-play-btn gm-pprev" aria-label="Previous track"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 2h2v12H3z M14 2 6 8l8 6z"/></svg></button>
@@ -693,59 +699,63 @@ export function initUI(ctx) {
           <button class="gm-pick" data-set="music">Music</button>
           <button class="gm-pick" data-set="sounds">Sounds</button>
           <button class="gm-pick" data-set="greetings">Greetings</button>
+          <button class="gm-pick" data-set="un">UN</button>
         </div>
         <div class="gm-ptitle mono" aria-live="polite"></div>
         <div class="gm-pbar" aria-label="Seek"><i></i></div>
       </div>
       <button class="gm-play-btn gm-msets" id="gm-msets" aria-controls="gm-mini-fly"
-        aria-expanded="false" aria-label="Browse the record’s three collections">
+        aria-expanded="false" aria-label="Browse the record’s four collections">
         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3h9v1.6H2z M2 6.6h9v1.6H2z M2 10.2h5.5v1.6H2z"/><path d="M11 9.2a2 2 0 1 0 2 2V7.4l2-.6V5l-4 1.2z"/></svg>
-        <span class="gm-msets-n" aria-hidden="true">3</span>
-        <span class="gm-msets-dest" aria-hidden="true">Music · Sounds · Greetings</span>
+        <span class="gm-msets-n" aria-hidden="true">4</span>
+        <span class="gm-msets-dest" aria-hidden="true">Music · Sounds · Greetings · UN</span>
       </button>
     </div>
     <div class="gm-sc-host" aria-hidden="true"></div>`;
-  const SC_SETS = {
-    sounds: 'https://soundcloud.com/nasa/sets/golden-record-sounds-of',
-    greetings: 'https://soundcloud.com/nasa/sets/golden-record-greetings-to-the',
-    // the 90-minute Music from Earth sequence, one continuous file from a
-    // community upload (NASA's official release omits the music — it is
-    // still under copyright, so this one may someday vanish; the player
-    // degrades to its fallback message if it does)
-    music: 'https://soundcloud.com/the-film-effect/voyager-golden-record-music-from-earth',
+  // ---- the record, as four collections -------------------------------------
+  // One <audio> element drives all of it. That is a deliberate simplification:
+  // the greetings and Earth sounds are NASA's own public-domain files served
+  // from this repo, and the music and UN sections are real per-track files, so
+  // there is nothing left for a streaming widget to do. Gone with it: a 1.3 MB
+  // third-party script, the iOS "priming" hack it needed, and a cue sheet that
+  // guessed track boundaries from published durations and drifted ~30 s by the
+  // middle of the record.
+  const audio = new Audio();
+  audio.preload = 'none';
+  // split so neither literal is both rooted at vendor/ and suffixed with an
+  // extension — preflight harvests those as filenames and would flag them
+  const GREET_DIR = 'vendor/audio/greetings/';
+  const SOUND_DIR = 'vendor/audio/sounds/';
+
+  const COLLECTIONS = {
+    music: {
+      label: 'Music from Earth', sub: '27 pieces · 90 minutes',
+      note: 'Still under copyright, which is why NASA’s own release leaves it out.',
+      tracks: MUSIC.map((m) => ({ t: m.t, src: m.src, meta: `${m.country} · ${m.credit}` })),
+    },
+    sounds: {
+      label: 'Sounds of Earth', sub: '21 recordings',
+      note: 'NASA’s own recordings, public domain.',
+      tracks: SOUNDS_OF_EARTH.map((s) => ({ t: s.t, src: SOUND_DIR + s.f + '.m4a' })),
+    },
+    greetings: {
+      label: 'Greetings', sub: '55 languages',
+      note: 'NASA’s own recordings, public domain.',
+      tracks: GREETINGS.map((g) => ({
+        t: g.name, src: GREET_DIR + g.file + '.m4a', native: g.native, lang: g.lang,
+      })),
+    },
+    un: {
+      label: 'United Nations', sub: '2 spoken sections',
+      note: 'The record’s first voice, and the greetings under humpback whale song.',
+      tracks: UN.map((u) => ({ t: u.t, src: u.src })),
+    },
   };
-  // Music from Earth cue sheet: NASA's published track order and lengths,
-  // accumulated into start offsets (seconds) within the single upload.
-  // prev/next seek between cues so the one big file plays like a playlist.
-  const MUSIC_CUES = [
-    [0,    'Bach — Brandenburg Concerto No. 2, First Movement'],
-    [280,  'Java — Court Gamelan, “Kinds of Flowers”'],
-    [563,  'Senegal — Percussion'],
-    [691,  'Zaire — Mbuti Girls’ Initiation Song'],
-    [747,  'Australia — “Morning Star” and “Devil Bird”'],
-    [833,  'Mexico — “El Cascabel,” Lorenzo Barcelata'],
-    [1027, 'Chuck Berry — “Johnny B. Goode”'],
-    [1185, 'New Guinea — Men’s House Song'],
-    [1265, 'Japan — Shakuhachi, “Tsuru no Sugomori”'],
-    [1556, 'Bach — Gavotte en Rondeaux, Arthur Grumiaux'],
-    [1731, 'Mozart — Queen of the Night Aria, Edda Moser'],
-    [1906, 'Georgia — “Tchakrulo”'],
-    [2044, 'Peru — Panpipes and Drum'],
-    [2096, 'Louis Armstrong — “Melancholy Blues”'],
-    [2281, 'Azerbaijan — Bagpipes'],
-    [2431, 'Stravinsky — Rite of Spring, Sacrificial Dance'],
-    [2706, 'Bach — The Well-Tempered Clavier, Glenn Gould'],
-    [2994, 'Beethoven — Fifth Symphony, First Movement'],
-    [3434, 'Bulgaria — “Izlel je Delyo Hagdutin,” Valya Balkanska'],
-    [3733, 'Navajo — Night Chant'],
-    [3790, 'Holborne — “The Fairie Round”'],
-    [3867, 'Solomon Islands — Panpipes'],
-    [3939, 'Peru — Wedding Song'],
-    [3977, 'China — Guqin, “Flowing Streams,” Guan Pinghu'],
-    [4434, 'India — Raga “Jaat Kahan Ho,” Kesarbai Kerkar'],
-    [4644, 'Blind Willie Johnson — “Dark Was the Night”'],
-    [4839, 'Beethoven — Cavatina, Budapest String Quartet'],
-  ];
+
+  let setKey = 'music';
+  let trackIdx = 0;
+  let started = false; // has anything ever played? drives the idle bar
+
   const scHost = mini.querySelector('.gm-sc-host');
   const pTitle = mini.querySelector('.gm-ptitle');
   const pBar = mini.querySelector('.gm-pbar');
@@ -755,87 +765,146 @@ export function initUI(ctx) {
   const miniFly = mini.querySelector('.gm-mini-fly');
   const miniSets = mini.querySelector('.gm-msets');
   const picks = [...mini.querySelectorAll('.gm-pick')];
+  const trackList = mini.querySelector('.gm-tracklist');
+  const flyNote = mini.querySelector('.gm-fly-note');
+  if (scHost) scHost.remove(); // the widget's parking space is no longer needed
+
   // "Idle" means nothing has played yet: the bar has no track to name, so it
-  // spends its widest space naming the three collections instead — and the
-  // transport stands down, because prev/next on a never-played stream seek a
-  // paused widget and (on the NASA sets) overwrite the invitation with a track
-  // title while nothing is playing. ONE helper owns the flag: every site that
-  // writes a title must come through here, or the CSS will hide its message.
+  // spends its widest space naming the collections instead, and the transport
+  // stands down (prev/next mean nothing before there is a current track).
   const setIdle = (on) => {
     mini.classList.toggle('is-idle', on);
     pTitle.classList.toggle('is-idle', on);
   };
   setIdle(true);
-  let scWidget = null;
-  let scReady = false;
-  let scPlaying = false;
-  let scSet = 'music';
-  let scApiPromise = null;
-  let scDuration = 0;   // current sound's duration (ms), cached on READY
-  let scLastIdx = -1;   // last seen playlist index (NASA sets)
-  let scPriming = false; // silent buffer-warm in progress (volume 0)
-  let scWantTrack = null; // NASA-set index tapped before READY landed
 
-  // iOS only honors play commands that land hard on the heels of a real tap —
-  // if the stream still has to BUFFER first, the tap's activation window
-  // expires and the play is dropped (that's why the first tap "did nothing"
-  // and the second worked: the first one buffered). So right after READY the
-  // stream is primed: volume 0, play, pause on the first PLAY, volume back.
-  // By the time a human reads the page and taps, the buffer is hot and the
-  // first tap plays. Blocked-autoplay browsers simply time out harmlessly.
-  const primeStream = () => {
-    if (!scWidget || !scReady || scPlaying || scPriming) return;
-    scPriming = true;
-    scWidget.setVolume(0);
-    scWidget.play();
-    setTimeout(() => {
-      if (scPriming) { scPriming = false; scWidget.setVolume(100); } // play was blocked — fine
-    }, 4000);
-  };
-  const cancelPriming = () => {
-    if (scPriming) { scPriming = false; scWidget.setVolume(100); }
+  const SVG_PLAY = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2l10 6-10 6z"/></svg>';
+  const SVG_PAUSE = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h3v12H4z M9 2h3v12H9z"/></svg>';
+  const paintPlayBtn = () => {
+    const playing = !audio.paused && !audio.ended;
+    pPlay.innerHTML = playing ? SVG_PAUSE : SVG_PLAY;
+    pPlay.setAttribute('aria-label', playing ? 'Pause' : 'Play');
   };
 
-  // SoundCloud's PLAY_PROGRESS events arrive on their own lazy cadence and
-  // can leave the title/highlight stale for many seconds after a track
-  // change — so while playing, poll the true position once a second and
-  // reconcile everything from it
-  setInterval(() => {
-    if (!scWidget || !scReady || !scPlaying) return;
-    scWidget.getPosition((ms) => {
-      if (scSet === 'music') {
-        if (scDuration > 0) pBarFill.style.transform = `scaleX(${((ms || 0) / scDuration).toFixed(4)})`;
-        const i = musicIdxAt(ms || 0);
-        if (i !== musicIdx) setMusicTitle(i);
+  const tracks = () => COLLECTIONS[setKey].tracks;
+  const markCurrentRow = (i) => {
+    [...trackList.children].forEach((r, k) => r.classList.toggle('is-current', k === i));
+  };
+
+  function populateTrackList() {
+    const c = COLLECTIONS[setKey];
+    trackList.setAttribute('aria-label', c.label);
+    if (flyNote) flyNote.textContent = c.note;
+    trackList.innerHTML = '';
+    c.tracks.forEach((tr, i) => {
+      const b = el('button', 'gm-track' + (i === trackIdx && started ? ' is-current' : ''),
+        `<span class="gm-track-n">${String(i + 1).padStart(2, '0')}</span><span class="gm-track-t"></span>`);
+      b.querySelector('.gm-track-t').textContent = tr.t;
+      if (tr.native) {
+        const n = el('span', 'gm-track-native');
+        n.textContent = tr.native;
+        if (tr.lang) n.lang = tr.lang; // so a screen reader switches voice
+        b.appendChild(n);
+      } else if (tr.meta) {
+        const n = el('span', 'gm-track-native');
+        n.textContent = tr.meta;
+        b.appendChild(n);
       }
+      b.addEventListener('click', () => playTrack(i));
+      trackList.appendChild(b);
     });
-    if (scSet !== 'music') {
-      scWidget.getCurrentSoundIndex((ci) => {
-        if (ci != null && ci !== scLastIdx) {
-          scLastIdx = ci;
-          refreshTitle();
-          if (!miniFly.hidden) markCurrentRow(ci);
-        }
-      });
-    }
-  }, 1000);
+  }
 
+  function loadTrack(i, { play = true } = {}) {
+    const list = tracks();
+    if (!list.length) return;
+    trackIdx = Math.max(0, Math.min(list.length - 1, i));
+    const tr = list[trackIdx];
+    started = true;
+    setIdle(false);
+    pTitle.textContent = tr.t;
+    markCurrentRow(trackIdx);
+    pBarFill.style.transform = 'scaleX(0)';
+    audio.src = tr.src;
+    // A user gesture is still live here, which is exactly why a plain <audio>
+    // plays on the FIRST tap where the old widget needed priming.
+    if (play) audio.play().catch(() => {});
+    paintPlayBtn();
+  }
+  const playTrack = (i) => loadTrack(i);
+
+  audio.addEventListener('play', paintPlayBtn);
+  audio.addEventListener('pause', paintPlayBtn);
+  audio.addEventListener('timeupdate', () => {
+    if (!audio.duration) return;
+    pBarFill.style.transform = `scaleX(${(audio.currentTime / audio.duration).toFixed(4)})`;
+  });
+  audio.addEventListener('ended', () => {
+    if (trackIdx < tracks().length - 1) loadTrack(trackIdx + 1);
+    else paintPlayBtn();
+  });
+  // A collection whose source has gone away hides itself rather than offering a
+  // control that cannot work.
+  audio.addEventListener('error', () => {
+    if (!started) return;
+    pTitle.textContent = 'that recording is unavailable — try another';
+    paintPlayBtn();
+  });
+
+  pPlay.addEventListener('click', () => {
+    if (!started) { loadTrack(0); return; }
+    if (audio.paused) audio.play().catch(() => {});
+    else audio.pause();
+  });
+  mini.querySelector('.gm-pprev').addEventListener('click', () => {
+    if (!started) return;
+    if (audio.currentTime > 3) { audio.currentTime = 0; return; } // restart first
+    loadTrack(trackIdx - 1);
+  });
+  mini.querySelector('.gm-pnext').addEventListener('click', () => {
+    if (started) loadTrack(trackIdx + 1);
+  });
+  pBar.addEventListener('click', (e) => {
+    if (!started || !audio.duration) return;
+    const r = pBar.getBoundingClientRect();
+    audio.currentTime = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)) * audio.duration;
+  });
+
+  // One path for choosing a collection, shared by the flyout chips and the
+  // three chips the idle bar shows. `play` is true for the bar chips, which is
+  // what makes them one tap from silence to sound.
+  function selectSet(key, { play = false } = {}) {
+    setKey = key;
+    trackIdx = 0;
+    for (const x of setBtns) {
+      const on = x.dataset.set === key;
+      x.classList.toggle('is-active', on);
+      x.setAttribute('aria-pressed', String(on));
+    }
+    for (const x of picks) x.classList.toggle('is-active', x.dataset.set === key);
+    if (!miniFly.hidden) populateTrackList();
+    if (play) loadTrack(0);
+  }
+  for (const b of setBtns) b.addEventListener('click', () => selectSet(b.dataset.set));
+  for (const b of picks) b.addEventListener('click', () => selectSet(b.dataset.set, { play: true }));
+
+  // ---- the flyout ----------------------------------------------------------
   const paintFly = () => {
     miniSets.setAttribute('aria-expanded', String(!miniFly.hidden));
-    miniSets.classList.toggle('is-active', !miniFly.hidden); // lit while open
+    miniSets.classList.toggle('is-active', !miniFly.hidden);
   };
   const closeFly = () => { if (!miniFly.hidden) { miniFly.hidden = true; paintFly(); } };
   const openFly = () => { miniFly.hidden = false; paintFly(); populateTrackList(); };
   miniSets.addEventListener('click', () => (miniFly.hidden ? openFly() : closeFly()));
 
   // Escape closes the flyout and nothing else. Capture phase, because tour.js
-  // also listens for Escape on window to deselect a pulsar — without this one
-  // keypress would close the flyout AND yank the camera home.
+  // also listens for Escape on window to deselect — without this, one keypress
+  // would close the flyout AND yank the camera home.
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape' || miniFly.hidden) return;
     e.stopPropagation();
     closeFly();
-    miniSets.focus(); // land back on the control that opened it
+    miniSets.focus();
   }, { capture: true });
 
   // Click-outside. Bubble phase and no preventDefault, so tour.js's capture
@@ -846,296 +915,6 @@ export function initUI(ctx) {
     if (miniFly.contains(e.target) || miniSets.contains(e.target)) return;
     closeFly();
   });
-
-  // iOS primes the widget's media element on the FIRST play command and only
-  // actually starts on the second (why the dock took two taps while the
-  // plain-<audio> hello took one) — so every play intent pumps the command
-  // again if playback hasn't started. No-ops everywhere else.
-  let playGen = 0; // bumped by any pause, so stale retries below expire
-  const pumpPlay = () => {
-    if (!scWidget || !scReady) return;
-    cancelPriming(); // a real play intent takes over from the silent warm-up
-    const gen = ++playGen;
-    scWidget.play();
-    const retry = (ms) => setTimeout(() => {
-      if (gen === playGen && scWidget && scReady && !scPlaying) scWidget.play();
-    }, ms);
-    retry(700);
-    retry(1800);
-  };
-
-  const SVG_PLAY = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2l10 6-10 6z"/></svg>';
-  const SVG_PAUSE = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h3v12H4z M9 2h3v12H9z"/></svg>';
-  const paintPlayBtn = () => {
-    pPlay.innerHTML = scPlaying ? SVG_PAUSE : SVG_PLAY;
-    pPlay.setAttribute('aria-label', scPlaying ? 'Pause' : 'Play');
-  };
-  let musicIdx = -1; // current cue in the music sequence (-1 = unknown)
-  let pendingSeekMs = null; // seek applied on the next PLAY (a paused widget drops seeks)
-  const setMusicTitle = (i) => {
-    musicIdx = i;
-    setIdle(false);
-    pTitle.textContent = MUSIC_CUES[i][1]; // numbering lives in the track list
-    markCurrentRow(i);
-  };
-  const musicIdxAt = (ms) => {
-    let i = 0;
-    for (let k = 0; k < MUSIC_CUES.length; k++) {
-      if (ms >= MUSIC_CUES[k][0] * 1000 - 500) i = k;
-    }
-    return i;
-  };
-  // NASA's SoundCloud titles are inconsistently cased and prefixed
-  // ("Golden Record: Kiss, Mother And Child", "…(Min Dialect)Greeting") —
-  // strip the prefix, restore missing spaces, lower-case the joining words
-  const SMALL_WORDS = new Set(['and', 'or', 'the', 'of', 'in', 'a', 'an', 'to', 'from', 'with', 'by']);
-  const stripGR = (t) => (t || '')
-    .replace(/^golden record:\s*/i, '')
-    .replace(/\)([A-Za-z])/g, ') $1')
-    .split(' ')
-    .map((w, i) => (i > 0 && SMALL_WORDS.has(w.toLowerCase()) ? w.toLowerCase() : w))
-    .join(' ');
-  const refreshTitle = () => {
-    if (!scWidget) return;
-    if (scSet === 'music') { if (musicIdx < 0) setMusicTitle(0); return; }
-    scWidget.getCurrentSound((s) => {
-      if (s) { setIdle(false); pTitle.textContent = stripGR(s.title); }
-    });
-  };
-
-  // The two NASA playlists are fixed — their track lists are hard-coded
-  // (extracted once from the playlists themselves, titles tidied) so the
-  // browser renders instantly instead of waiting on SoundCloud's lazy
-  // metadata paging. Click order still maps 1:1 to widget.skip(index).
-  const NASA_TRACKS = {
-    sounds: [
-      'Life Signs, Pulsar', 'Kiss, Mother and Child', 'Tractor, Bus, Auto',
-      'Train', 'Horse and Cart', 'Morse Code, Ships', 'Tractor, Riveter',
-      'Herding Sheep, Blacksmith, Sawing', 'Tame Dog', 'Music of the Spheres',
-      'Mud Pots', 'Wind, Rain, Surf', 'Crickets, Frogs',
-      'Birds, Hyena, Elephant', 'Chimpanzee', 'Wild Dog',
-      'Footsteps, Heartbeat, Laughter', 'Fire, Speech', 'The First Tools',
-    ],
-    // order is load-bearing: it maps 1:1 to widget.skip(i)
-    greetings: GREETINGS.map((g) => g.name),
-  };
-
-  // ---- track list browser (in the ♫ flyout) --------------------------------
-  const trackList = mini.querySelector('.gm-tracklist');
-  function markCurrentRow(i) {
-    [...trackList.children].forEach((r, k) => r.classList.toggle('is-current', k === i));
-  }
-  // `extra` (optional, same length) is rendered as a second column — used for
-  // each language's own name in its own script.
-  function renderTrackRows(labels, currentIdx, extra) {
-    trackList.innerHTML = '';
-    labels.forEach((label, i) => {
-      const b = el('button', 'gm-track' + (i === currentIdx ? ' is-current' : ''),
-        `<span class="gm-track-n">${String(i + 1).padStart(2, '0')}</span><span class="gm-track-t"></span>`);
-      b.querySelector('.gm-track-t').textContent = label;
-      if (extra && extra[i]) {
-        const n = el('span', 'gm-track-native');
-        n.textContent = extra[i].native;
-        if (extra[i].lang) n.lang = extra[i].lang; // so a reader switches voice
-        b.appendChild(n);
-      }
-      b.addEventListener('click', () => playTrack(i));
-      trackList.appendChild(b);
-    });
-  }
-  function populateTrackList() {
-    if (scSet === 'music') {
-      renderTrackRows(MUSIC_CUES.map((c) => c[1]), Math.max(0, musicIdx));
-      return;
-    }
-    renderTrackRows(NASA_TRACKS[scSet], Math.max(0, scLastIdx),
-      scSet === 'greetings' ? GREETINGS : null);
-    if (scWidget && scReady) {
-      scWidget.getCurrentSoundIndex((ci) => { if (ci != null) markCurrentRow(ci); });
-    }
-  }
-  function playTrack(i) {
-    if (scSet === 'music') {
-      setMusicTitle(i);
-      const ms = MUSIC_CUES[i][0] * 1000;
-      // a widget that isn't playing yet drops seekTo — queue it for PLAY
-      if (!scWidget) { pendingSeekMs = ms; buildWidget('music').then(() => pumpPlay()); }
-      else if (scReady) {
-        if (scPlaying) scWidget.seekTo(ms);
-        else { pendingSeekMs = ms; pumpPlay(); }
-      } else { pendingSeekMs = ms; scWantPlay = true; } // mid-handshake
-      return;
-    }
-    if (scWidget && scReady) { scWidget.skip(i); pumpPlay(); markCurrentRow(i); }
-    else if (!scWidget) buildWidget(scSet).then((w) => { if (w) { w.skip(i); pumpPlay(); } });
-    else { scWantTrack = i; markCurrentRow(i); } // mid-handshake: apply on READY
-  }
-
-  const loadScApi = () => {
-    if (!scApiPromise) {
-      scApiPromise = new Promise((resolve, reject) => {
-        const s = document.createElement('script');
-        s.src = 'https://w.soundcloud.com/player/api.js';
-        s.onload = () => resolve(window.SC);
-        s.onerror = () => { scApiPromise = null; reject(new Error('SoundCloud API failed to load')); };
-        document.head.appendChild(s);
-      });
-    }
-    return scApiPromise;
-  };
-
-  function buildWidget(setKey) {
-    return loadScApi().then((SC) => {
-      scReady = false;
-      scPlaying = false;
-      scPriming = false; // a set switch mid-prime must not leave this latched
-      musicIdx = -1;
-      scLastIdx = -1;
-      scDuration = 0;
-      paintPlayBtn();
-      pBarFill.style.transform = 'scaleX(0)';
-      scHost.innerHTML = '';
-      const f = document.createElement('iframe');
-      f.allow = 'autoplay';
-      f.tabIndex = -1; // parked off-screen inside aria-hidden: never a tab stop
-      f.title = 'NASA Golden Record audio (SoundCloud)';
-      f.src = 'https://w.soundcloud.com/player/?url=' + encodeURIComponent(SC_SETS[setKey]) +
-        '&auto_play=false&visual=false&show_teaser=false&show_comments=false&color=%23c9a227';
-      scHost.appendChild(f);
-      scWidget = SC.Widget(f);
-      return new Promise((resolve) => {
-        const E = SC.Widget.Events;
-        scWidget.bind(E.READY, () => {
-          scReady = true;
-          scWidget.getDuration((d) => { scDuration = d || 0; });
-          // never clobber the idle invitation just because the pre-warm
-          // finished — the real title arrives with the first PLAY. A set
-          // switch mid-session shows 'loading…'; restore the idle voice.
-          if (pTitle.textContent === 'loading…') { setIdle(true); pTitle.textContent = ''; }
-          if (scWantTrack != null) { // a track tapped mid-handshake
-            const i = scWantTrack; scWantTrack = null;
-            scWidget.skip(i); markCurrentRow(i); pumpPlay();
-          } else if (scWantPlay) { scWantPlay = false; pumpPlay(); }
-          else primeStream(); // no pending intent: warm the buffer for the first tap
-          if (!miniFly.hidden) populateTrackList();
-          resolve(scWidget);
-        });
-        scWidget.bind(E.PLAY, () => {
-          if (scPriming) { scWidget.pause(); return; } // buffer is warm — stop the silent run
-          scPlaying = true;
-          if (pendingSeekMs != null) { scWidget.seekTo(pendingSeekMs); pendingSeekMs = null; }
-          pPlay.classList.remove('is-invite'); // the invitation was accepted
-          paintPlayBtn();
-          refreshTitle();
-          // keep the flyout list highlight in step
-          if (!miniFly.hidden) {
-            if (scSet === 'music') markCurrentRow(Math.max(0, musicIdx));
-            else scWidget.getCurrentSoundIndex((ci) => {
-              if (ci != null) { scLastIdx = ci; markCurrentRow(ci); }
-            });
-          }
-        });
-        scWidget.bind(E.PAUSE, () => {
-          if (scPriming) { // silent warm-up finished: rewind, restore volume
-            scPriming = false;
-            scWidget.seekTo(0);
-            scWidget.setVolume(100);
-            return;
-          }
-          scPlaying = false;
-          playGen++; // a real pause outranks any in-flight play retry
-          paintPlayBtn();
-        });
-        scWidget.bind(E.FINISH, () => { scPlaying = false; paintPlayBtn(); });
-        scWidget.bind(E.PLAY_PROGRESS, (e) => {
-          // the silent warm-up (and its straggler events) must not touch the
-          // UI — only real playback drives the bar and titles
-          if (scPriming || !scPlaying) return;
-          pBarFill.style.transform = `scaleX(${(e.relativePosition || 0).toFixed(4)})`;
-          if (scSet === 'music') {
-            const i = musicIdxAt(e.currentPosition || 0);
-            if (i !== musicIdx) setMusicTitle(i);
-          }
-        });
-        scWidget.bind(E.ERROR, () => {
-          setIdle(false);
-          pTitle.textContent = 'stream unavailable — open the collections for source links';
-        });
-      });
-    }).catch(() => {
-      setIdle(false);
-      pTitle.textContent = 'stream unavailable — open the collections for source links';
-    });
-  }
-
-  // A tap that lands while the widget is still handshaking must never be
-  // dropped (on phones the READY round-trip is slow — this was the
-  // "press play twice" bug). The intent is remembered and fires on READY.
-  let scWantPlay = false;
-  function startPlay() {
-    if (!scWidget) { scWantPlay = true; buildWidget(scSet); }
-    else if (scReady) pumpPlay();
-    else scWantPlay = true;
-  }
-  pPlay.addEventListener('click', () => {
-    if (scWidget && scReady && scPlaying) { playGen++; scWidget.pause(); return; }
-    startPlay();
-  });
-  // in the music sequence, prev/next hop between cue points inside the one
-  // long file; a "prev" more than 3 s into a piece restarts that piece first
-  const skipCue = (dir) => {
-    scWidget.getPosition((ms) => {
-      const i = musicIdxAt(ms || 0);
-      const j = dir < 0
-        ? ((ms || 0) - MUSIC_CUES[i][0] * 1000 > 3000 ? i : Math.max(0, i - 1))
-        : Math.min(MUSIC_CUES.length - 1, i + 1);
-      setMusicTitle(j);
-      scWidget.seekTo(MUSIC_CUES[j][0] * 1000);
-    });
-  };
-  mini.querySelector('.gm-pprev').addEventListener('click', () => {
-    if (!scReady) return;
-    if (scSet === 'music') skipCue(-1);
-    else { scWidget.prev(); refreshTitle(); }
-  });
-  mini.querySelector('.gm-pnext').addEventListener('click', () => {
-    if (!scReady) return;
-    if (scSet === 'music') skipCue(1);
-    else { scWidget.next(); refreshTitle(); }
-  });
-  pBar.addEventListener('click', (e) => {
-    if (!scReady) return;
-    const r = pBar.getBoundingClientRect();
-    const frac = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
-    scWidget.getDuration((d) => scWidget.seekTo(frac * d));
-  });
-  // One path for every way of choosing a collection: the flyout chips, and the
-  // three chips the idle bar shows. `play` is true when the choice is itself a
-  // play intent (the bar chips), which is what makes them one tap from silence
-  // to sound — routed through scWantPlay so the iOS priming still applies.
-  function selectSet(key, { play = false } = {}) {
-    const changing = key !== scSet;
-    scSet = key;
-    for (const x of setBtns) {
-      const on = x.dataset.set === key;
-      x.classList.toggle('is-active', on);
-      x.setAttribute('aria-pressed', String(on));
-    }
-    for (const x of picks) x.classList.toggle('is-active', x.dataset.set === key);
-    if (!changing) { if (play) startPlay(); return; }
-    const wasPlaying = scPlaying;
-    setIdle(false); // or the message below is hidden along with the idle chips
-    pTitle.textContent = 'loading…';
-    if (!miniFly.hidden) populateTrackList(); // music renders instantly; NASA sets fill on READY
-    if (play) scWantPlay = true;
-    buildWidget(key).then((w) => { if (w && wasPlaying && !play) pumpPlay(); });
-  }
-  for (const b of setBtns) b.addEventListener('click', () => selectSet(b.dataset.set));
-  for (const b of picks) b.addEventListener('click', () => selectSet(b.dataset.set, { play: true }));
-  // Pre-warm: build the default widget right away so the READY handshake AND
-  // the silent buffer-warm are both done long before a human reads the page
-  // and presses play — that's what makes the first tap play on iOS.
-  setTimeout(() => { if (!scWidget && !scApiPromise) buildWidget(scSet); }, 400);
 
   // ---- the title-card greeting: a one-off "hello" ---------------------------
   // NASA's own recordings (US-government works, public domain), vendored as

@@ -973,7 +973,22 @@
   backdrop-filter: var(--blur-panel);
   -webkit-backdrop-filter: var(--blur-panel);
 }
-.gm-mini-fly .gm-fine { border-top: none; margin: 0.7em 0 0; padding-top: 0; }
+.gm-mini-fly .gm-fine { border-top: none; margin: 0.5em 0 0; padding-top: 0; }
+/* provenance is worth having, but not worth four lines of the flyout: it lives
+   behind a disclosure, in the same chrome as every other one on the site */
+.gm-fly-src { margin-top: 0.7em; }
+.gm-fly-src summary {
+  cursor: pointer;
+  list-style: none;
+  font-size: 0.56rem;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  color: var(--gold-text);
+}
+.gm-fly-src summary::-webkit-details-marker { display: none; }
+.gm-fly-src summary::after { content: ' +'; }
+.gm-fly-src[open] summary::after { content: ' −'; }
+.gm-fly-src summary:hover { color: var(--gold-bright); }
 /* no shouting in the player: mixed case for its heading and collection chips */
 .gm-mini .gm-k,
 .gm-mini .gm-mode {
