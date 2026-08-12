@@ -1151,6 +1151,15 @@
 .gm-pick:hover { color: var(--gold-bright); border-color: var(--gold-dim); }
 .gm-pick.is-active { color: var(--gold-bright); border-color: var(--gold); }
 
+/* At 320px the four collection names need 230px and have 202px. They must all
+   be VISIBLE, not scrollable — a chip you have to discover by swiping defeats
+   the entire point of naming them on the bar. Tightening the padding, gap and
+   letter-spacing buys back the 28px without touching the 40px tap targets. */
+@media (max-width: 380px) {
+  .gm-picks { gap: 4px; }
+  .gm-pick { padding: 0.4em 0.45em; letter-spacing: 0.05em; }
+}
+
 /* track list browser in the flyout */
 .gm-tracklist {
   margin-top: 0.75em;
@@ -1195,6 +1204,21 @@
 }
 .gm-track:hover .gm-track-native,
 .gm-track.is-current .gm-track-native { color: var(--gold); }
+
+/* The performer credit is a phrase, not a label — beside a long title it was
+   squeezing it to one word per line. It gets its own row and the full width. */
+.gm-track { flex-wrap: wrap; }
+.gm-track-meta {
+  flex: 1 0 100%;
+  padding-left: 2.6em;   /* clears the track number, so it reads as a caption */
+  font-family: var(--body);
+  font-size: 0.82rem;
+  line-height: 1.35;
+  color: var(--gold-text);
+}
+.gm-track:hover .gm-track-meta,
+.gm-track.is-current .gm-track-meta { color: var(--gold); }
+.gm-track-t { flex: 1 1 0; min-width: 0; }
 .gm-pbar {
   position: relative;
   height: 3px;
@@ -1439,13 +1463,18 @@ body.gm-still .gm-mini { display: none !important; }
     padding-left: calc(12px + env(safe-area-inset-left, 0px));
     padding-right: calc(12px + env(safe-area-inset-right, 0px));
   }
-  /* the phone bar has no room for the lede — the three names are the
-     invitation here (the region's aria-label still reads "Hear the record") */
+  /* the phone bar has no room for the lede — the names are the invitation here
+     (the region's aria-label still reads "Hear the record") */
   .gm-picks-lede { display: none; }
   .gm-pick { min-height: 40px; }
   .gm-mini .gm-mode { flex-basis: 100%; }  /* stacked, unmistakable */
 
   .gm-mini-fly {
+    /* Fully opaque here, not the 92% the desktop popover uses. On a phone this
+       panel covers the masthead, and any translucency at all left the title
+       ghosting up through the track list. Nothing is gained by seeing a
+       headline through a list you are trying to read. */
+    background: var(--void-lift);
     left: var(--sheet-x); right: var(--sheet-x);
     bottom: calc(100% + var(--sheet-gap));
     /* never taller than the space between the nav and the bar (landscape) */

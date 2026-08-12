@@ -669,13 +669,13 @@ export function initUI(ctx) {
   mini.setAttribute('aria-label', 'Hear the record');
   mini.innerHTML = `
     <div class="gm-mini-fly" id="gm-mini-fly" hidden>
-      <p class="gm-fly-lede">Three kinds of thing were pressed into this record:
-        what we play, what we sound like, and what we say.</p>
+      <p class="gm-fly-lede">What we play, what we sound like, what we say —
+        and what our governments said on our behalf.</p>
       <div class="gm-player-sets" role="group" aria-label="Collections">
         <button class="gm-mode is-active" data-set="music" aria-pressed="true"
           ><span class="gm-mode-t">Music from Earth</span><span class="gm-mode-n">27 pieces · 90 minutes</span></button>
         <button class="gm-mode" data-set="sounds" aria-pressed="false"
-          ><span class="gm-mode-t">Sounds of Earth</span><span class="gm-mode-n">19 recordings</span></button>
+          ><span class="gm-mode-t">Sounds of Earth</span><span class="gm-mode-n">21 recordings</span></button>
         <button class="gm-mode" data-set="greetings" aria-pressed="false"
           ><span class="gm-mode-t">Greetings</span><span class="gm-mode-n">55 languages</span></button>
         <button class="gm-mode" data-set="un" aria-pressed="false"
@@ -829,7 +829,7 @@ export function initUI(ctx) {
         if (tr.lang) n.lang = tr.lang; // so a screen reader switches voice
         b.appendChild(n);
       } else if (tr.meta) {
-        const n = el('span', 'gm-track-native');
+        const n = el('span', 'gm-track-meta');
         n.textContent = tr.meta;
         b.appendChild(n);
       }
