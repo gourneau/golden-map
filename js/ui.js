@@ -683,16 +683,8 @@ export function initUI(ctx) {
       </div>
       <div class="gm-tracklist mono" role="group" aria-label="Tracks"></div>
       <details class="gm-fly-src">
-        <summary class="mono">Where this comes from</summary>
+        <summary class="mono">About this collection</summary>
         <p class="gm-fine gm-fly-note"></p>
-        <p class="gm-fine">The greetings and Earth sounds are
-          <a href="https://science.nasa.gov/mission/voyager/golden-record-contents/greetings/" target="_blank" rel="noopener">NASA’s own recordings</a>,
-          public domain, served from this site. The music and the two United
-          Nations sections come from the
-          <a href="https://archive.org/details/voyager-golden-record-cd-ozma" target="_blank" rel="noopener">40th-anniversary transfer</a>;
-          there is also a <a href="https://archive.org/details/voyager-golden-record-book-ozma" target="_blank" rel="noopener">scan of the book</a>.
-          Jimmy Carter’s message travelled as printed words, not sound — it is
-          quoted in Act V instead.</p>
       </details>
     </div>
     <div class="gm-mini-bar">
@@ -736,24 +728,49 @@ export function initUI(ctx) {
   const COLLECTIONS = {
     music: {
       label: 'Music from Earth', sub: '27 pieces · 90 minutes',
-      note: 'Still under copyright, which is why NASA’s own release leaves it out.',
+      note: 'The 27 selections, in full. Titles, durations and performer credits from '
+        + '<a href="https://musicbrainz.org/release/2e011ec7-8728-44d6-a7d5-3f608d89c420" target="_blank" rel="noopener">MusicBrainz</a>’s '
+        + 'entry for the 40th-anniversary edition — the cleanest track-level data anywhere for this record, '
+        + 'and where the performers’ names in their own scripts come from. Country of origin is NASA’s own '
+        + 'wording from 1977, Soviet republics and all. Audio streamed from the '
+        + '<a href="https://archive.org/details/voyager-golden-record-cd-ozma" target="_blank" rel="noopener">Internet Archive transfer</a>; '
+        + 'there is also a <a href="https://archive.org/details/voyager-golden-record-book-ozma" target="_blank" rel="noopener">scan of the book that came with it</a>.',
       tracks: MUSIC.map((m) => ({ t: m.t, src: m.src, meta: `${m.country} · ${m.credit}` })),
     },
     sounds: {
       label: 'Sounds of Earth', sub: '21 recordings',
-      note: 'NASA’s own recordings, public domain.',
+      note: 'Volcanoes, surf, crickets, a chimpanzee, a tractor, an F-111 overhead, '
+        + 'a kiss, a heartbeat — Earth introducing itself with no words at all. The last '
+        + 'track is Laurie Spiegel realising Kepler’s <i>Harmonices Mundi</i> on a synthesiser: '
+        + 'the planets’ orbits played as music. '
+        + '<a href="https://science.nasa.gov/mission/voyager/golden-record-contents/sounds/" target="_blank" rel="noopener">NASA’s</a> '
+        + 'own recordings, published individually, public domain — vendored in this repository '
+        + 'and served from this site rather than streamed from anyone.',
       tracks: SOUNDS_OF_EARTH.map((s) => ({ t: s.t, src: SOUND_DIR + s.f + '.m4a' })),
     },
     greetings: {
       label: 'Greetings', sub: '55 languages',
-      note: 'NASA’s own recordings, public domain.',
+      note: 'Fifty-five languages, recorded at Cornell in 1977 and gathered by Linda '
+        + 'Salzman Sagan. Four are ancient — Akkadian, Sumerian, Hittite and Aramaic — spoken '
+        + 'by scholars, not native speakers, because nobody alive speaks them. Each row shows '
+        + 'the language’s own name in its own script. '
+        + '<a href="https://science.nasa.gov/mission/voyager/golden-record-contents/greetings/" target="_blank" rel="noopener">NASA’s</a> '
+        + 'own recordings, public domain — vendored in this repository and served from this site. '
+        + 'The button on the title card plays the one closest to your browser’s language.',
       tracks: GREETINGS.map((g) => ({
         t: g.name, src: GREET_DIR + g.file + '.m4a', native: g.native, lang: g.lang,
       })),
     },
     un: {
       label: 'United Nations', sub: '2 spoken sections',
-      note: 'The record’s first voice, and the greetings under humpback whale song.',
+      note: 'The record’s first voice is not a greeting from Earth’s people but from its '
+        + 'diplomats: Kurt Waldheim, then Secretary-General of the United Nations. The second '
+        + 'track sets the UN delegates’ greetings against the songs of humpback whales — '
+        + 'Earth’s other language, and the only voices on the record that are not human. '
+        + 'Jimmy Carter’s message travelled with them as printed words on the cover, not as '
+        + 'sound, which is why there is nothing here to play; it is quoted in Act V instead. '
+        + 'Both from the '
+        + '<a href="https://archive.org/details/voyager-golden-record-cd-ozma" target="_blank" rel="noopener">40th-anniversary transfer</a>.',
       tracks: UN.map((u) => ({ t: u.t, src: u.src })),
     },
   };
@@ -800,7 +817,7 @@ export function initUI(ctx) {
   function populateTrackList() {
     const c = COLLECTIONS[setKey];
     trackList.setAttribute('aria-label', c.label);
-    if (flyNote) flyNote.textContent = c.note;
+    if (flyNote) flyNote.innerHTML = c.note; // per-collection, and it carries links
     trackList.innerHTML = '';
     c.tracks.forEach((tr, i) => {
       const b = el('button', 'gm-track' + (i === trackIdx && started ? ' is-current' : ''),

@@ -1,14 +1,15 @@
 {
   "name": "golden-record",
   "private": true,
-  "description": "Dev tooling only. The SITE has no dependencies and no build step — every runtime asset is a plain vendored file. Nothing in here is served.",
+  "description": "Dev tooling only. The SITE has no dependencies and no build step \u2014 every runtime asset is a plain vendored file. Nothing in here is served.",
   "scripts": {
     "check": "node tools/preflight.mjs",
     "check:live": "node tools/preflight.mjs --live",
     "smoke": "node tools/smoke.mjs --url https://goldenrecord.voyage/",
     "smoke:local": "node tools/smoke.mjs --url http://localhost:8000/",
     "smoke:all": "node tools/smoke.mjs --url https://goldenrecord.voyage/ --browser all",
-    "preflight": "npm run check && npm run smoke"
+    "preflight": "npm run check && npm run smoke",
+    "backup-audio": "node tools/backup-archive-audio.mjs"
   },
   "devDependencies": {
     "playwright": "^1.62.1"

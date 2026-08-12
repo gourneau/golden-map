@@ -5,3 +5,9 @@ node_modules/
 .env
 .env.*
 *.swp
+
+# local safety copy of the Internet Archive audio (tools/backup-archive-audio.mjs).
+# Large, and a commercial release we have no right to redistribute — this is a
+# private archival copy so the music and UN sections can be re-cut if that item
+# ever disappears. Never commit, never serve.
+backup/
