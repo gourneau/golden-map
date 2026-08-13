@@ -1205,6 +1205,21 @@
 .gm-track:hover .gm-track-native,
 .gm-track.is-current .gm-track-native { color: var(--gold); }
 
+/* What the greeting actually says. A visitor can now learn that Amoy asks
+   "Have you eaten yet?" — which is the entire reason to list 55 languages
+   rather than just play them. Its own row, like the performer credit. */
+.gm-track-says {
+  flex: 1 0 100%;
+  padding-left: 2.6em;
+  font-family: var(--body);
+  font-style: italic;
+  font-size: 0.86rem;
+  line-height: 1.4;
+  color: var(--paper-dim);
+}
+.gm-track:hover .gm-track-says,
+.gm-track.is-current .gm-track-says { color: var(--paper); }
+
 /* The performer credit is a phrase, not a label — beside a long title it was
    squeezing it to one word per line. It gets its own row and the full width. */
 .gm-track { flex-wrap: wrap; }

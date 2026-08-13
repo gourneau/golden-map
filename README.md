@@ -45,18 +45,24 @@ Five acts:
    seven dials, four famous seeds (Drake 1961, Sagan, the pessimist, the
    telescope era), and N recomputed live.
 
-A persistent mini player carries the record itself, in three collections named
-on the bar rather than hidden behind an icon: *Music from Earth* (27 pieces),
-*Sounds of Earth*, and *Greetings* — 55 languages, each listed in its own
-script. The greetings and the Earth sounds are **self-hosted**: NASA published
-them individually as public-domain files, so they are vendored here as AAC
-rather than streamed from anyone.
+A persistent mini player carries the record itself, in **four collections named
+on the bar** rather than hidden behind an icon: *Music from Earth* (27 pieces),
+*Sounds of Earth* (21 recordings), *Greetings* (55 languages), and the two
+*United Nations* sections — Kurt Waldheim's greeting, which opens the record,
+and the UN greetings that play under humpback whale song.
 
-Two spoken sections of the record are in neither of NASA's published sets, and
-the player says so: the greeting from UN Secretary-General Kurt Waldheim that
-opens the record, and the United Nations greetings that play under humpback
-whale song. Jimmy Carter's message travelled as printed words, not sound — it is
-quoted in Act V instead.
+The greetings and Earth sounds are **self-hosted**: NASA published them
+individually as public-domain files, so all 76 are vendored here as AAC (3.1 MB)
+rather than streamed from anyone. Every greeting is listed with **its own name
+in its own script** and **what it actually says** — Amoy asks *"Have you eaten
+yet?"* — from NASA's published translations. Music and the UN sections stream
+from the Internet Archive's 40th-anniversary transfer, the only source where
+they exist as correctly separated tracks.
+
+There is **no SoundCloud widget** and no third-party player script. One `<audio>`
+element drives everything, which is why a track plays on the first tap rather
+than the second, and why an ad blocker changes nothing. Jimmy Carter's message
+travelled as printed words, not sound — it is quoted in Act V instead.
 
 The Act I greeting button plays in **your** language where the record has one:
 the visitor's browser locale is matched against the 55, falling back to the

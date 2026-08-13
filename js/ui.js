@@ -345,7 +345,13 @@ export function initUI(ctx) {
         <p class="gm-detail-note">Enormously not to scale: drawn at true scale,
           Earth would be about forty billion times smaller than this little globe —
           far tinier than a single pixel.</p>
-        <p class="gm-fine">On the engraved map the origin is really the Sun;
+        <p class="gm-fine">The disc itself is gold-plated copper, twelve inches across,
+        meant to be played at 16⅔ revolutions per minute with the cartridge and
+        stylus supplied beside it. Electroplated onto the cover is a patch of
+        uranium-238: with a half-life of 4.5 billion years, a finder can date the
+        record by how much of it is left — a second clock, keeping time by decay
+        the way the pulsar periods keep it by slowing down.</p>
+      <p class="gm-fine">On the engraved map the origin is really the Sun;
           at galactic scale the Sun and Earth are the same point. The blue
           globe is a marker, not a measurement.</p>`;
       return;
@@ -625,7 +631,9 @@ export function initUI(ctx) {
           marry, compressed into a minute</span></li>
         <li><b>Timothy Ferris</b><span>producer</span></li>
         <li><b>Jon Lomberg</b><span>design director — the visual content</span></li>
-        <li><b>Linda Salzman Sagan</b><span>gathered the spoken greetings</span></li>
+        <li><b>Linda Salzman Sagan</b><span>gathered the spoken greetings — including
+          her six-year-old son Nick’s, the English one, which is the voice on the
+          button at the top of this site: “Hello from the children of planet Earth”</span></li>
         <li><b>Alan Lomax · Robert E. Brown</b><span>ethnomusicologists, who chose
           most of the music</span></li>
         <li><b>Jimmy Iovine</b><span>sound engineer — later of Interscope and
@@ -660,9 +668,9 @@ export function initUI(ctx) {
     </p>`;
 
   // ---- the record player: a persistent mini dock --------------------------
-  // NASA's official playlists stream through a visually-hidden SoundCloud
-  // widget; these controls drive it over the Widget API so the player wears
-  // the site's gold instead of SoundCloud's chrome. The dock rides the bottom
+  // Four collections through one <audio> element; these controls drive it
+  // directly, so the player wears the site's gold and owes nothing to a
+  // third-party embed. The dock rides the bottom
   // of EVERY act — the record keeps playing while you explore. Nothing loads
   // (and nothing plays) until the first press of play.
   const mini = el('aside', 'gm-panel gm-mini is-on');
@@ -759,6 +767,7 @@ export function initUI(ctx) {
         + 'The button on the title card plays the one closest to your browser’s language.',
       tracks: GREETINGS.map((g) => ({
         t: g.name, src: GREET_DIR + g.file + '.m4a', native: g.native, lang: g.lang,
+        says: g.says,
       })),
     },
     un: {
@@ -828,7 +837,14 @@ export function initUI(ctx) {
         n.textContent = tr.native;
         if (tr.lang) n.lang = tr.lang; // so a screen reader switches voice
         b.appendChild(n);
-      } else if (tr.meta) {
+      }
+      // what it actually says — the whole reason to list 55 languages
+      if (tr.says) {
+        const q = el('span', 'gm-track-says');
+        q.textContent = '“' + tr.says + '”';
+        b.appendChild(q);
+      }
+      if (!tr.native && tr.meta) {
         const n = el('span', 'gm-track-meta');
         n.textContent = tr.meta;
         b.appendChild(n);
@@ -941,9 +957,9 @@ export function initUI(ctx) {
 
   // ---- the title-card greeting: a one-off "hello" ---------------------------
   // NASA's own recordings (US-government works, public domain), vendored as
-  // plain files and played with a bare <audio> element — deliberately NOT a
-  // SoundCloud widget, because SoundCloud widgets pause one another. The
-  // greeting overlays the music without interrupting it.
+  // plain files and played with their OWN <audio> element, separate from the
+  // dock's — so the greeting overlays whatever is playing instead of stopping
+  // it. Everywhere else, one element is the point; here two is.
   //
   // The record carries 55 of these, so we greet a visitor in their own language
   // when we have it. English is the fallback, and ?still=1 forces English so the
@@ -964,9 +980,9 @@ export function initUI(ctx) {
       helloTail.textContent = greeting ? `say hello in ${shortName(greeting)}` : 'say hello';
       // the English text is "Hello from the children of planet Earth" — quoting
       // that beside another language's recording would simply be false
-      hello.title = greeting
-        ? `The record’s ${shortName(greeting)} greeting, recorded 1977 — NASA`
-        : '“Hello from the children of planet Earth” — the record’s English greeting, NASA';
+      const g = greeting || GREETINGS.find((x) => x.file === 'english');
+      hello.title = `“${g.says}” — the record’s ${shortName(g)} greeting, recorded 1977. `
+        + 'The English one is spoken by Nick Sagan, then six years old, Carl Sagan’s son.';
     };
     const ha = new Audio(greeting ? GREET_DIR + greeting.file + '.m4a' : 'vendor/audio/english-greeting.wav');
     ha.preload = 'auto';
