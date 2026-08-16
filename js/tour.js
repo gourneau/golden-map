@@ -75,11 +75,53 @@ const RESIZE_DEBOUNCE_MS = 250; // settle time before the resize re-frame check
 const SHORT_SCREEN_PX = 700;    // below this viewport height Act I stands back
                                 // (matches the ≤700px masthead rule in ui.css)
 
+// ---- fitted framing ---------------------------------------------------------
+// For acts III–V, HOMES supplies a view DIRECTION — a composition choice — and
+// nothing else. The distance and the lateral/vertical offset are solved per
+// viewport so that everything the act is about lands inside the part of the
+// screen the panels are not covering.
+//
+// Hard-coded distances could not do this. HOMES.pulsars stood 16.67 kpc back
+// (sized to keep the galactic center at 8.28 kpc in frame), which left the
+// fourteen beacons filling 21% of a 1920px frame — and on a 1280px one put the
+// two leftmost of them under the opaque 400px rail, 12 of 14 at 1024px. Nothing
+// was ever frustum-clipped: it was occlusion, plus a frame three times too big.
+const FIT_ACTS = new Set(['pulsars', 'verdict', 'finders']);
+const FIT_PAD_PX = 18;        // air between the content and the usable rect
+const FIT_MIN_DIST = 1.2;     // kpc floor, and the near-plane guard
+const FIT_TOLERANCE = 0.04;   // a resize under 4% of the fitted distance is ignored
+// Room held back for the idle sway and the camera breath, which move the frame
+// AFTER it has been fitted. Without it the fit is exactly tight and the first
+// thing the drift does is push the outermost beacon out of the visible band —
+// which is how this was found. A sway of MAP_SWAY_AMPL about the target moves a
+// point r out by r·θ, and Act V's oblique framing puts the worst case at ~7% of
+// the half-frame, so 10% covers it with room for the breath on top.
+const FIT_SWAY_SLACK = 1.10;
+// map3d's name sprites are fixed-size billboards parked just above each beacon.
+// They are part of the picture, so the fit holds them too — otherwise the
+// outermost beacon sits neatly at the edge with its own name hanging off it.
+const LABEL_HALF_W = 0.26, LABEL_HALF_H = 0.065, LABEL_LIFT = 0.16;
+const ORIGIN = new THREE.Vector3(0, 0, 0);
+
 const CLICK_SLOP_PX = 6;      // pointer travel beyond this is a drag, not a click
 const HOVER_INTERVAL_MS = 80; // throttle for hover raycasts
 const ORBIT_IDLE_S = 4;       // seconds of stillness before Act I idle sway resumes
 const SWAY_AMPL = 0.05;       // rad, Act I idle sway about the face-on portrait
 const SWAY_RATE = 0.3;        // rad/s of sway phase (~21 s per full sway cycle)
+// The map acts get a wider, slower version of the same sway. A still frame of a
+// 3D star map reads as a flat drawing — the parallax is what tells you the
+// fourteen beacons sit at different depths, which is the entire point of
+// rebuilding the engraving in 3D. It moves the CAMERA, never the stars: the
+// pulsars are not visibly going anywhere, the map is dated to epoch 1969.7, and
+// Act V's slider already owns real motion (map3d's shear()). Drifting them here
+// would imply time was passing and quietly contradict it.
+// Kept small on purpose. The map acts are FITTED — their content fills the
+// visible band almost exactly — so a sway of the ±0.12 rad this started at
+// swung the outermost beacon straight back under the rail it was just rescued
+// from. 0.05 rad moves the farthest point by ~4% of the half-frame, which
+// FIT_SWAY_SLACK below reserves for it.
+const MAP_SWAY_AMPL = 0.05;   // rad
+const MAP_SWAY_RATE = 0.16;   // rad/s (~39 s per full cycle)
 const BREATH_AMPL = 0.0035;   // fraction of camera–target distance
 
 export function initTour(ctx) {
@@ -197,13 +239,192 @@ export function initTour(ctx) {
     target.addScaledVector(scrRight, halfW * frac);
   }
 
+  // ---- fitted framing -------------------------------------------------------
+  const _f = new THREE.Vector3(), _rt = new THREE.Vector3(), _up = new THREE.Vector3();
+  const _v = new THREE.Vector3(), _dir = new THREE.Vector3();
+  const _fitPos = new THREE.Vector3(), _fitTgt = new THREE.Vector3();
+  const noInsets = { left: 0, right: 0, top: 0, bottom: 0 };
+  const insets = () => (ctx.sceneInsets ? ctx.sceneInsets() : noInsets);
+
+  // The usable rectangle, in NDC. ui.js measures which panels are actually up,
+  // so this needs no knowledge of class names or breakpoints.
+  const _rect = { x0: -1, x1: 1, y0: -1, y1: 1 };
+  function usableRect() {
+    const W = window.innerWidth, H = window.innerHeight;
+    const ins = insets();
+    _rect.x0 = (2 * (ins.left + FIT_PAD_PX)) / W - 1;
+    _rect.x1 = 1 - (2 * (ins.right + FIT_PAD_PX)) / W;
+    _rect.y0 = (2 * (ins.bottom + FIT_PAD_PX)) / H - 1;
+    _rect.y1 = 1 - (2 * (ins.top + FIT_PAD_PX)) / H;
+    // A viewport can be narrower or shorter than its own chrome. Never hand the
+    // solver an inside-out rect: fall back to a sliver at the middle of it.
+    if (_rect.x1 - _rect.x0 < 0.2) {
+      const c = (_rect.x0 + _rect.x1) / 2; _rect.x0 = c - 0.1; _rect.x1 = c + 0.1;
+    }
+    if (_rect.y1 - _rect.y0 < 0.2) {
+      const c = (_rect.y0 + _rect.y1) / 2; _rect.y0 = c - 0.1; _rect.y1 = c + 0.1;
+    }
+    return _rect;
+  }
+
+  // Solve camera position + target for a set of world points, keeping the view
+  // direction exactly as composed. Writes into outPos/outTgt, returns the
+  // camera-to-target distance.
+  //
+  // Why points and not a bounding sphere. A sphere of radius R needs
+  // d = R/sin(fov/2) — the frustum plane is TANGENT to it — not the R/tan(fov/2)
+  // the flat-disc shortcut gives; that alone is a sec(24°) = 9.5% error at this
+  // fov. But the real cost is the sphere itself: the tightest sphere over the
+  // pulsar cloud has R = 3.375 kpc, and fitting it to a 1440x900 frame from Act
+  // III's angle wants 8.30 kpc where fitting the POINTS wants 4.56. The cloud is
+  // a lopsided flattened shell; a ball around it is nearly twice the frame it
+  // needs, which would have fixed the occlusion and left the "too zoomed out"
+  // complaint almost untouched. And once the camera trucks sideways to clear the
+  // rail the sphere is off-axis, its silhouette grows, and the sphere fit stops
+  // being correct at all without iterating.
+  //
+  // The points cost nothing to fit exactly. With camera
+  //     C = K − d·f + sx·r + sy·u
+  // a point P has depth (P−K)·f + d and screen offset (P−K)·r − sx, so
+  // "inside the left edge x0" reads
+  //     (P−K)·r − sx  ≥  x0 · A · ((P−K)·f + d)
+  // which is LINEAR in (d, sx, sy). Requiring the sx interval to be non-empty
+  // eliminates sx and leaves d in closed form; same for sy. One pass for the
+  // distance, one for the offsets — and no iteration is needed because r and u
+  // are perpendicular to f, so trucking sideways does not change any point's
+  // DEPTH, and depth is the only thing the perspective divide uses.
+  function fitFraming(points, dir, outPos, outTgt) {
+    const rect = usableRect();
+    const B = Math.tan((camera.fov * Math.PI) / 360); // half-height per unit depth
+    const A = B * camera.aspect;                      // half-width  per unit depth
+
+    _f.copy(dir).normalize();
+    _rt.crossVectors(_f, Z_UP);                       // three's own camera-right
+    if (_rt.lengthSq() < 1e-8) _rt.set(1, 0, 0);      // a dead-on plan view
+    _rt.normalize();
+    _up.crossVectors(_rt, _f);
+
+    // Anchor at the centroid. The solve is anchor-invariant; this only keeps the
+    // offsets it reports small enough to read.
+    outTgt.set(0, 0, 0);
+    for (const p of points) outTgt.add(p);
+    outTgt.multiplyScalar(1 / points.length);
+
+    let hMax = -Infinity, gMin = Infinity, qMax = -Infinity, pMin = Infinity;
+    let zMin = Infinity;
+    let sxLo = -Infinity, sxHi = Infinity, syLo = -Infinity, syHi = Infinity;
+    let d = 0;
+
+    // one visitor, run twice: pass 0 collects the binding extremes that give d,
+    // pass 1 collects the slack at that d and hands back the offsets
+    const sweep = (pass) => {
+      for (const p of points) {
+        _v.copy(p).sub(outTgt);
+        const z = _v.dot(_f), x = _v.dot(_rt), y = _v.dot(_up);
+        for (let k = 0; k < 3; k++) {
+          // the point itself, then the two corners of its name billboard
+          const px = k === 0 ? x : k === 1 ? x + LABEL_HALF_W : x - LABEL_HALF_W;
+          const py = k === 0 ? y : k === 1 ? y + LABEL_HALF_H + LABEL_LIFT
+                                           : y - LABEL_HALF_H + LABEL_LIFT;
+          if (pass === 0) {
+            if (px - rect.x1 * A * z > hMax) hMax = px - rect.x1 * A * z;
+            if (px - rect.x0 * A * z < gMin) gMin = px - rect.x0 * A * z;
+            if (py - rect.y1 * B * z > qMax) qMax = py - rect.y1 * B * z;
+            if (py - rect.y0 * B * z < pMin) pMin = py - rect.y0 * B * z;
+            if (z < zMin) zMin = z;
+          } else {
+            const zz = z + d;
+            if (px - rect.x1 * A * zz > sxLo) sxLo = px - rect.x1 * A * zz;
+            if (px - rect.x0 * A * zz < sxHi) sxHi = px - rect.x0 * A * zz;
+            if (py - rect.y1 * B * zz > syLo) syLo = py - rect.y1 * B * zz;
+            if (py - rect.y0 * B * zz < syHi) syHi = py - rect.y0 * B * zz;
+          }
+        }
+      }
+    };
+
+    sweep(0);
+    d = Math.min(
+      Math.max(
+        (hMax - gMin) / ((rect.x1 - rect.x0) * A),
+        (qMax - pMin) / ((rect.y1 - rect.y0) * B),
+        FIT_MIN_DIST - zMin,   // nothing behind (or on top of) the camera
+        FIT_MIN_DIST,
+      ),
+      controls.maxDistance * 0.95, // the reader must still be able to pull back
+    );
+    d *= FIT_SWAY_SLACK;
+    sweep(1);
+
+    outTgt.addScaledVector(_rt, (sxLo + sxHi) / 2)
+          .addScaledVector(_up, (syLo + syHi) / 2);
+    outPos.copy(outTgt).addScaledVector(_f, -d);
+    return d;
+  }
+
+  // What the frame must contain. Deliberately NOT the galactic center: at
+  // 8.28 kpc it is nearly twice the farthest beacon (4.70 kpc, B1240-64 as
+  // engraved), and including it pushes the Act III camera from 6.7 to 11.1 kpc
+  // on a 1440px screen — the fourteen beacons, which are what Act III IS, drop
+  // to 60% of their size to keep one dot in shot. It has its own row in the
+  // rail ("15 · Galactic Center") that flies you straight to it. The phone
+  // framing made this call already (see the note above PHONE_HOMES); this agrees.
+  // Fit against where the beacons END UP, not where they happen to be right now.
+  // The live endpoints move: Act II unfolds them from flat over 1.6s, and the
+  // fit runs on the act change, before a frame of that has played. Reading them
+  // live meant framing a map that was still folded — jump straight from Act I to
+  // Act V and the outermost beacon was simply not in the set, so the solver
+  // never reserved room for it and it landed under the nav. The unfold always
+  // finishes at these exact vectors, and Act V is fitted at timeMyr = 0 (the
+  // shear is the reader's own business, and re-fitting under their slider would
+  // pull the camera back while they drag it), so the static data is the truth.
+  const _pts = [];
+  function actPoints() {
+    _pts.length = 0;
+    _pts.push(ORIGIN); // the Sun: every line starts there, it is never optional
+    const mode = ctx.state.mapMode;
+    for (const p of ctx.pulsars) {
+      if (mode !== 'modern') _pts.push(p.xyz1977);
+      if (mode !== 'engraved') _pts.push(p.xyzModern);
+    }
+    return _pts;
+  }
+
+  // Slide a framing so the subject centers in the VISIBLE area rather than in
+  // the frame. The panels are opaque, and the frame's middle is not the reader's
+  // middle. Supersedes a fixed `422 / innerWidth` truck that knew about the
+  // right-hand detail panel and nothing else: in Act III the 400px list rail
+  // sits on the LEFT as well, the two cancel out, and trucking anyway pushed the
+  // selected beacon 211px left at 1280px wide — straight under the rail, along
+  // with its name and its line back to the Sun.
+  //   visible band [L, W−R], its centre in NDC is (L−R)/W;
+  //   shifting the rig screen-right by s puts the subject at NDC −s/halfW;
+  //   so s = halfW · (R−L)/W.  (L=0 reduces to the old 422/W. Same for Y.)
+  function centerInUsable(pos, target) {
+    const W = window.innerWidth, H = window.innerHeight;
+    const ins = insets();
+    const halfH = pos.distanceTo(target) * Math.tan((camera.fov * Math.PI) / 360);
+    const lookDir = target.clone().sub(pos).normalize();
+    const scrRight = new THREE.Vector3().crossVectors(lookDir, Z_UP);
+    if (scrRight.lengthSq() < 1e-8) scrRight.set(1, 0, 0);
+    scrRight.normalize();
+    const scrUp = new THREE.Vector3().crossVectors(scrRight, lookDir);
+    const dx = halfH * camera.aspect * ((ins.right - ins.left) / W);
+    const dy = halfH * ((ins.top - ins.bottom) / H);
+    for (const v of [pos, target]) v.addScaledVector(scrRight, dx).addScaledVector(scrUp, dy);
+  }
+
   // A phone on its side: the act sheet is a left column that can take half the
   // frame, and HOMES are composed for a desktop's proportions. Stand back for
   // the height a 390px-tall frame doesn't have, then truck clear of the column.
   const narrowLandscape = () => ctx.phoneLandscape();
   const LANDSCAPE_PULL = 1.3;
 
+  let lastFitDist = 0;   // distance the standing framing was fitted at
+  let userMoved = false; // the reader has driven the camera since the last home
+
   function goHome(dur = 2.2) {
+    userMoved = false;
     if (camera.aspect < PORTRAIT_ASPECT) {
       let h = PHONE_HOMES[ctx.state.act] || PHONE_HOMES.record;
       if (ctx.state.act === 'record' && window.innerHeight < SHORT_SCREEN_PX) h = PHONE_HOMES.recordShort;
@@ -218,6 +439,18 @@ export function initTour(ctx) {
     if (ctx.state.act === 'record') h = narrowLandscape() ? HOMES.recordLandscape : HOMES.recordWide;
     const pos = new THREE.Vector3(...h.pos);
     const target = new THREE.Vector3(...h.target);
+
+    // Acts III–V: HOMES gives the direction, the fit gives distance and offset.
+    // (A landscape phone keeps the hand-composed pull-and-truck for now — its
+    // sheet is a left column and those homes are already tuned against it.)
+    if (FIT_ACTS.has(ctx.state.act) && !narrowLandscape()) {
+      _dir.copy(target).sub(pos);
+      lastFitDist = fitFraming(actPoints(), _dir, pos, target);
+      ctx.homeDist = lastFitDist;
+      flyTo(pos, target, dur, true);
+      return;
+    }
+
     if (narrowLandscape() && ctx.state.act !== 'record') {
       pos.copy(target).addScaledVector(new THREE.Vector3(...h.pos).sub(target), LANDSCAPE_PULL);
       truckPastPanel(pos, target, -0.42); // the sheet is the LEFT column here
@@ -257,7 +490,16 @@ export function initTour(ctx) {
     // area instead of hiding under the panel (the Galactic Center, rightmost
     // thing on the map, was fully covered without this).
     if (camera.aspect >= PORTRAIT_ASPECT) {
-      truckPastPanel(pos, target, Math.min(0.42, 422 / window.innerWidth));
+      // `spread` is a dramatic choice, not a guarantee: on a narrow window the
+      // Sun end of a long line fell off the left edge. Take whichever distance
+      // is larger — the composed one, or the one that actually fits both ends
+      // and the beacon's name inside the visible area. (The fit centres on its
+      // own centroid, not on frameLine's look point, so treat it as a floor.)
+      const dv = target.clone().sub(pos);
+      const have = dv.length();
+      const need = fitFraming([ORIGIN, end], dv, _fitPos, _fitTgt);
+      if (need > have) pos.copy(target).addScaledVector(dv.divideScalar(have), -need);
+      centerInUsable(pos, target);
     }
     flyTo(pos, target, 1.6);
   }
@@ -296,10 +538,26 @@ export function initTour(ctx) {
         && camera.aspect >= PORTRAIT_ASPECT && !narrowLandscape()) {
       // the dimensional sweep: swoop to plane level — the stars visibly rise
       // out of the galactic disc — then climb to the hero overview
-      // (landscape only: the legs are composed for wide frames)
+      // (landscape only: the legs are composed for wide frames).
+      // Both legs are built from the FITTED frame rather than HOMES.pulsars:
+      // landing leg 2 on the old constant would park the camera at a framing the
+      // fit never chose, and it would sit there until the next act change.
+      const pos = new THREE.Vector3(), target = new THREE.Vector3();
+      _dir.set(...HOMES.pulsars.target).sub(new THREE.Vector3(...HOMES.pulsars.pos));
+      const d = fitFraming(actPoints(), _dir, pos, target);
+      lastFitDist = d;
+      ctx.homeDist = d;
+      userMoved = false;
+      // leg 1: same target and compass bearing, camera dropped to disc level
+      const az = Math.atan2(pos.y - target.y, pos.x - target.x);
+      const low = new THREE.Vector3(
+        target.x + Math.cos(az) * d * 0.92,
+        target.y + Math.sin(az) * d * 0.92,
+        target.z + d * 0.05,
+      );
       flyPath([
-        { pos: new THREE.Vector3(4, -11, 0.7), target: new THREE.Vector3(3, 0, 0.5), dur: 2.4 },
-        { pos: new THREE.Vector3(...HOMES.pulsars.pos), target: new THREE.Vector3(...HOMES.pulsars.target), dur: 2.4 },
+        { pos: low, target: target.clone(), dur: 2.4 },
+        { pos, target, dur: 2.4 },
       ]);
       return;
     }
@@ -428,6 +686,7 @@ export function initTour(ctx) {
     if (e.target !== canvas) return;
     pointerDown = true;
     sinceUser = 0;
+    userMoved = true; // hand-framed now: a resize must not restage it
     downX = e.clientX; downY = e.clientY;
     clearHover(); // drag starts — the tooltip must not linger under the cursor
     stripBreath();
@@ -439,6 +698,7 @@ export function initTour(ctx) {
   window.addEventListener('wheel', (e) => {
     if (e.target !== canvas) return;
     sinceUser = 0;
+    userMoved = true; // zoomed by hand: same rule as a drag
     cancelTween();
   }, { passive: true, capture: true });
 
@@ -495,10 +755,12 @@ export function initTour(ctx) {
     }
   });
 
-  // ---- resize: portrait re-framing --------------------------------------------
-  // main.js updates camera.aspect on resize. When the viewport crosses the
-  // portrait threshold, the standing framing was computed for the other
-  // orientation — re-home, but never yank a tween, a gesture, or a selection.
+  // ---- resize: re-framing -----------------------------------------------------
+  // main.js updates camera.aspect on resize. Two things can go stale: the
+  // portrait/landscape choice of home, and — now that III–V are FITTED to the
+  // viewport — the fit itself. Re-home for either, but never yank a tween, a
+  // gesture, a selection, or a camera the reader has moved by hand: someone who
+  // orbited in to look at Vela did not ask their window resize to throw it away.
   let wasPortrait = camera.aspect < PORTRAIT_ASPECT;
   let resizeTimer = 0;
   window.addEventListener('resize', () => {
@@ -507,7 +769,17 @@ export function initTour(ctx) {
       const isPortrait = camera.aspect < PORTRAIT_ASPECT;
       const crossed = isPortrait !== wasPortrait;
       wasPortrait = isPortrait;
-      if (crossed && !tween && !pointerDown && ctx.state.selected == null) goHome(0.9);
+      if (tween || pointerDown || ctx.state.selected != null) return;
+      if (crossed) { goHome(0.9); return; }
+      if (isPortrait || userMoved || !FIT_ACTS.has(ctx.state.act) || narrowLandscape()) return;
+      // Would the fit actually move? Solve into scratch and compare, so that
+      // dragging a window edge does not restage the camera on every settle.
+      _dir.copy(controls.target).sub(camera.position);
+      const need = fitFraming(actPoints(), _dir, _fitPos, _fitTgt);
+      if (lastFitDist > 0
+          && Math.abs(need - lastFitDist) < lastFitDist * FIT_TOLERANCE
+          && _fitPos.distanceTo(camera.position) < need * FIT_TOLERANCE) return;
+      goHome(0.7); // shorter than an act change: this is a correction, not a move
     }, RESIZE_DEBOUNCE_MS);
   });
 
@@ -557,9 +829,11 @@ export function initTour(ctx) {
 
     // Act I: barely-there idle sway (±SWAY_AMPL rad) about the face-on portrait —
     // a full orbit would swing the disc edge-on and lose the engraved design.
-    if (ctx.state.act === 'record' && !ctx.state.selected && sinceUser > ORBIT_IDLE_S) {
-      swayPhase += dt * SWAY_RATE;
-      const sway = SWAY_AMPL * Math.sin(swayPhase);
+    if ((ctx.state.act === 'record' || FIT_ACTS.has(ctx.state.act))
+        && !ctx.state.selected && sinceUser > ORBIT_IDLE_S) {
+      const onMap = ctx.state.act !== 'record';
+      swayPhase += dt * (onMap ? MAP_SWAY_RATE : SWAY_RATE);
+      const sway = (onMap ? MAP_SWAY_AMPL : SWAY_AMPL) * Math.sin(swayPhase);
       orbitArm.copy(camera.position).sub(controls.target).applyAxisAngle(Z_UP, sway - swayPrev);
       swayPrev = sway;
       camera.position.copy(controls.target).add(orbitArm);

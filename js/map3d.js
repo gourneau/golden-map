@@ -542,8 +542,16 @@ export function createMap(ctx) {
 
       // label, fading with distance
       const dist = camera.position.distanceTo(it.label.position);
-      // Act V's camera sits far out — extend the label range so names still read
-      const labelRange = curAct === 'finders' ? 6.5 : 3.2;
+      // Names appear as the reader closes in, and the overview stays clean.
+      // This is a FRACTION of however far the act framed itself, not a fixed
+      // number of kpc: the tour now fits each act to the viewport, so the same
+      // constant that hid these at Act III's old 16.67 kpc had them fading up
+      // and colliding around the Sun at a fitted 7 kpc. The old constants were
+      // this ratio all along (16.67 × 0.19 = 3.17 ≈ 3.2), so nothing moves at
+      // the distances they were tuned against. Act V keeps its wider setting —
+      // its camera sits far out and the names still have to read.
+      const homeD = ctx.homeDist || 16.67;
+      const labelRange = homeD * (curAct === 'finders' ? 0.44 : 0.19);
       const lOp = labelFade * actFade
         * Math.max(0, Math.min(0.85, labelRange / dist - 0.2))
         * Math.min(1, Math.max(0, (dist - 0.5) / 1.0)) // gone when the camera is up close (Earth zoom)

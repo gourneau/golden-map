@@ -27,6 +27,14 @@ ctx = {
   prefersReducedMotion,   // boolean — honor it: skip/shorten animations
   phoneLayout(), phoneLandscape(),  // the ONE definition of "phone-shaped
                           //   viewport", mirrored by css/ui.css media queries
+  sceneInsets(),          // {left,right,top,bottom} px of viewport the panels
+                          //   cover right now. ui.js owns it because only ui.js
+                          //   knows which panels are up and how wide the
+                          //   breakpoint made them; tour.js fits each act into
+                          //   what's left. Zeros under ?still=1, and no side
+                          //   insets on phones (there the panels are sheets).
+  homeDist,               // kpc the current act framed itself at — map3d fades
+                          //   the beacon labels as a fraction of it
   still,                  // boolean — ?still=1 screenshot mode: pinned hero frame,
                           //   no UI chrome, no idle motion (og.jpg capture)
   modules: { starfield, record, voyager, map3d },  // available AFTER scene modules built
@@ -73,8 +81,13 @@ SCALE: 1 scene unit = 1 kpc. The Sun is at the origin. GC at ~(8.28, 0, −0.02)
 - `js/tour.js`      → `export function initTour(ctx) -> { update(dt,t) }`
    Owns camera movement (tweened fly-tos; write your own small tween, no libs),
    act-driven staging, raycast picking on canvas click → ctx.select(...), keyboard
-   nav (arrows step acts — clamped at the ends, no wrap; Esc = deselect). Selection
-   framings truck screen-right so the subject clears the right-side detail panel.
+   nav (arrows step acts — clamped at the ends, no wrap; Esc = deselect).
+   Acts III–V are FITTED, not hard-coded: HOMES gives the view direction and the
+   solver derives distance and offset so every beacon lands inside
+   ctx.sceneInsets() — the 400px rail and detail panel are opaque, and a constant
+   distance put up to 12 of the 14 beacons underneath them on a narrow desktop.
+   Selection framings centre on the VISIBLE band for the same reason (both
+   columns can be up at once, and they cancel). Phones keep PHONE_HOMES.
 
 ## Design system (css/style.css — already written, use its variables)
 

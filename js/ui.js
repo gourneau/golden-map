@@ -1270,6 +1270,43 @@ export function initUI(ctx) {
     window.addEventListener('resize', measureChrome);
   }
 
+  // ---- what the chrome covers, in px ---------------------------------------
+  // The tour frames each act into the part of the viewport the panels DON'T
+  // cover. Only ui.js knows which panels are up and how wide the breakpoint
+  // made them, so it answers the question rather than letting tour.js re-derive
+  // it from class names and media queries — that is exactly the fork this
+  // file's ownership rule exists to prevent, and it is how the camera came to
+  // compensate for a 400px right-hand panel that Act III does not have while
+  // ignoring the 400px LEFT-hand rail that it does.
+  //
+  // offsetLeft/offsetTop/offsetWidth, NOT getBoundingClientRect: panels ride a
+  // translateX(±18px) while they fade in, and the tour asks for insets in the
+  // same tick as the class flip, so a transformed rect would be 18px out. The
+  // offset* family is layout-based and ignores transforms; html is
+  // overflow:hidden and #ui is the fixed offsetParent at 0,0, so these are
+  // already viewport coordinates.
+  const leftPanels = [explainer, rail, verdict];
+  const rightPanels = [detail, finders];
+  const up = (n) => n.classList.contains('is-on') && n.offsetWidth > 0;
+  ctx.sceneInsets = () => {
+    const ins = { left: 0, right: 0, top: 0, bottom: 0 };
+    if (ctx.still) return ins; // screenshot mode hides every panel
+    const W = window.innerWidth, H = window.innerHeight;
+    ins.top = nav.offsetTop + nav.offsetHeight;
+    // the docked player is a centered pill floating clear of the bottom edge —
+    // measure where its TOP is rather than assuming its height is the whole band
+    ins.bottom = H - miniBar.getBoundingClientRect().top;
+    for (const n of [artifactChip, earthChip, corner]) {
+      if (up(n)) ins.bottom = Math.max(ins.bottom, H - n.offsetTop);
+    }
+    // ≤900px every panel is a bottom sheet, not a column: no side insets, and
+    // the sheet's own height is already handled by PHONE_HOMES + sheetRecenter
+    if (ctx.phoneLayout()) return ins;
+    for (const n of leftPanels) if (up(n)) ins.left = Math.max(ins.left, n.offsetLeft + n.offsetWidth);
+    for (const n of rightPanels) if (up(n)) ins.right = Math.max(ins.right, W - n.offsetLeft);
+    return ins;
+  };
+
   // ---- act / selection plumbing ------------------------------------------
   const actPanels = [title, explainer, rail, verdict, finders, artifactChip, earthChip];
   const DETAIL_ACTS = new Set(['pulsars', 'verdict', 'finders']);
