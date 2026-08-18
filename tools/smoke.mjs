@@ -38,10 +38,13 @@ for (const engine of ENGINES) {
   const consoleErrors = [];
   const pageErrors = [];
   const badResponses = [];
-  // Hosts whose failures are not ours and not actionable: the analytics beacon
-  // refuses a localhost origin by design, and archive.org streams are optional.
-  // A check that cries wolf is a check nobody reads.
-  const THIRD_PARTY = ['cloudflareinsights.com', 'archive.org', 'soundcloud.com', 'sndcdn.com'];
+  // archive.org and soundcloud.com USED to be on this list, declared "not ours
+  // and not actionable". So when archive.org became unreachable for a real
+  // visitor and two of the four collections went silent, this file printed
+  // SMOKE PASSED. A whitelist that hides the failure mode you actually have is
+  // not noise reduction. Only the analytics beacon remains, and only because it
+  // is aborted by route() below and refuses a localhost origin by design.
+  const THIRD_PARTY = ['cloudflareinsights.com'];
   // Only OUR errors. The SoundCloud iframe emits Firefox cookie warnings we
   // neither cause nor can fix, and a check that cries wolf stops being read.
   const origin = new URL(URL_).origin;
@@ -115,6 +118,98 @@ for (const engine of ENGINES) {
     fail(`${engine}: ${e.message}`);
   } finally {
     await browser.close();
+  }
+}
+
+
+// ---- the fallback, exercised rather than assumed ---------------------------
+// The reported bug: archive.org unreachable from a visitor's network, Music and
+// UN silent, Greetings and Sounds fine. Two shapes, and they are NOT one test.
+// A refused connection fires 'error' in milliseconds. A filter that DROPS
+// packets fires nothing at all — which is why the player has a watchdog, and
+// why a test that only simulated refusal would prove nothing about the outage
+// that actually happened.
+export async function fallbackRun(engine, URL_, mode) {
+  const pw = await import('playwright');
+  const browser = await pw[engine].launch();
+  const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+  await page.route('**/*cloudflareinsights.com/**', (r) => r.abort());
+  let hits = 0;
+  await page.route(/^https?:\/\/([a-z0-9-]+\.)*archive\.org\//i, async (r) => {
+    hits++;
+    if (mode === 'refused') return r.abort('connectionfailed');
+    // match a DROP rule on the wire: no RST, no DNS error, just silence —
+    // longer than the player's FIRST_BYTE_MS so the watchdog is what decides
+    await new Promise((res) => setTimeout(res, 30000));
+    return r.abort('timedout');
+  });
+  const out = [];
+  const ok = (m) => out.push(`  ok   ${m}`);
+  const bad = (m) => out.push(`  FAIL ${m}`);
+  await page.goto(URL_, { waitUntil: 'load', timeout: 45000 });
+  await page.waitForTimeout(2500);
+  await page.click('.gm-pick[data-set="music"]');
+  let switched = false;
+  try {
+    await page.waitForFunction(() => window.__ctx.audio.state().engine === 'backup',
+      null, { timeout: 35000 });
+    switched = true;
+  } catch { /* reported below */ }
+  switched ? ok(`${mode}: failed over to the backup engine`)
+           : bad(`${mode}: still on archive.org after 35s — the visitor gets silence`);
+  const st = await page.evaluate(() => window.__ctx.audio.state());
+  st.host === 'bad' ? ok(`${mode}: archive.org marked unreachable ("${st.why}")`)
+                    : bad(`${mode}: host state "${st.host}", expected "bad"`);
+  hits > 0 ? ok(`${mode}: ${hits} archive.org request(s) intercepted`)
+           : bad(`${mode}: nothing requested archive.org — the test proved nothing`);
+  // The engine swaps the moment the widget object exists; SoundCloud then needs
+  // a few seconds to buffer and report PLAY. Wait for sound rather than sampling
+  // the instant of the swap — "silent" here must mean silent, not "not yet".
+  let sounding = false;
+  try {
+    await page.waitForFunction(() => window.__ctx.audio.state().playing, null, { timeout: 20000 });
+    sounding = true;
+  } catch { /* reported below */ }
+  sounding ? ok(`${mode}: audio is actually playing from the backup`)
+           : bad(`${mode}: backup engine loaded but produced no sound in 20s`);
+  // the playlist must be untouched — names and credits are ours, not the source's
+  await page.click('.gm-msets').catch(() => {});
+  await page.waitForTimeout(700);
+  const rows = await page.evaluate(() => [...document.querySelectorAll('.gm-track')].map((r) => ({
+    t: r.querySelector('.gm-track-t')?.textContent,
+    m: r.querySelector('.gm-track-meta')?.textContent })));
+  rows.length === 27 ? ok(`${mode}: all 27 rows still listed`)
+                     : bad(`${mode}: ${rows.length} rows, expected 27`);
+  rows[6] && /Johnny B. Goode/.test(rows[6].t) && /Chuck Berry/.test(rows[6].m || '')
+    ? ok(`${mode}: names and credits unchanged in fallback`)
+    : bad(`${mode}: playlist degraded — row 7 is ${JSON.stringify(rows[6])}`);
+  // UN has no backup and must SAY so: present, focusable, explained
+  const un = await page.evaluate(() => {
+    const b = document.querySelector('.gm-pick[data-set="un"]');
+    return { present: !!b, dis: b && b.getAttribute('aria-disabled'), why: (b && b.title || '').length };
+  });
+  un.present && un.dis === 'true' && un.why > 20
+    ? ok(`${mode}: UN disabled in place with a reason`)
+    : bad(`${mode}: UN chip is ${JSON.stringify(un)} — expected present, aria-disabled, explained`);
+  await browser.close();
+  return out;
+}
+
+// Run both shapes of the outage as part of the normal invocation. This is the
+// case that reached a visitor, so it is not an opt-in flag.
+if (!process.argv.includes('--no-fallback')) {
+  for (const mode of ['refused', 'blackhole']) {
+    console.log(`\narchive.org ${mode}`);
+    // Pinned to Chromium on purpose. This case tests OUR fallback logic, and it
+    // needs an engine where the SoundCloud widget itself demonstrably runs:
+    // Playwright's Firefox build never starts that iframe even with autoplay
+    // fully allowed, though it plays our own vendored audio fine. Pinning is not
+    // whitelisting — every assertion still runs and still fails the build; only
+    // the engine that hosts the third-party iframe is fixed.
+    for (const line of await fallbackRun('chromium', URL_, mode)) {
+      console.log(line);
+      if (line.startsWith('  FAIL')) failures++;
+    }
   }
 }
 

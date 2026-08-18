@@ -75,9 +75,14 @@ SCALE: 1 scene unit = 1 kpc. The Sun is at the origin. GC at ~(8.28, 0, −0.02)
    three.js. Includes the persistent audio mini-dock: ONE <audio> element and
    four collections (js/data/record-audio.js, js/data/greetings.js). Greetings
    and Earth sounds are vendored public-domain NASA files; music and the two UN
-   sections stream from the Internet Archive. There is no SoundCloud widget any
-   more — and with it went the Widget API, the iOS play-priming hack, and the
-   cue sheet that guessed track boundaries from published durations.
+   sections stream from the Internet Archive, with a SoundCloud fallback
+   (js/scplayer.js) for when archive.org is unreachable — which happens: it is
+   routinely blocked wholesale by network filters. Detection is a one-byte CORS
+   probe plus a byte watchdog, because a filtered host HANGS rather than firing
+   an error. The verdict is sticky per page load. The track list is ours in both
+   modes: only the bytes change, never a name or a credit. The United Nations
+   sections have no second source and disable themselves in place, with the
+   reason attached — they are never hidden.
 - `js/tour.js`      → `export function initTour(ctx) -> { update(dt,t) }`
    Owns camera movement (tweened fly-tos; write your own small tween, no libs),
    act-driven staging, raycast picking on canvas click → ctx.select(...), keyboard

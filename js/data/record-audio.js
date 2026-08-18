@@ -8,8 +8,17 @@
 // only source where they exist as correctly separated tracks. The music is
 // still under copyright (most of it into the 2060s; Armstrong and Blind Willie
 // Johnson enter the US public domain on 1 January 2028), which is why NASA's
-// own release omits it. If either ever goes away, the player hides that
-// collection rather than showing a broken control.
+// own release omits it.
+//
+// archive.org is a single point of failure, and it failed for a real visitor on
+// a healthy Mac: it is routinely blocked wholesale by corporate, school and ISP
+// filters (false-flagged as BitTorrent), has had extended outages, and its
+// /download/ URLs 302 to a per-request node hostname, so a filter that blocks
+// only *.archive.org subdomains kills playback while archive.org itself still
+// resolves. Music therefore carries a SoundCloud fallback on a different domain.
+// The United Nations sections have none — they exist in neither NASA set, and
+// another archive.org item is no use when archive.org is the thing blocked — so
+// that collection is the one that genuinely disables itself.
 //
 // Country and performer credits are NASA's own wording, Soviet republics and
 // all — that is what the sleeve said in 1977.
@@ -245,3 +254,32 @@ export const SOUNDS_OF_EARTH = [
   { t: 'Mud pots', f: 'mud' },
   { t: 'Music of the Spheres — Laurie Spiegel, after Kepler', f: 'spheres' },
 ];
+
+// ---- fallback: a different domain, for when archive.org cannot be reached ----
+// One continuous upload, so a track is a SEEK rather than a file.
+//
+// These offsets are NASA's published 1977 durations, accumulated — NOT the Ozma
+// per-track lengths above, and that distinction is the whole point. The Ozma
+// transfer runs 5427s (90:27); this upload runs 5250s (87:30). Accumulating Ozma
+// durations therefore drifts to +187s by the last piece — it would be wrong from
+// the second track onward. The NASA sheet ends at 4839 + 401 = 5240s, ten
+// seconds from the upload's true length, so it is globally calibrated to THIS
+// file and its error is local drift rather than scale.
+//
+// That local error is real: roughly half a minute by mid-record, non-linear, and
+// not removable from any published source. SoundCloud's own waveform JSON is
+// floored and log-scaled with no quiet buckets, so the gaps are not recoverable
+// from it either. The player says the cues are approximate instead of implying a
+// precision it does not have.
+//
+// The track NAMES, countries and performer credits stay ours in either mode —
+// this changes where the bytes come from, not a word the reader sees.
+export const MUSIC_FALLBACK = {
+  url: 'https://soundcloud.com/the-film-effect/voyager-golden-record-music-from-earth',
+  seconds: 5250,
+  note: 'Backup source: one continuous upload, so track starts are approximate.',
+  cues: [
+    0, 280, 563, 691, 747, 833, 1027, 1185, 1265, 1556, 1731, 1906, 2044, 2096,
+    2281, 2431, 2706, 2994, 3434, 3733, 3790, 3867, 3939, 3977, 4434, 4644, 4839,
+  ],
+};

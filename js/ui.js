@@ -9,7 +9,8 @@
 
 import { extinctionMyr, displayBlinkSeconds } from './astro.js';
 import { GREETINGS, shortName, pickGreeting } from './data/greetings.js';
-import { MUSIC, UN, SOUNDS_OF_EARTH } from './data/record-audio.js';
+import { MUSIC, UN, SOUNDS_OF_EARTH, MUSIC_FALLBACK } from './data/record-audio.js';
+import { createSoundCloud } from './scplayer.js';
 import { loadText, explanationSvg } from './assets.js';
 
 export function initUI(ctx) {
@@ -794,6 +795,74 @@ export function initUI(ctx) {
     },
   };
 
+  // ---- is archive.org actually reachable? ----------------------------------
+  // A filter that DROPS packets — which is what archive.org routinely gets from
+  // corporate, school and ISP filters that false-flag it as a torrent host —
+  // produces NO 'error' event at all. The element sits in NETWORK_LOADING until
+  // the OS gives up, which can be over a minute. The single error handler this
+  // player had could therefore never fire for the failure a real visitor hit:
+  // Music and UN silent on a healthy Mac, Greetings and Sounds fine.
+  //
+  // Three signals, whichever lands first:
+  //   1. 'error'      — DNS failure, refused connection, or a filter's block page
+  //                     (a 200 text/html decodes as MEDIA_ERR_SRC_NOT_SUPPORTED).
+  //   2. a fetch probe — archive.org sends access-control-allow-origin:* on BOTH
+  //                     the /download 302 and the per-request node it redirects
+  //                     to, and answers a Range preflight, so a real one-byte
+  //                     cross-origin GET works AND exercises the same node
+  //                     hostname the <audio> element will be handed.
+  //   3. a watchdog   — the backstop for an inconclusive probe.
+  //
+  // The ordering is the trick: PROBE_MS < FIRST_BYTE_MS, so a slow but WORKING
+  // connection is cleared by evidence before any clock condemns it, and any byte
+  // at all cancels the watchdog outright. A visitor on 3G who needs twenty
+  // seconds to buffer is never misdiagnosed — they are downloading and we can
+  // see it. Only "nine seconds and not one byte" is a verdict.
+  const PROBE_MS = 5000;
+  const FIRST_BYTE_MS = 9000;
+  const isArchive = (u) => /^https?:\/\/([a-z0-9-]+\.)*archive\.org\//i.test(u || '');
+
+  let hostState = 'unknown';  // 'unknown' | 'ok' | 'bad' — sticky for this page load
+  let probing = null;
+  let lastDiagnosis = '';
+
+  function probeArchive() {
+    if (probing) return probing;
+    const ac = new AbortController();
+    const t0 = performance.now();
+    const timer = setTimeout(() => ac.abort(), PROBE_MS);
+    probing = fetch(MUSIC[0].src, {
+      method: 'GET', mode: 'cors', cache: 'no-store',
+      headers: { Range: 'bytes=0-0' }, signal: ac.signal,
+    }).then((r) => {
+      if (r.body) r.body.cancel().catch(() => {});
+      // A captive portal answers 200 text/html; that is not reachability, which
+      // is why the content type is part of the test and not decoration.
+      const ok = (r.status === 206 || r.status === 200)
+        && /^audio\//i.test(r.headers.get('content-type') || '');
+      return { ok, ms: performance.now() - t0, status: r.status };
+    }).catch((e) => {
+      // The Fetch spec makes a CORS rejection and a network rejection
+      // deliberately indistinguishable, so only the SHAPE of the failure is
+      // evidence: an abort means five seconds produced no headers, which is the
+      // reported outage exactly. A fast TypeError could be a CORS posture change
+      // on archive.org's side, and condemning the host for that would move every
+      // visitor to a worse source for no reason — so it stays inconclusive and
+      // the watchdog decides on evidence from the element itself.
+      const hung = e && e.name === 'AbortError';
+      return { ok: hung ? false : null, ms: performance.now() - t0, status: 0 };
+    }).finally(() => clearTimeout(timer));
+    return probing;
+  }
+
+  // Where each collection's bytes come from, and what can still serve it when
+  // that host is unreachable. NULL is a real answer and the UI has to say so
+  // out loud rather than quietly dropping the control — see paintAvailability.
+  COLLECTIONS.music.host = 'archive'; COLLECTIONS.music.backup = 'soundcloud';
+  COLLECTIONS.un.host = 'archive'; COLLECTIONS.un.backup = null;
+  COLLECTIONS.sounds.host = 'self'; COLLECTIONS.sounds.backup = null;
+  COLLECTIONS.greetings.host = 'self'; COLLECTIONS.greetings.backup = null;
+
   let setKey = 'music';
   let trackIdx = 0;
   let started = false; // has anything ever played? drives the idle bar
@@ -823,7 +892,7 @@ export function initUI(ctx) {
   const SVG_PLAY = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2l10 6-10 6z"/></svg>';
   const SVG_PAUSE = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2h3v12H4z M9 2h3v12H9z"/></svg>';
   const paintPlayBtn = () => {
-    const playing = !audio.paused && !audio.ended;
+    const playing = usingBackup() ? scPlaying : (!audio.paused && !audio.ended);
     pPlay.innerHTML = playing ? SVG_PAUSE : SVG_PLAY;
     pPlay.setAttribute('aria-label', playing ? 'Pause' : 'Play');
   };
@@ -836,7 +905,17 @@ export function initUI(ctx) {
   function populateTrackList() {
     const c = COLLECTIONS[setKey];
     trackList.setAttribute('aria-label', c.label);
-    if (flyNote) flyNote.innerHTML = c.note; // per-collection, and it carries links
+    // In backup mode the collection's own note is no longer true — it credits a
+    // source we are not playing from. Say what is actually happening instead.
+    if (flyNote) {
+      flyNote.innerHTML = (usingBackup() && setKey === 'music')
+        ? 'Playing from a <b>backup source</b>: one continuous upload on SoundCloud, '
+          + 'not 27 separate files, because the Internet Archive is not reachable '
+          + 'from this network. The track list still works — it seeks to about where '
+          + 'each piece begins, within roughly half a minute. Names and credits are '
+          + 'unchanged. ' + c.note
+        : c.note; // per-collection, and it carries links
+    }
     trackList.innerHTML = '';
     c.tracks.forEach((tr, i) => {
       const b = el('button', 'gm-track' + (i === trackIdx && started ? ' is-current' : ''),
@@ -874,13 +953,51 @@ export function initUI(ctx) {
     pTitle.textContent = tr.t;
     markCurrentRow(trackIdx);
     pBarFill.style.transform = 'scaleX(0)';
+    if (usingBackup()) { backupLoad(trackIdx, play); paintPlayBtn(); return; }
     audio.src = tr.src;
-    // A user gesture is still live here, which is exactly why a plain <audio>
-    // plays on the FIRST tap where the old widget needed priming.
+    // A user gesture is still live on this line. Nothing above it may await and
+    // nothing may be inserted between the src assignment and play(), or iOS
+    // drops the play and the first tap does nothing — the exact bug the old
+    // SoundCloud priming hack existed to paper over. watchSource() is
+    // deliberately fire-and-forget, AFTER play, for that reason.
     if (play) audio.play().catch(() => {});
+    watchSource(tr.src);
     paintPlayBtn();
   }
   const playTrack = (i) => loadTrack(i);
+
+  // ---- the byte watchdog ---------------------------------------------------
+  // Any byte is proof of life. readyState >= HAVE_METADATA means a decoder has
+  // parsed a container header, which cannot happen without a successful fetch.
+  // 'progress' alone is NOT enough: it fires while the browser is merely
+  // ATTEMPTING to fetch, so it fires on a hung socket too.
+  let watchdog = 0;
+  const clearWatchdog = () => { clearTimeout(watchdog); watchdog = 0; };
+  const sawBytes = () => {
+    if (!watchdog) return;
+    if (audio.readyState >= 1 || (audio.buffered && audio.buffered.length)) {
+      clearWatchdog();
+      if (isArchive(audio.currentSrc || audio.src)) hostState = 'ok';
+    }
+  };
+  for (const ev of ['progress', 'loadedmetadata', 'canplay', 'playing']) {
+    audio.addEventListener(ev, sawBytes);
+  }
+
+  function watchSource(url) {
+    clearWatchdog();
+    if (!isArchive(url) || hostState === 'ok') return;
+    watchdog = setTimeout(() => {
+      watchdog = 0;
+      if (audio.readyState >= 1) return; // arrived late, but arrived
+      failOver(`no bytes from archive.org in ${FIRST_BYTE_MS} ms`);
+    }, FIRST_BYTE_MS);
+    // the probe can only ever SHORTEN that wait, never lengthen it
+    probeArchive().then((p) => {
+      if (p.ok === true) { hostState = 'ok'; clearWatchdog(); }
+      else if (p.ok === false && watchdog) failOver(`probe: ${p.status || 'no response'} in ${p.ms | 0} ms`);
+    });
+  }
 
   audio.addEventListener('play', paintPlayBtn);
   audio.addEventListener('pause', paintPlayBtn);
@@ -892,10 +1009,16 @@ export function initUI(ctx) {
     if (trackIdx < tracks().length - 1) loadTrack(trackIdx + 1);
     else paintPlayBtn();
   });
-  // A collection whose source has gone away hides itself rather than offering a
-  // control that cannot work.
+  // Correcting a claim this file used to make right here: NOTHING ever hid a
+  // collection, and nothing verified a source before offering it. The old
+  // comment said otherwise and the code said nothing at all — one line of copy
+  // in the title bar, no retry, no fallback, no log. That is how an outage
+  // reached a visitor and came back to me as word of mouth.
   audio.addEventListener('error', () => {
     if (!started) return;
+    const src = audio.currentSrc || audio.src;
+    const code = audio.error ? audio.error.code : 0;
+    if (isArchive(src)) { failOver(`error event, MediaError ${code}`); return; }
     pTitle.textContent = 'that recording is unavailable — try another';
     paintPlayBtn();
   });
@@ -903,6 +1026,11 @@ export function initUI(ctx) {
   // One definition of "toggle playback", shared by the button and the Space key.
   function togglePlay() {
     if (!started) { loadTrack(0); return; }
+    if (usingBackup()) {
+      if (!sc) { backupLoad(trackIdx, true); return; }
+      if (scPlaying) sc.pause(); else sc.play();
+      return;
+    }
     if (audio.paused) audio.play().catch(() => {});
     else audio.pause();
   }
@@ -921,10 +1049,133 @@ export function initUI(ctx) {
     audio.currentTime = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)) * audio.duration;
   });
 
+  // ---- fail-over -----------------------------------------------------------
+  let sc = null;            // the SoundCloud transport, built only if needed
+  let scHostEl = null;
+  let scPending = false;
+  const usingBackup = () => hostState === 'bad' && COLLECTIONS[setKey].backup === 'soundcloud';
+
+  function backupLoad(i, play) {
+    const cue = MUSIC_FALLBACK.cues[i] || 0;
+    if (!sc) {
+      if (scPending) return;
+      scPending = true;
+      scHostEl = el('div', 'gm-sc-host');
+      scHostEl.setAttribute('aria-hidden', 'true');
+      mini.appendChild(scHostEl);
+      createSoundCloud({
+        url: MUSIC_FALLBACK.url,
+        host: scHostEl,
+        onPlay: () => { scPlaying = true; paintPlayBtn(); },
+        onPause: () => { scPlaying = false; paintPlayBtn(); },
+        onProgress: (posMs) => {
+          const secs = posMs / 1000;
+          const cues = MUSIC_FALLBACK.cues;
+          const end = trackIdx + 1 < cues.length ? cues[trackIdx + 1] : MUSIC_FALLBACK.seconds;
+          const span = end - cues[trackIdx];
+          if (span > 0) pBarFill.style.transform = `scaleX(${Math.max(0, Math.min(1, (secs - cues[trackIdx]) / span)).toFixed(4)})`;
+        },
+      }).then((t) => {
+        sc = t; scPending = false;
+        backupLoad(i, play);
+      }).catch(() => {
+        scPending = false;
+        pTitle.textContent = 'both sources are unreachable — try Greetings or Sounds';
+      });
+      return;
+    }
+    // A widget that is not playing silently DROPS seekTo, which is why the old
+    // code carried a pending-seek queue. Ordering the seek after play removes it.
+    if (play) { sc.play(); setTimeout(() => sc.seekMs(cue * 1000), 250); }
+    else sc.seekMs(cue * 1000);
+    // the name is ours, not the source's — say it as soon as the backup is live
+    pTitle.textContent = tracks()[i].t;
+    markCurrentRow(i);
+    // iOS never lets a cross-origin iframe inherit the parent's activation, and
+    // this play is ~5s after the tap in any case. Rather than pump into the
+    // void, ask for the one thing that will work: another tap.
+    if (play) setTimeout(() => {
+      if (!scPlaying) {
+        pPlay.classList.add('is-invite');
+        pTitle.textContent = 'tap play to start the backup source';
+      }
+    }, 3000);
+    // Last resort. The widget is a cross-origin iframe: it can be blocked by the
+    // same filters, by an extension, or by a browser that will not let it start
+    // — and when that happens there is nothing left for this page to try. Rather
+    // than leave a dead transport, hand over a real link and get out of the way.
+    if (play) setTimeout(() => {
+      if (scPlaying || !flyNote) return;
+      openFly();
+      flyNote.innerHTML = 'The Internet Archive is unreachable from this network, '
+        + 'and the backup player could not start here either — some browsers and '
+        + 'extensions block embedded players outright. The recording is still '
+        + 'available directly: <a href="' + MUSIC_FALLBACK.url + '" target="_blank" '
+        + 'rel="noopener">open it on SoundCloud</a>. The greetings and the sounds '
+        + 'of Earth are served from this site and are unaffected.';
+    }, 12000);
+  }
+  let scPlaying = false;
+
+  // Availability is painted, never hidden. The UN sections exist on the record
+  // and Act V names them — a control that silently evaporates sends a reader
+  // hunting for something the page just told them about. Disabling teaches;
+  // hiding gaslights. aria-disabled rather than disabled, so the button keeps
+  // its place in the tab order and its explanation with it.
+  function paintAvailability() {
+    for (const key of Object.keys(COLLECTIONS)) {
+      const dead = hostState === 'bad' && COLLECTIONS[key].host === 'archive'
+        && !COLLECTIONS[key].backup;
+      for (const b of [...setBtns, ...picks].filter((x) => x.dataset.set === key)) {
+        b.classList.toggle('is-unavailable', dead);
+        b.setAttribute('aria-disabled', String(dead));
+        b.title = dead
+          ? 'Both sections stream from the Internet Archive, which is not reachable '
+            + 'from this network. The music has a backup source; these two do not.'
+          : '';
+      }
+    }
+  }
+
+  function failOver(why) {
+    clearWatchdog();
+    if (hostState === 'bad') return;
+    hostState = 'bad';
+    lastDiagnosis = why;
+    // This site has no telemetry, by choice. A console WARNING is the one
+    // channel that costs a visitor nothing and tells a developer everything —
+    // and warn, not error, so smoke.mjs's "no console errors" keeps its meaning.
+    console.warn('[golden record] archive.org is not reachable from this network '
+      + `(${why}). Music falls back to a SoundCloud upload; the two United Nations `
+      + 'sections have no backup and are disabled.');
+    paintAvailability();
+    if (COLLECTIONS[setKey].backup !== 'soundcloud') return;
+    const wantPlay = started && !audio.paused;
+    const at = trackIdx;
+    audio.pause();
+    // removeAttribute + load() is the ONLY way to make the element drop an
+    // in-flight request. `audio.src = ''` resolves against the document and
+    // starts fetching the page itself, leaving the dead socket open behind it.
+    audio.removeAttribute('src');
+    audio.load();
+    setIdle(false);
+    mini.classList.add('is-backup');
+    if (flyNote) flyNote.textContent = MUSIC_FALLBACK.note;
+    pTitle.textContent = 'the archive is unreachable — switching to the backup source…';
+    backupLoad(at, wantPlay);
+  }
+
   // One path for choosing a collection, shared by the flyout chips and the
   // three chips the idle bar shows. `play` is true for the bar chips, which is
   // what makes them one tap from silence to sound.
   function selectSet(key, { play = false } = {}) {
+    const c = COLLECTIONS[key];
+    if (hostState === 'bad' && c.host === 'archive' && !c.backup) {
+      openFly();                          // show the note and the reason
+      if (flyNote) flyNote.textContent = c.note + ' The Internet Archive is not '
+        + 'reachable from this network, and these two sections have no backup source.';
+      return;
+    }
     setKey = key;
     trackIdx = 0;
     for (const x of setBtns) {
@@ -989,6 +1240,17 @@ export function initUI(ctx) {
     e.stopPropagation();
     togglePlay();
   }, { capture: true });
+
+  // Read-only introspection. tools/smoke.mjs asserts against THIS rather than
+  // scraping class names, so a CSS rename never becomes a red build, and a
+  // developer can ask the live page what it thinks its audio is doing.
+  ctx.audio = {
+    state: () => ({ host: hostState,
+      engine: usingBackup() ? (sc ? 'backup' : 'backup-loading') : 'direct',
+      collection: setKey, track: trackIdx, why: lastDiagnosis,
+      playing: usingBackup() ? scPlaying : (!audio.paused && !audio.ended) }),
+    probe: probeArchive,
+  };
 
   // ---- the title-card greeting: a one-off "hello" ---------------------------
   // NASA's own recordings (US-government works, public domain), vendored as

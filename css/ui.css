@@ -1149,6 +1149,14 @@
     background 0.25s var(--ease);
 }
 .gm-pick:hover { color: var(--gold-bright); border-color: var(--gold-dim); }
+/* Unavailable, not absent: still legible, still focusable, visibly not for now.
+   Hiding it would send a reader who just met these sections in Act V hunting
+   for a control that silently vanished. */
+.gm-pick.is-unavailable,
+.gm-mini .gm-mode.is-unavailable { opacity: 0.42; border-style: dashed; }
+/* the backup music source is one continuous upload, so every row is "about
+   here" and the list says so rather than implying a precision it lacks */
+.gm-mini.is-backup .gm-track-n::after { content: '≈'; color: var(--gold-dim); }
 .gm-pick.is-active { color: var(--gold-bright); border-color: var(--gold); }
 
 /* At 320px the four collection names need 230px and have 202px. They must all
