@@ -169,6 +169,16 @@ export function initUI(ctx) {
         explanationSvg(raw).replace(/^[\s\S]*?(?=<svg)/, ''); // strip XML prolog for innerHTML
     }).catch(() => { coverLoaded = false; }); // a failed fetch may retry next visit
   }
+  // Warm it during Act I's idle time. Measured cold, the figure costs ~120ms and
+  // almost all of it is the fetch — the transform is 1ms and parsing the 1558
+  // paths is 4-6ms — so the fix is to have the bytes already in cache by the time
+  // anyone opens Act II, not to make the parse faster. requestIdleCallback keeps
+  // it off the critical path; Safari has no rIC, hence the timeout fallback.
+  {
+    const warm = () => loadCoverFigure();
+    if (typeof requestIdleCallback === 'function') requestIdleCallback(warm, { timeout: 4000 });
+    else setTimeout(warm, 2500);
+  }
   const demoBox = explainer.querySelector('.gm-demo');
   const demoTicks = explainer.querySelector('.gm-demo-ticks');
   const demoBits = explainer.querySelector('.gm-demo-bits');
@@ -890,11 +900,13 @@ export function initUI(ctx) {
     paintPlayBtn();
   });
 
-  pPlay.addEventListener('click', () => {
+  // One definition of "toggle playback", shared by the button and the Space key.
+  function togglePlay() {
     if (!started) { loadTrack(0); return; }
     if (audio.paused) audio.play().catch(() => {});
     else audio.pause();
-  });
+  }
+  pPlay.addEventListener('click', togglePlay);
   mini.querySelector('.gm-pprev').addEventListener('click', () => {
     if (!started) return;
     if (audio.currentTime > 3) { audio.currentTime = 0; return; } // restart first
@@ -947,13 +959,36 @@ export function initUI(ctx) {
   }, { capture: true });
 
   // Click-outside. Bubble phase and no preventDefault, so tour.js's capture
-  // listener still sees canvas gestures; guarding miniSets stops the toggle
-  // double-firing (pointerdown closes, the following click would reopen).
+  // listener still sees canvas gestures.
+  //
+  // The guard is the whole DOCK, not just the flyout. .gm-mini-bar is a SIBLING
+  // of .gm-mini-fly, so guarding the flyout alone counted the player's own
+  // transport as "outside" and slammed the list shut on every press of play,
+  // prev, next or the seek bar — exactly when you most want to watch the title
+  // and credits change. Working inside the player is not "clicking away" from
+  // it. The ♫ button still toggles explicitly, and Escape still closes.
   document.addEventListener('pointerdown', (e) => {
-    if (miniFly.hidden) return;
-    if (miniFly.contains(e.target) || miniSets.contains(e.target)) return;
+    if (miniFly.hidden || mini.contains(e.target)) return;
     closeFly();
   });
+
+  // Space is transport, not dismissal. With the list open the ♫ toggle still
+  // holds focus from the click that opened it, so a native <button> activation
+  // closed the panel — the one key a player should never spend on that.
+  // preventDefault stops the synthesised click; Enter is left alone, so every
+  // control is still reachable from the keyboard in the normal way.
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== ' ' && e.code !== 'Space') return;
+    if (miniFly.hidden) return;
+    // never steal Space from a real form control (the Act V time slider and the
+    // Drake sliders are <input type="range">)
+    const t = e.target;
+    if (t && (t.isContentEditable
+      || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName || ''))) return;
+    e.preventDefault();
+    e.stopPropagation();
+    togglePlay();
+  }, { capture: true });
 
   // ---- the title-card greeting: a one-off "hello" ---------------------------
   // NASA's own recordings (US-government works, public domain), vendored as
